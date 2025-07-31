@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Brain, FileText, Bookmark, Image, Network, Search, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Stethoscope, FileText, Bookmark, Image, Network, Search, ArrowRight, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type DiagramSection = 'scattered' | 'convergence' | 'organized';
@@ -64,7 +64,7 @@ const DiagramComponent = ({ onSectionClick, activeSection }: DiagramComponentPro
           <ArrowLeft className="absolute -right-10 top-1/2 -translate-y-1/2 w-8 h-8 text-primary/50" />
           
           <div className="absolute w-12 h-12 md:w-16 md:h-16 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/30 flex items-center justify-center shadow-lg">
-            <Brain className="w-7 h-7 md:w-9 md:h-9 text-primary" />
+            <Stethoscope className="w-7 h-7 md:w-9 md:h-9 text-primary" />
           </div>
         </div>
       </div>
@@ -86,7 +86,7 @@ const DiagramComponent = ({ onSectionClick, activeSection }: DiagramComponentPro
               <Search className="w-5 h-5 md:w-6 md:h-6 text-primary" />
             </div>
             <div className="w-10 h-10 md:w-12 md:h-12 glass-panel rounded-lg flex items-center justify-center">
-              <Brain className="w-5 h-5 md:w-6 md:h-6 text-primary" />
+              <Stethoscope className="w-5 h-5 md:w-6 md:h-6 text-primary" />
             </div>
           </div>
         </div>

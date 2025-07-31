@@ -1,6 +1,21 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Stethoscope, LogIn, Search, Upload, User, Settings, LogOut, Moon, Sun, Heart, MapPin, Phone, Users, Activity } from 'lucide-react';
+import { 
+  Stethoscope, 
+  LogIn, 
+  Search, 
+  Upload, 
+  User, 
+  Settings, 
+  LogOut, 
+  Moon, 
+  Sun, 
+  Heart, 
+  MapPin, 
+  Phone, 
+  Users, 
+  Activity 
+} from 'lucide-react';
 import { useRippleEffect } from '@/lib/animations';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
