@@ -18,6 +18,7 @@ import SearchPage from "./pages/SearchPage";
 import ProvidersPage from "./pages/ProvidersPage";
 import Settings from "./pages/Settings";
 import ManagePage from "./pages/ManagePage";
+import AdminPage from "./pages/AdminPage";
 import Navbar from "./components/Navbar";
 import FloatingSidebar from "./components/FloatingSidebar";
 
@@ -110,6 +111,14 @@ const AppRoutes = () => {
         element={
           <PageTransition>
             <Settings />
+          </PageTransition>
+        } 
+      />
+      <Route 
+        path="/admin" 
+        element={
+          <PageTransition>
+            <AdminPage />
           </PageTransition>
         } 
       />

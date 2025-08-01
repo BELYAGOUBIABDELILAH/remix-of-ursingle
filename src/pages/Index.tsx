@@ -7,6 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import AnimatedTransition from "@/components/AnimatedTransition";
+import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
+import MobileAppSection from "@/components/MobileAppSection";
+import MapSection from "@/components/MapSection";
+import Footer from "@/components/Footer";
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -287,7 +291,19 @@ const Index = () => {
             </div>
           </div>
         </section>
+
+        {/* Testimonials Section */}
+        <TestimonialsSection />
+
+        {/* Map Section */}
+        <MapSection />
+
+        {/* Mobile App Section */}
+        <MobileAppSection />
       </AnimatedTransition>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };
