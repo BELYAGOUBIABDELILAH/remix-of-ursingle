@@ -24,6 +24,9 @@ import ManagePage from "./pages/ManagePage";
 import AdminPage from "./pages/AdminPage";
 import Navbar from "./components/Navbar";
 import FloatingSidebar from "./components/FloatingSidebar";
+import EmergencyPage from "./pages/EmergencyPage";
+import ProviderProfilePage from "./pages/ProviderProfilePage";
+import AIChatWidget from "./components/AIChatWidget";
 
 const queryClient = new QueryClient();
 
@@ -150,6 +153,22 @@ const AppRoutes = () => {
         } 
       />
       <Route 
+        path="/emergency" 
+        element={
+          <PageTransition>
+            <EmergencyPage />
+          </PageTransition>
+        } 
+      />
+      <Route 
+        path="/provider/:id" 
+        element={
+          <PageTransition>
+            <ProviderProfilePage />
+          </PageTransition>
+        } 
+      />
+      <Route 
         path="*" 
         element={
           <PageTransition>
@@ -173,6 +192,7 @@ const App = () => (
               <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-secondary/10 animate-gradient">
                 <Navbar />
                 <FloatingSidebar />
+                <AIChatWidget />
                 <AppRoutes />
               </div>
             </BrowserRouter>
