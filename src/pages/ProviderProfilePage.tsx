@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, Star, ShieldCheck, Phone, Share2, Flag, Calendar, Languages, Award, Image as ImageIcon } from "lucide-react";
+import { getProviderById } from "@/data/providers";
+import { BookingModal } from "@/components/BookingModal";
 
 const mockProvider = {
   id: "1",

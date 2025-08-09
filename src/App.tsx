@@ -27,6 +27,7 @@ import FloatingSidebar from "./components/FloatingSidebar";
 import EmergencyPage from "./pages/EmergencyPage";
 import ProviderProfilePage from "./pages/ProviderProfilePage";
 import AIChatWidget from "./components/AIChatWidget";
+import { seedProvidersIfNeeded } from "@/data/providers";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,8 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
     </div>
   );
 };
+
+const SeedInit = () => { useEffect(() => { seedProvidersIfNeeded(50); }, []); return null; };
 
 const AppRoutes = () => {
   return (
@@ -189,6 +192,7 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              <SeedInit />
               <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-secondary/10 animate-gradient">
                 <Navbar />
                 <FloatingSidebar />
