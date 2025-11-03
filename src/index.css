@@ -5,8 +5,8 @@
  
 @layer base {
   :root {
-    /* CityHealth Design System - Glassmorphism Theme */
-    --background: 200 100% 97%;
+    /* CityHealth Design System - Moderne & Minimaliste */
+    --background: 0 0% 98%; /* Blanc cassé */
     --foreground: 220 13% 18%;
 
     --card: 0 0% 100%;
@@ -15,25 +15,25 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 13% 18%;
  
-    --primary: 150 100% 33%; /* Medical green #00A651 */
+    --primary: 157 19% 59%; /* Vert menthe sage #9DBBAE */
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 150 100% 45%;
+    --primary-glow: 157 25% 70%;
  
-    --secondary: 210 100% 40%; /* Trust blue #0066CC */
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%; /* Bleu clair */
+    --secondary-foreground: 220 13% 18%;
  
-    --muted: 220 13% 96%;
+    --muted: 210 40% 96%;
     --muted-foreground: 220 13% 46%;
  
-    --accent: 16 100% 60%; /* Warm orange #FF6B35 */
-    --accent-foreground: 0 0% 100%;
+    --accent: 270 50% 88%; /* Violet doux */
+    --accent-foreground: 220 13% 18%;
  
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 200 88% 55%;
+    --ring: 157 19% 59%;
  
     --radius: 0.75rem;
 
@@ -41,8 +41,8 @@
     --glass-bg: 255 255 255;
     --glass-border: 255 255 255;
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
-    --gradient-bg: linear-gradient(135deg, hsl(200 100% 97%), hsl(150 60% 95%));
-    --shadow-soft: 0 8px 32px rgba(31, 38, 135, 0.1);
+    --gradient-bg: linear-gradient(135deg, hsl(0 0% 98%), hsl(157 25% 95%));
+    --shadow-soft: 0 4px 12px rgba(157, 187, 174, 0.15);
     --shadow-glow: 0 0 40px hsl(var(--primary) / 0.15);
   }
  
@@ -56,17 +56,17 @@
     --popover: 220 13% 12%;
     --popover-foreground: 220 13% 98%;
  
-    --primary: 150 100% 45%;
-    --primary-foreground: 220 13% 9%;
-    --primary-glow: 150 100% 60%;
+    --primary: 157 19% 59%; /* Vert menthe sage */
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 157 25% 70%;
  
-    --secondary: 210 100% 46%;
+    --secondary: 210 40% 20%; /* Bleu clair adapté dark */
     --secondary-foreground: 220 13% 98%;
  
     --muted: 220 13% 15%;
     --muted-foreground: 220 13% 65%;
  
-    --accent: 16 100% 64%;
+    --accent: 270 50% 70%; /* Violet doux adapté dark */
     --accent-foreground: 220 13% 98%;
  
     --destructive: 0 62.8% 30.6%;
@@ -74,7 +74,7 @@
  
     --border: 220 13% 18%;
     --input: 220 13% 18%;
-    --ring: 200 88% 65%;
+    --ring: 157 19% 59%;
 
     /* Dark glassmorphism */
     --glass-bg: 31 38 135;
@@ -84,7 +84,23 @@
   }
 }
 
+/* Animations slide down for mobile menu */
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @layer utilities {
+  .animate-slide-down {
+    animation: slide-down 0.2s ease-out;
+  }
+
   .animate-pulse-slow {
     animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
@@ -352,4 +368,3 @@
   .rating-stars { @apply text-yellow-400; }
   .emergency-alert { @apply bg-destructive text-destructive-foreground p-4 rounded-lg animate-pulse; }
 }
-

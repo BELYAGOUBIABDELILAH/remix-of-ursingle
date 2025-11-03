@@ -1,53 +1,37 @@
-import { HeroSection } from '@/components/homepage/HeroSection';
-import { ServicesOverview } from '@/components/homepage/ServicesOverview';
+import { Header } from '@/components/layout/Header';
+import { ModernHeroSection } from '@/components/homepage/ModernHeroSection';
+import { QuickSearchSection } from '@/components/homepage/QuickSearchSection';
 import { FeaturedProviders } from '@/components/homepage/FeaturedProviders';
-import { AIAssistantPreview } from '@/components/homepage/AIAssistantPreview';
-import { StatsSection } from '@/components/homepage/StatsSection';
-import { ComprehensiveFooter } from '@/components/homepage/ComprehensiveFooter';
-import { TestimonialsSection } from '@/components/landing/TestimonialsSection';
-import MobileAppSection from '@/components/MobileAppSection';
-import MapSection from '@/components/MapSection';
+import { TestimonialsSlider } from '@/components/homepage/TestimonialsSlider';
+import { ProviderCTA } from '@/components/homepage/ProviderCTA';
+import { ModernFooter } from '@/components/homepage/ModernFooter';
 import { ScrollToTop } from '@/components/ScrollToTop';
-import { ToastContainer } from '@/components/ToastContainer';
-import { ParticleBackground } from '@/components/ParticleBackground';
-import { useToastNotifications } from '@/hooks/useToastNotifications';
 
 export const NewIndex = () => {
-  const { toasts } = useToastNotifications();
-
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      <ParticleBackground />
-      <ToastContainer toasts={toasts} />
+    <div className="min-h-screen bg-background">
+      {/* Header - Sticky Navigation */}
+      <Header />
       
-      {/* Hero Section with Advanced Search */}
-      <HeroSection />
+      {/* Hero Section */}
+      <ModernHeroSection />
       
-      {/* Services Overview */}
-      <ServicesOverview />
+      {/* Quick Search Section */}
+      <QuickSearchSection />
       
-      {/* Featured Providers Carousel */}
+      {/* Featured Providers */}
       <FeaturedProviders />
       
-      {/* AI Assistant Preview */}
-      <AIAssistantPreview />
+      {/* Testimonials Slider */}
+      <TestimonialsSlider />
       
-      {/* Statistics Section */}
-      <StatsSection />
+      {/* Provider CTA Banner */}
+      <ProviderCTA />
       
-      {/* Testimonials */}
-      <TestimonialsSection showTestimonials={true} />
+      {/* Footer */}
+      <ModernFooter />
       
-      {/* Map Section */}
-      <MapSection />
-      
-      {/* Mobile App */}
-      <MobileAppSection />
-      
-      {/* Comprehensive Footer */}
-      <ComprehensiveFooter />
-      
-      {/* Scroll to Top */}
+      {/* Scroll to Top Button */}
       <ScrollToTop />
     </div>
   );
