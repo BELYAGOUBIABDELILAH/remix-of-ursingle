@@ -26,6 +26,9 @@ import { Header } from "./components/layout/Header";
 import FloatingSidebar from "./components/FloatingSidebar";
 import EmergencyPage from "./pages/EmergencyPage";
 import ProviderProfilePage from "./pages/ProviderProfilePage";
+import ProviderRegister from "./pages/ProviderRegister";
+import ProviderDashboard from "./pages/ProviderDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
 import AIChatWidget from "./components/AIChatWidget";
 import { seedProvidersIfNeeded } from "@/data/providers";
 
@@ -168,6 +171,30 @@ const AppRoutes = () => {
         element={
           <PageTransition>
             <ProviderProfilePage />
+          </PageTransition>
+        } 
+      />
+      <Route 
+        path="/provider/register" 
+        element={
+          <PageTransition>
+            <ProviderRegister />
+          </PageTransition>
+        } 
+      />
+      <Route 
+        path="/provider/dashboard" 
+        element={
+          <PageTransition>
+            <ProviderDashboard />
+          </PageTransition>
+        } 
+      />
+      <Route 
+        path="/admin/dashboard" 
+        element={
+          <PageTransition>
+            <AdminDashboard />
           </PageTransition>
         } 
       />
