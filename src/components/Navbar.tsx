@@ -20,7 +20,7 @@ import { useRippleEffect } from '@/lib/animations';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import AuthModal from '@/components/AuthModal';
+import { AuthModal } from '@/components/AuthModal';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -263,7 +263,7 @@ export const Navbar = () => {
         </header>
       </TooltipProvider>
       
-      <AuthModal isOpen={isAuthModalOpen} onClose={handleCloseAuthModal} />
+      <AuthModal open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen} />
     </>
   );
 };

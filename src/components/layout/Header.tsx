@@ -1,28 +1,42 @@
 import { useState } from 'react';
-import { Moon, Sun, Menu, Globe } from 'lucide-react';
+import { Moon, Sun, Menu, LogOut, Settings, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { NotificationCenter } from '@/components/NotificationCenter';
+import { AuthModal } from '@/components/AuthModal';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export const Header = () => {
   const { theme, toggleTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
+  const { user, isAuthenticated, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalTab, setAuthModalTab] = useState<'login' | 'signup'>('login');
 
   const languageLabels = {
     fr: { flag: '🇫🇷', label: 'Français' },
     ar: { flag: '🇩🇿', label: 'العربية' },
     en: { flag: '🇬🇧', label: 'English' },
   };
+
+  const userInitials = user?.name
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || 'U';
 
   const navLinks = [
     { to: '/', label: t('nav.home') },
@@ -101,18 +115,74 @@ export const Header = () => {
           </DropdownMenu>
 
           {/* Notification Center */}
-          <div className="hidden md:block">
-            <NotificationCenter />
-          </div>
+          {isAuthenticated && (
+            <div className="hidden md:block">
+              <NotificationCenter />
+            </div>
+          )}
 
-          {/* Auth Buttons - Desktop */}
+          {/* User Menu or Auth Buttons - Desktop */}
           <div className="hidden md:flex items-center gap-2">
-            <Button variant="ghost" size="sm">
-              {t('nav.signin')}
-            </Button>
-            <Button size="sm" className="bg-gradient-to-r from-primary to-accent hover:opacity-90">
-              Inscription
-            </Button>
+            {isAuthenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user?.avatar} />
+                      <AvatarFallback>{userInitials}</AvatarFallback>
+                    </Avatar>
+                    <span className="hidden lg:inline">{user?.name}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="px-2 py-1.5">
+                    <p className="text-sm font-medium">{user?.name}</p>
+                    <p className="text-xs text-muted-foreground">{user?.email}</p>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="cursor-pointer">
+                      <UserIcon className="mr-2 h-4 w-4" />
+                      Mon profil
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/settings" className="cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Paramètres
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={logout} className="cursor-pointer text-destructive">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Déconnexion
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    setAuthModalTab('login');
+                    setAuthModalOpen(true);
+                  }}
+                >
+                  {t('nav.signin')}
+                </Button>
+                <Button 
+                  size="sm" 
+                  className="bg-gradient-to-r from-primary to-accent hover:opacity-90"
+                  onClick={() => {
+                    setAuthModalTab('signup');
+                    setAuthModalOpen(true);
+                  }}
+                >
+                  Inscription
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -140,18 +210,56 @@ export const Header = () => {
                   </Link>
                 ))}
                 <div className="border-t border-border/40 pt-4 mt-4 space-y-3">
-                  <Button variant="outline" className="w-full" onClick={() => setMobileMenuOpen(false)}>
-                    {t('nav.signin')}
-                  </Button>
-                  <Button className="w-full bg-gradient-to-r from-primary to-accent" onClick={() => setMobileMenuOpen(false)}>
-                    Inscription
-                  </Button>
+                  {isAuthenticated ? (
+                    <>
+                      <Button variant="outline" className="w-full" onClick={() => { setMobileMenuOpen(false); }}>
+                        <Link to="/profile" className="flex items-center gap-2">
+                          <UserIcon className="h-4 w-4" />
+                          Mon profil
+                        </Link>
+                      </Button>
+                      <Button variant="destructive" className="w-full" onClick={() => { logout(); setMobileMenuOpen(false); }}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Déconnexion
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button 
+                        variant="outline" 
+                        className="w-full" 
+                        onClick={() => { 
+                          setAuthModalTab('login'); 
+                          setAuthModalOpen(true); 
+                          setMobileMenuOpen(false); 
+                        }}
+                      >
+                        {t('nav.signin')}
+                      </Button>
+                      <Button 
+                        className="w-full bg-gradient-to-r from-primary to-accent" 
+                        onClick={() => { 
+                          setAuthModalTab('signup'); 
+                          setAuthModalOpen(true); 
+                          setMobileMenuOpen(false); 
+                        }}
+                      >
+                        Inscription
+                      </Button>
+                    </>
+                  )}
                 </div>
               </nav>
             </SheetContent>
           </Sheet>
         </div>
       </div>
+
+      <AuthModal 
+        open={authModalOpen} 
+        onOpenChange={setAuthModalOpen} 
+        defaultTab={authModalTab}
+      />
     </header>
   );
 };

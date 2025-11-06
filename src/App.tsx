@@ -29,8 +29,10 @@ import ProviderProfilePage from "./pages/ProviderProfilePage";
 import ProviderRegister from "./pages/ProviderRegister";
 import ProviderDashboard from "./pages/ProviderDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import UserProfilePage from "./pages/UserProfilePage";
 import AIChatWidget from "./components/AIChatWidget";
 import { AIChatbot } from "./components/AIChatbot";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 import { seedProvidersIfNeeded } from "@/data/providers";
 
 const queryClient = new QueryClient();
@@ -179,7 +181,9 @@ const AppRoutes = () => {
         path="/provider/register" 
         element={
           <PageTransition>
-            <ProviderRegister />
+            <ProtectedRoute requireRole="provider">
+              <ProviderRegister />
+            </ProtectedRoute>
           </PageTransition>
         } 
       />
@@ -187,7 +191,9 @@ const AppRoutes = () => {
         path="/provider/dashboard" 
         element={
           <PageTransition>
-            <ProviderDashboard />
+            <ProtectedRoute requireRole="provider">
+              <ProviderDashboard />
+            </ProtectedRoute>
           </PageTransition>
         } 
       />
@@ -195,7 +201,19 @@ const AppRoutes = () => {
         path="/admin/dashboard" 
         element={
           <PageTransition>
-            <AdminDashboard />
+            <ProtectedRoute requireRole="admin">
+              <AdminDashboard />
+            </ProtectedRoute>
+          </PageTransition>
+        } 
+      />
+      <Route 
+        path="/profile" 
+        element={
+          <PageTransition>
+            <ProtectedRoute>
+              <UserProfilePage />
+            </ProtectedRoute>
           </PageTransition>
         } 
       />
