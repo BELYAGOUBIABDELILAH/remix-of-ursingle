@@ -14,16 +14,506 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      analytics_events: {
+        Row: {
+          created_at: string | null
+          event_data: Json | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          page_url: string | null
+          session_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          page_url?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          page_url?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      chat_messages: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          role: string
+          session_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          role: string
+          session_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          role?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_sessions: {
+        Row: {
+          created_at: string | null
+          id: string
+          language: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          language?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          language?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      emergency_services: {
+        Row: {
+          created_at: string | null
+          emergency_phone: string
+          id: string
+          is_24_7: boolean | null
+          provider_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          emergency_phone: string
+          id?: string
+          is_24_7?: boolean | null
+          provider_id: string
+        }
+        Update: {
+          created_at?: string | null
+          emergency_phone?: string
+          id?: string
+          is_24_7?: boolean | null
+          provider_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emergency_services_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          body: string
+          created_at: string | null
+          id: string
+          read: boolean | null
+          title: string
+          type: string | null
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          id?: string
+          read?: boolean | null
+          title: string
+          type?: string | null
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          id?: string
+          read?: boolean | null
+          title?: string
+          type?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          full_name: string
+          id: string
+          language: string | null
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name: string
+          id: string
+          language?: string | null
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string
+          id?: string
+          language?: string | null
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      providers: {
+        Row: {
+          address: string
+          avatar_url: string | null
+          business_name: string
+          city: string | null
+          cover_image_url: string | null
+          created_at: string | null
+          description: string | null
+          email: string | null
+          id: string
+          is_emergency: boolean | null
+          latitude: number | null
+          longitude: number | null
+          phone: string
+          provider_type: Database["public"]["Enums"]["provider_type"]
+          specialty_id: string | null
+          updated_at: string | null
+          user_id: string
+          verification_status:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          website: string | null
+        }
+        Insert: {
+          address: string
+          avatar_url?: string | null
+          business_name: string
+          city?: string | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          email?: string | null
+          id?: string
+          is_emergency?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          phone: string
+          provider_type: Database["public"]["Enums"]["provider_type"]
+          specialty_id?: string | null
+          updated_at?: string | null
+          user_id: string
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          website?: string | null
+        }
+        Update: {
+          address?: string
+          avatar_url?: string | null
+          business_name?: string
+          city?: string | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          email?: string | null
+          id?: string
+          is_emergency?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          phone?: string
+          provider_type?: Database["public"]["Enums"]["provider_type"]
+          specialty_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "providers_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ratings: {
+        Row: {
+          comment: string | null
+          created_at: string | null
+          id: string
+          provider_id: string
+          rating: number
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          provider_id: string
+          rating: number
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          provider_id?: string
+          rating?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ratings_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedules: {
+        Row: {
+          created_at: string | null
+          day_of_week: number
+          end_time: string
+          id: string
+          is_active: boolean | null
+          provider_id: string
+          start_time: string
+        }
+        Insert: {
+          created_at?: string | null
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_active?: boolean | null
+          provider_id: string
+          start_time: string
+        }
+        Update: {
+          created_at?: string | null
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_active?: boolean | null
+          provider_id?: string
+          start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedules_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      services: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          duration_minutes: number | null
+          id: string
+          name_ar: string | null
+          name_en: string | null
+          name_fr: string
+          price: number | null
+          provider_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          name_ar?: string | null
+          name_en?: string | null
+          name_fr: string
+          price?: number | null
+          provider_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          name_ar?: string | null
+          name_en?: string | null
+          name_fr?: string
+          price?: number | null
+          provider_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      specialties: {
+        Row: {
+          created_at: string | null
+          icon: string | null
+          id: string
+          name_ar: string
+          name_en: string
+          name_fr: string
+        }
+        Insert: {
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          name_ar: string
+          name_en: string
+          name_fr: string
+        }
+        Update: {
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          name_ar?: string
+          name_en?: string
+          name_fr?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      verifications: {
+        Row: {
+          created_at: string | null
+          document_type: string
+          document_url: string
+          id: string
+          notes: string | null
+          provider_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["verification_status"] | null
+        }
+        Insert: {
+          created_at?: string | null
+          document_type: string
+          document_url: string
+          id?: string
+          notes?: string | null
+          provider_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["verification_status"] | null
+        }
+        Update: {
+          created_at?: string | null
+          document_type?: string
+          document_url?: string
+          id?: string
+          notes?: string | null
+          provider_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["verification_status"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verifications_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "citizen" | "provider" | "admin"
+      availability_status: "available" | "busy" | "offline"
+      provider_type:
+        | "doctor"
+        | "clinic"
+        | "hospital"
+        | "pharmacy"
+        | "laboratory"
+      verification_status: "pending" | "verified" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +640,11 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["citizen", "provider", "admin"],
+      availability_status: ["available", "busy", "offline"],
+      provider_type: ["doctor", "clinic", "hospital", "pharmacy", "laboratory"],
+      verification_status: ["pending", "verified", "rejected"],
+    },
   },
 } as const
