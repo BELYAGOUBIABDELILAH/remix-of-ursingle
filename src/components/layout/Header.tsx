@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Moon, Sun, Menu, LogOut, Settings, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useLanguage } from '@/hooks/useLanguage';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import {
@@ -39,10 +39,10 @@ export const Header = () => {
     .slice(0, 2) || 'U';
 
   const navLinks = [
-    { to: '/', label: t('nav.home') },
-    { to: '/search', label: 'Prestataires' },
-    { to: '/emergency', label: t('nav.emergency') },
-    { to: '/contact', label: t('nav.contact') },
+    { to: '/', label: t('nav', 'home') },
+    { to: '/search', label: t('header', 'providers') },
+    { to: '/emergency', label: t('nav', 'emergency') },
+    { to: '/contact', label: t('header', 'contact') },
   ];
 
   return (
@@ -77,24 +77,24 @@ export const Header = () => {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          {/* Theme Toggle */}
+          {/* Theme Toggle - Hidden on Mobile */}
           <Button
             variant="ghost"
             size="icon"
             onClick={toggleTheme}
-            className="hover:bg-accent"
+            className="hover:bg-accent hidden sm:flex"
             aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
           >
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </Button>
 
-          {/* Language Selector */}
+          {/* Language Selector - Hidden on Mobile */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="hover:bg-accent"
+                className="hover:bg-accent hidden sm:flex"
                 aria-label="Select language"
               >
                 <span className="text-lg">{languageLabels[language].flag}</span>
@@ -143,19 +143,19 @@ export const Header = () => {
                   <DropdownMenuItem asChild>
                     <Link to="/profile" className="cursor-pointer">
                       <UserIcon className="mr-2 h-4 w-4" />
-                      Mon profil
+                      {t('header', 'profile')}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/settings" className="cursor-pointer">
                       <Settings className="mr-2 h-4 w-4" />
-                      Paramètres
+                      {t('header', 'settings')}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={logout} className="cursor-pointer text-destructive">
                     <LogOut className="mr-2 h-4 w-4" />
-                    Déconnexion
+                    {t('header', 'logout')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -169,7 +169,7 @@ export const Header = () => {
                     setAuthModalOpen(true);
                   }}
                 >
-                  {t('nav.signin')}
+                  {t('header', 'signin')}
                 </Button>
                 <Button 
                   size="sm" 
@@ -179,7 +179,7 @@ export const Header = () => {
                     setAuthModalOpen(true);
                   }}
                 >
-                  Inscription
+                  {t('header', 'signup')}
                 </Button>
               </>
             )}
@@ -210,17 +210,50 @@ export const Header = () => {
                   </Link>
                 ))}
                 <div className="border-t border-border/40 pt-4 mt-4 space-y-3">
+                  {/* Mobile Theme & Language Toggles */}
+                  <div className="flex gap-2 mb-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={toggleTheme}
+                      className="flex-1"
+                      aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                    >
+                      {theme === 'dark' ? <Sun size={16} className="mr-2" /> : <Moon size={16} className="mr-2" />}
+                      {theme === 'dark' ? 'Light' : 'Dark'}
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="flex-1">
+                          <span className="mr-2">{languageLabels[language].flag}</span>
+                          {languageLabels[language].label}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        {Object.entries(languageLabels).map(([lang, { flag, label }]) => (
+                          <DropdownMenuItem
+                            key={lang}
+                            onClick={() => setLanguage(lang as 'fr' | 'ar' | 'en')}
+                          >
+                            <span className="mr-2">{flag}</span>
+                            {label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
                   {isAuthenticated ? (
                     <>
                       <Button variant="outline" className="w-full" onClick={() => { setMobileMenuOpen(false); }}>
                         <Link to="/profile" className="flex items-center gap-2">
                           <UserIcon className="h-4 w-4" />
-                          Mon profil
+                          {t('header', 'profile')}
                         </Link>
                       </Button>
                       <Button variant="destructive" className="w-full" onClick={() => { logout(); setMobileMenuOpen(false); }}>
                         <LogOut className="mr-2 h-4 w-4" />
-                        Déconnexion
+                        {t('header', 'logout')}
                       </Button>
                     </>
                   ) : (
@@ -234,7 +267,7 @@ export const Header = () => {
                           setMobileMenuOpen(false); 
                         }}
                       >
-                        {t('nav.signin')}
+                        {t('header', 'signin')}
                       </Button>
                       <Button 
                         className="w-full bg-gradient-to-r from-primary to-accent" 
@@ -244,7 +277,7 @@ export const Header = () => {
                           setMobileMenuOpen(false); 
                         }}
                       >
-                        Inscription
+                        {t('header', 'signup')}
                       </Button>
                     </>
                   )}
