@@ -18,6 +18,38 @@ export interface Translations {
     submit: string;
   };
 
+  // Hero Section
+  hero: {
+    title: string;
+    subtitle: string;
+    cta: string;
+    illustration: string;
+  };
+
+  // Quick Search
+  quickSearch: {
+    title: string;
+    namePlaceholder: string;
+    typePlaceholder: string;
+    locationPlaceholder: string;
+    launchSearch: string;
+    doctor: string;
+    clinic: string;
+    pharmacy: string;
+    lab: string;
+  };
+
+  // Header
+  header: {
+    providers: string;
+    contact: string;
+    profile: string;
+    settings: string;
+    logout: string;
+    signup: string;
+    signin: string;
+  };
+
   // Navigation
   nav: {
     home: string;
@@ -115,6 +147,32 @@ export const translations: Record<Language, Translations> = {
       next: 'Suivant',
       submit: 'Soumettre',
     },
+    hero: {
+      title: 'Trouvez les meilleurs soins\nà Sidi Bel Abbès',
+      subtitle: 'Découvrez et prenez rendez-vous avec les meilleurs professionnels de santé près de chez vous',
+      cta: 'Rechercher un prestataire',
+      illustration: 'Illustration médicale moderne',
+    },
+    quickSearch: {
+      title: 'Recherche Rapide',
+      namePlaceholder: 'Nom ou spécialité...',
+      typePlaceholder: 'Type de prestataire',
+      locationPlaceholder: 'Localisation...',
+      launchSearch: 'Lancer la recherche',
+      doctor: 'Médecin',
+      clinic: 'Clinique',
+      pharmacy: 'Pharmacie',
+      lab: 'Laboratoire',
+    },
+    header: {
+      providers: 'Prestataires',
+      contact: 'Contact',
+      profile: 'Mon profil',
+      settings: 'Paramètres',
+      logout: 'Déconnexion',
+      signup: 'Inscription',
+      signin: 'Connexion',
+    },
     nav: {
       home: 'Accueil',
       search: 'Recherche',
@@ -200,6 +258,32 @@ export const translations: Record<Language, Translations> = {
       next: 'التالي',
       submit: 'إرسال',
     },
+    hero: {
+      title: 'اعثر على أفضل الرعاية\nفي سيدي بلعباس',
+      subtitle: 'اكتشف واحجز مواعيد مع أفضل المتخصصين في الرعاية الصحية بالقرب منك',
+      cta: 'ابحث عن مقدم خدمة',
+      illustration: 'رسم توضيحي طبي حديث',
+    },
+    quickSearch: {
+      title: 'بحث سريع',
+      namePlaceholder: 'الاسم أو التخصص...',
+      typePlaceholder: 'نوع مقدم الخدمة',
+      locationPlaceholder: 'الموقع...',
+      launchSearch: 'ابدأ البحث',
+      doctor: 'طبيب',
+      clinic: 'عيادة',
+      pharmacy: 'صيدلية',
+      lab: 'مختبر',
+    },
+    header: {
+      providers: 'مقدمو الخدمات',
+      contact: 'اتصل بنا',
+      profile: 'ملفي الشخصي',
+      settings: 'الإعدادات',
+      logout: 'تسجيل الخروج',
+      signup: 'إنشاء حساب',
+      signin: 'تسجيل الدخول',
+    },
     nav: {
       home: 'الرئيسية',
       search: 'بحث',
@@ -284,6 +368,32 @@ export const translations: Record<Language, Translations> = {
       back: 'Back',
       next: 'Next',
       submit: 'Submit',
+    },
+    hero: {
+      title: 'Find the Best Care\nin Sidi Bel Abbès',
+      subtitle: 'Discover and book appointments with the best healthcare professionals near you',
+      cta: 'Search for a Provider',
+      illustration: 'Modern medical illustration',
+    },
+    quickSearch: {
+      title: 'Quick Search',
+      namePlaceholder: 'Name or specialty...',
+      typePlaceholder: 'Provider type',
+      locationPlaceholder: 'Location...',
+      launchSearch: 'Launch search',
+      doctor: 'Doctor',
+      clinic: 'Clinic',
+      pharmacy: 'Pharmacy',
+      lab: 'Laboratory',
+    },
+    header: {
+      providers: 'Providers',
+      contact: 'Contact',
+      profile: 'My Profile',
+      settings: 'Settings',
+      logout: 'Logout',
+      signup: 'Sign Up',
+      signin: 'Sign In',
     },
     nav: {
       home: 'Home',

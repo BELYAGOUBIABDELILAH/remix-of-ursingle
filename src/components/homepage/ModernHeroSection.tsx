@@ -24,24 +24,24 @@ export const ModernHeroSection = () => {
       <div className="container mx-auto max-w-6xl relative z-10">
         <div className="text-center mb-12 animate-fade-in">
           {/* Main Title */}
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent leading-tight">
-            Trouvez les meilleurs soins<br />à Sidi Bel Abbès
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent leading-tight whitespace-pre-line">
+            {t('hero', 'title')}
           </h1>
           
           {/* Subtitle */}
-          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-10">
-            Découvrez et prenez rendez-vous avec les meilleurs professionnels de santé près de chez vous
+          <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-10 px-4">
+            {t('hero', 'subtitle')}
           </p>
 
           {/* CTA Button */}
           <Button 
             size="lg" 
             onClick={handleSearch}
-            className="bg-gradient-to-r from-primary to-accent hover:opacity-90 text-white px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105"
+            className="bg-gradient-to-r from-primary to-accent hover:opacity-90 text-white px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105"
             aria-label="Search for healthcare provider"
           >
-            <Search className="mr-2 h-5 w-5" />
-            Rechercher un prestataire
+            <Search className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+            {t('hero', 'cta')}
           </Button>
         </div>
 
@@ -52,11 +52,8 @@ export const ModernHeroSection = () => {
               <div className="w-32 h-32 mx-auto mb-6 rounded-full bg-primary/20 flex items-center justify-center">
                 <MapPin className="h-16 w-16 text-primary" />
               </div>
-              <p className="text-2xl font-semibold text-muted-foreground">
-                Illustration médicale moderne
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                (À remplacer par une vraie image/illustration)
+              <p className="text-xl sm:text-2xl font-semibold text-muted-foreground">
+                {t('hero', 'illustration')}
               </p>
             </div>
           </div>
