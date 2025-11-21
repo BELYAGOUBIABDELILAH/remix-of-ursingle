@@ -36,7 +36,7 @@ serve(async (req) => {
       session_id,
       page_url,
       user_agent: req.headers.get('user-agent') || 'unknown',
-      ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip'),
+      ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined,
     };
 
     const { error } = await supabaseClient
