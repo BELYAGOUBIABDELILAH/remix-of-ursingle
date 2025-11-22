@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, Star, ShieldCheck, Phone, Share2, Flag, Calendar, Languages, Award, Image as ImageIcon } from "lucide-react";
 import { getProviderById } from "@/data/providers";
 import { BookingModal } from "@/components/BookingModal";
+import { ReviewSystem } from "@/components/ReviewSystem";
 
 const mockProvider = {
   id: "1",
@@ -28,6 +29,7 @@ const mockProvider = {
 const ProviderProfilePage = () => {
   const { id } = useParams();
   const provider = useMemo(() => mockProvider, [id]);
+  const [bookingOpen, setBookingOpen] = useState(false);
 
   useEffect(() => {
     document.title = `${provider.name} – CityHealth Profile`;
@@ -56,7 +58,10 @@ const ProviderProfilePage = () => {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button>Book Appointment</Button>
+            <Button onClick={() => setBookingOpen(true)}>
+              <Calendar className="h-4 w-4 mr-2" />
+              Book Appointment
+            </Button>
             <Button variant="outline">Add to Favorites</Button>
             <Button variant="ghost"><Share2 className="h-4 w-4" /></Button>
             <Button variant="ghost"><Flag className="h-4 w-4" /></Button>
@@ -97,22 +102,12 @@ const ProviderProfilePage = () => {
           </Card>
 
           {/* Reviews */}
-          <Card className="glass-card">
-            <CardHeader className="py-4"><CardTitle>Recent Reviews</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="border rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-semibold">A{ i }</span>
-                    <span className="text-xs text-muted-foreground">2 days ago</span>
-                    <span className="ml-auto inline-flex items-center gap-1 rating-stars"><Star className="h-4 w-4" /> 5.0</span>
-                  </div>
-                  <p className="text-sm">Excellent care and very professional. Highly recommended.</p>
-                </div>
-              ))}
-              <div className="flex justify-end"><Button variant="outline">View all reviews</Button></div>
-            </CardContent>
-          </Card>
+          <ReviewSystem 
+            providerId={provider.id}
+            providerName={provider.name}
+            canReview={true}
+            isProvider={false}
+          />
         </div>
 
         {/* Right column */}
@@ -153,6 +148,14 @@ const ProviderProfilePage = () => {
           </Card>
         </div>
       </section>
+
+      {/* Booking Modal */}
+      <BookingModal 
+        open={bookingOpen}
+        onOpenChange={setBookingOpen}
+        providerName={provider.name}
+        providerId={provider.id}
+      />
     </main>
   );
 };

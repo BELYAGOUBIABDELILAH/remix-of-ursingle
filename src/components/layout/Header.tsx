@@ -16,6 +16,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { NotificationCenter } from '@/components/NotificationCenter';
 import { AuthModal } from '@/components/AuthModal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { AIHealthAssistant } from '@/components/AIHealthAssistant';
 
 export const Header = () => {
   const { theme, toggleTheme } = useTheme();
