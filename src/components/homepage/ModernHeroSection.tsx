@@ -45,17 +45,14 @@ export const ModernHeroSection = () => {
           </Button>
         </div>
 
-        {/* Hero Image/Illustration Placeholder */}
+        {/* Hero Image/Illustration */}
         <div className="mt-16 relative">
-          <div className="aspect-video max-w-4xl mx-auto rounded-3xl bg-gradient-to-br from-primary/20 to-accent/20 shadow-2xl backdrop-blur-sm border border-primary/20 flex items-center justify-center">
-            <div className="text-center p-8">
-              <div className="w-32 h-32 mx-auto mb-6 rounded-full bg-primary/20 flex items-center justify-center">
-                <MapPin className="h-16 w-16 text-primary" />
-              </div>
-              <p className="text-xl sm:text-2xl font-semibold text-muted-foreground">
-                {t('hero', 'illustration')}
-              </p>
-            </div>
+          <div className="aspect-video max-w-4xl mx-auto rounded-3xl shadow-2xl overflow-hidden border border-primary/20 animate-fade-in">
+            <img 
+              src="/src/assets/hero-healthcare.png" 
+              alt="Professional healthcare consultation illustration"
+              className="w-full h-full object-cover"
+            />
           </div>
         </div>
       </div>
