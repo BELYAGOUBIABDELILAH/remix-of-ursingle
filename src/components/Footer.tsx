@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
+import { AIHealthAssistant } from '@/components/AIHealthAssistant';
 
 const Footer = () => {
   const { t, language, setLanguage } = useLanguage();
@@ -211,6 +212,9 @@ const Footer = () => {
           </div>
         </div>
       </div>
+      
+      {/* AI Health Assistant - Available from footer too */}
+      <AIHealthAssistant />
     </footer>
   );
 };
