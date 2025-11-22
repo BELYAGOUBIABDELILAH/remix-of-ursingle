@@ -8,6 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLanguage } from '@/contexts/LanguageContext';
 import AnimatedTransition from '@/components/AnimatedTransition';
+import { VerifiedBadge } from '@/components/trust/VerifiedBadge';
+import { CertificationsDisplay } from '@/components/trust/CertificationsDisplay';
 
 const ProvidersPage = () => {
   const { t } = useLanguage();
@@ -63,7 +65,19 @@ const ProvidersPage = () => {
             <div className="grid grid-cols-2 gap-4">
               <Input placeholder="Ville" />
               <Input placeholder="Code postal" />
-            </div>
+      </div>
+
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle>Certifications Requises</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            En tant que prestataire vérifié, vous devrez fournir les certifications suivantes :
+          </p>
+          <CertificationsDisplay compact />
+        </CardContent>
+      </Card>
           </CardContent>
         </Card>
       </div>
@@ -114,10 +128,7 @@ const ProvidersPage = () => {
           <h2 className="text-2xl font-bold">Tableau de bord</h2>
           <p className="text-muted-foreground">Dr. Ahmed Benali - Cardiologue</p>
         </div>
-        <Badge variant="secondary" className="gap-2">
-          <Star className="h-4 w-4" />
-          Vérifié
-        </Badge>
+        <VerifiedBadge type="verified" size="lg" />
       </div>
 
       <div className="grid md:grid-cols-3 gap-6 mb-8">

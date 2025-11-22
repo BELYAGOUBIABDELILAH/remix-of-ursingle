@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Star, MapPin, Shield, Clock, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Star, MapPin, Clock, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 import { Link } from 'react-router-dom';
+import { VerifiedBadge } from '@/components/trust/VerifiedBadge';
 
 interface Provider {
   id: string;
@@ -177,10 +178,7 @@ export const FeaturedProviders = () => {
                   </div>
                   
                   {provider.isVerified && (
-                    <Badge variant="secondary" className="gap-1">
-                      <Shield size={12} />
-                      {t('providers.verified')}
-                    </Badge>
+                    <VerifiedBadge type="verified" size="sm" />
                   )}
                 </div>
 

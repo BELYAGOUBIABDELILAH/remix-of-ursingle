@@ -7,8 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import AnimatedTransition from "@/components/AnimatedTransition";
-import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
 import MobileAppSection from "@/components/MobileAppSection";
+import { TestimonialsCarousel } from "@/components/trust/TestimonialsCarousel";
+import { SecuritySection } from "@/components/trust/SecuritySection";
+import { CertificationsDisplay } from "@/components/trust/CertificationsDisplay";
+import { VerifiedBadge } from "@/components/trust/VerifiedBadge";
 import MapSection from "@/components/MapSection";
 import Footer from "@/components/Footer";
 import ParticleBackground from "@/components/ParticleBackground";
@@ -262,7 +265,7 @@ const Index = () => {
                         <div className="flex items-center gap-2 mb-2">
                           <h3 className="font-semibold text-lg">{provider.name}</h3>
                           {provider.isVerified && (
-                            <Badge variant="secondary" className="text-xs">✓ Verified</Badge>
+                            <VerifiedBadge type="verified" size="sm" />
                           )}
                         </div>
                         <p className="text-muted-foreground text-sm">{provider.type}</p>
@@ -349,7 +352,25 @@ const Index = () => {
         </section>
 
         {/* Testimonials Section */}
-        <TestimonialsSection showTestimonials={true} />
+        <TestimonialsCarousel />
+
+        {/* Security & Trust Section */}
+        <SecuritySection />
+
+        {/* Certifications */}
+        <section className="py-16 px-4">
+          <div className="container mx-auto max-w-6xl">
+            <div className="text-center mb-12 animate-slide-up">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                Certifications & Conformité
+              </h2>
+              <p className="text-muted-foreground text-lg">
+                CityHealth respecte les normes les plus strictes en matière de santé numérique
+              </p>
+            </div>
+            <CertificationsDisplay />
+          </div>
+        </section>
 
         {/* Map Section */}
         <MapSection />
