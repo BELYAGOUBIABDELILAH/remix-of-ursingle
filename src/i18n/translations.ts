@@ -48,6 +48,7 @@ export interface Translations {
     logout: string;
     signup: string;
     signin: string;
+    dashboard: string;
   };
 
   // Navigation
@@ -172,6 +173,7 @@ export const translations: Record<Language, Translations> = {
       logout: 'Déconnexion',
       signup: 'Inscription',
       signin: 'Connexion',
+      dashboard: 'Tableau de bord',
     },
     nav: {
       home: 'Accueil',
@@ -283,6 +285,7 @@ export const translations: Record<Language, Translations> = {
       logout: 'تسجيل الخروج',
       signup: 'إنشاء حساب',
       signin: 'تسجيل الدخول',
+      dashboard: 'لوحة التحكم',
     },
     nav: {
       home: 'الرئيسية',
@@ -394,6 +397,7 @@ export const translations: Record<Language, Translations> = {
       logout: 'Logout',
       signup: 'Sign Up',
       signin: 'Sign In',
+      dashboard: 'Dashboard',
     },
     nav: {
       home: 'Home',
