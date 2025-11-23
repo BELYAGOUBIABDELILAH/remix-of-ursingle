@@ -64,8 +64,10 @@ export const VerifiedBadge = ({
   return (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger asChild>
-          {badge}
+        <TooltipTrigger>
+          <div>
+            {badge}
+          </div>
         </TooltipTrigger>
         <TooltipContent className="max-w-xs">
           <p>{config.tooltip}</p>
