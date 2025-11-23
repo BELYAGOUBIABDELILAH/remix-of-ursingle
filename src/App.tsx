@@ -31,6 +31,7 @@ import ProviderRegister from "./pages/ProviderRegister";
 import ProviderDashboard from "./pages/ProviderDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserProfilePage from "./pages/UserProfilePage";
+import PatientDashboard from "./pages/PatientDashboard";
 import AIChatWidget from "./components/AIChatWidget";
 import { AIChatbot } from "./components/AIChatbot";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -214,6 +215,16 @@ const AppRoutes = () => {
           <PageTransition>
             <ProtectedRoute>
               <UserProfilePage />
+            </ProtectedRoute>
+          </PageTransition>
+        } 
+      />
+      <Route 
+        path="/dashboard" 
+        element={
+          <PageTransition>
+            <ProtectedRoute requireRole="patient">
+              <PatientDashboard />
             </ProtectedRoute>
           </PageTransition>
         } 

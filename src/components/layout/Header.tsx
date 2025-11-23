@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Moon, Sun, Menu, LogOut, Settings, User as UserIcon } from 'lucide-react';
+import { Moon, Sun, Menu, LogOut, Settings, User as UserIcon, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -16,7 +16,6 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { NotificationCenter } from '@/components/NotificationCenter';
 import { AuthModal } from '@/components/AuthModal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { AIHealthAssistant } from '@/components/AIHealthAssistant';
 
 export const Header = () => {
   const { theme, toggleTheme } = useTheme();
@@ -147,6 +146,14 @@ export const Header = () => {
                       {t('header', 'profile')}
                     </Link>
                   </DropdownMenuItem>
+                  {user?.role === 'patient' && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/dashboard" className="cursor-pointer">
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Tableau de bord
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem asChild>
                     <Link to="/settings" className="cursor-pointer">
                       <Settings className="mr-2 h-4 w-4" />
