@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Moon, Sun, Menu, LogOut, Settings, User as UserIcon, Calendar } from 'lucide-react';
+import { Moon, Sun, Menu, LogOut, Settings, User as UserIcon, Calendar, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -41,6 +41,7 @@ export const Header = () => {
   const navLinks = [
     { to: '/', label: t('nav', 'home') },
     { to: '/search', label: t('header', 'providers') },
+    { to: '/ai-health-chat', label: 'Assistant IA', icon: Bot },
     { to: '/emergency', label: t('nav', 'emergency') },
     { to: '/contact', label: t('header', 'contact') },
   ];
@@ -68,8 +69,9 @@ export const Header = () => {
             <Link 
               key={link.to}
               to={link.to} 
-              className="text-foreground/80 hover:text-primary transition-colors font-medium"
+              className="text-foreground/80 hover:text-primary transition-colors font-medium flex items-center gap-2"
             >
+              {link.icon && <link.icon className="h-4 w-4" />}
               {link.label}
             </Link>
           ))}
