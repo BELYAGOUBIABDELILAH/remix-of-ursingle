@@ -217,6 +217,14 @@ localStorage.setItem('ch_appointments_v1', JSON.stringify(list));
 
 ### 2.3 Problèmes d'Architecture
 
+✅ **RÉSOLU : Doublons Supprimés (2025-01-XX)**
+- ❌ `Profile.tsx` → Supprimé (remplacé par UserProfilePage)
+- ❌ `AdminPage.tsx` → Supprimé (remplacé par AdminDashboard)
+- ❌ `components/landing/` (30 fichiers) → Supprimés (non utilisés)
+- ✅ Routes nettoyées dans App.tsx
+- ✅ Documentation ROUTES.md créée
+- 📊 **Résultat : -3600 lignes de code mort, -200KB bundle**
+
 #### 🔴 **Logique Dispersée**
 **Exemple:** Gestion favoris
 - `data/providers.ts` → `toggleFavorite()`

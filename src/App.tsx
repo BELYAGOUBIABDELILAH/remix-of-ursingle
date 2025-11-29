@@ -16,13 +16,11 @@ import MapPage from "./pages/MapPage";
 import ContactPage from "./pages/ContactPage";
 import FavoritesPage from "./pages/FavoritesPage";
 import NotFound from "./pages/NotFound";
-import Profile from "./pages/Profile";
 import Import from "./pages/Import";
 import SearchPage from "./pages/SearchPage";
 import ProvidersPage from "./pages/ProvidersPage";
 import Settings from "./pages/Settings";
 import ManagePage from "./pages/ManagePage";
-import AdminPage from "./pages/AdminPage";
 import { Header } from "./components/layout/Header";
 import FloatingSidebar from "./components/FloatingSidebar";
 import EmergencyPage from "./pages/EmergencyPage";
@@ -93,14 +91,6 @@ const AppRoutes = () => {
         } 
       />
       <Route 
-        path="/profile" 
-        element={
-          <PageTransition>
-            <Profile />
-          </PageTransition>
-        } 
-      />
-      <Route 
         path="/import" 
         element={
           <PageTransition>
@@ -133,15 +123,7 @@ const AppRoutes = () => {
         } 
       />
       <Route 
-        path="/admin" 
-        element={
-          <PageTransition>
-            <AdminPage />
-          </PageTransition>
-        } 
-      />
-      <Route 
-        path="/map" 
+        path="/map"
         element={
           <PageTransition>
             <MapPage />
