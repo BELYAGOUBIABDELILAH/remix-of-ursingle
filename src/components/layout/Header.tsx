@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { Moon, Sun, Menu, LogOut, Settings, User as UserIcon, Calendar, Bot } from 'lucide-react';
+import { Menu, LogOut, Settings, User as UserIcon, Calendar, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Link } from 'react-router-dom';
@@ -18,7 +17,6 @@ import { AuthModal } from '@/components/AuthModal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export const Header = () => {
-  const { theme, toggleTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
   const { user, isAuthenticated, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -79,17 +77,6 @@ export const Header = () => {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          {/* Theme Toggle - Hidden on Mobile */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            className="hover:bg-accent hidden sm:flex"
-            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          </Button>
-
           {/* Language Selector - Hidden on Mobile */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -220,38 +207,26 @@ export const Header = () => {
                   </Link>
                 ))}
                 <div className="border-t border-border/40 pt-4 mt-4 space-y-3">
-                  {/* Mobile Theme & Language Toggles */}
-                  <div className="flex gap-2 mb-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={toggleTheme}
-                      className="flex-1"
-                      aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                    >
-                      {theme === 'dark' ? <Sun size={16} className="mr-2" /> : <Moon size={16} className="mr-2" />}
-                      {theme === 'dark' ? 'Light' : 'Dark'}
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="flex-1">
-                          <span className="mr-2">{languageLabels[language].flag}</span>
-                          {languageLabels[language].label}
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        {Object.entries(languageLabels).map(([lang, { flag, label }]) => (
-                          <DropdownMenuItem
-                            key={lang}
-                            onClick={() => setLanguage(lang as 'fr' | 'ar' | 'en')}
-                          >
-                            <span className="mr-2">{flag}</span>
-                            {label}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+                  {/* Mobile Language Toggle */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="w-full">
+                        <span className="mr-2">{languageLabels[language].flag}</span>
+                        {languageLabels[language].label}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      {Object.entries(languageLabels).map(([lang, { flag, label }]) => (
+                        <DropdownMenuItem
+                          key={lang}
+                          onClick={() => setLanguage(lang as 'fr' | 'ar' | 'en')}
+                        >
+                          <span className="mr-2">{flag}</span>
+                          {label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
 
                   {isAuthenticated ? (
                     <>
