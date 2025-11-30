@@ -6,10 +6,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { ThemeProvider } from "@/contexts/ThemeContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import NewIndex from "./pages/NewIndex";
+import AntigravityIndex from "./pages/AntigravityIndex";
 import WhyPage from "./pages/WhyPage";
 import HowPage from "./pages/HowPage";
 import MapPage from "./pages/MapPage";
@@ -62,7 +61,7 @@ const AppRoutes = () => {
         path="/" 
         element={
           <PageTransition>
-            <NewIndex />
+            <AntigravityIndex />
           </PageTransition>
         } 
       />
@@ -235,24 +234,22 @@ const AppRoutes = () => {
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <LanguageProvider>
-          <AuthProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <SeedInit />
-                <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-secondary/10 animate-gradient">
-                  <FloatingSidebar />
-                  <AIChatbot />
-                  <AppRoutes />
-                </div>
-              </BrowserRouter>
-            </TooltipProvider>
-          </AuthProvider>
-        </LanguageProvider>
-      </ThemeProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <SeedInit />
+              <div className="min-h-screen bg-white">
+                <FloatingSidebar />
+                <AIChatbot />
+                <AppRoutes />
+              </div>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AuthProvider>
+      </LanguageProvider>
     </QueryClientProvider>
   </ErrorBoundary>
 );
