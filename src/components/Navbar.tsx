@@ -8,9 +8,7 @@ import {
   User, 
   Settings, 
   LogOut, 
-  Moon, 
-  Sun, 
-  Heart, 
+  Heart,
   MapPin, 
   Phone, 
   Users, 
@@ -19,7 +17,6 @@ import {
 import { useRippleEffect } from '@/lib/animations';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTheme } from '@/contexts/ThemeContext';
 import { AuthModal } from '@/components/AuthModal';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -136,7 +133,6 @@ export const Navbar = () => {
   const [active, setActive] = useState('home');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const { isAuthenticated, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   
   const handleOpenAuthModal = () => {
     setIsAuthModalOpen(true);
@@ -209,22 +205,6 @@ export const Navbar = () => {
                 onClick={() => handleNavItemClick(item.id)}
               />
             ))}
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-lg ml-1"
-                  onClick={toggleTheme}
-                >
-                  {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Toggle {theme === 'dark' ? 'light' : 'dark'} mode</p>
-              </TooltipContent>
-            </Tooltip>
             
             {isAuthenticated ? (
               <Tooltip>

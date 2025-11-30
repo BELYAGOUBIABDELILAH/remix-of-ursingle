@@ -348,9 +348,30 @@ Basé sur les réponses user, implémenter :
 
 ## 🐛 Issues Connus
 
-1. **Mapbox-gl package**: Tentative de suppression a échoué (package non trouvé). À vérifier manuellement dans package.json
-2. **Old Index pages**: `NewIndex.tsx` existe toujours, à supprimer après validation complète
-3. **ThemeContext references**: Chercher tous les `useTheme()` dans le codebase et les supprimer
+1. ~~Mapbox-gl package: Tentative de suppression a échoué~~ ✅ RÉSOLU
+2. ~~Old Index pages: `NewIndex.tsx` existe toujours~~ → À supprimer après validation complète
+3. ~~ThemeContext references: Chercher tous les `useTheme()` dans le codebase~~ ✅ RÉSOLU
+   - FloatingSidebar.tsx - Supprimé toggle theme
+   - Navbar.tsx - Supprimé toggle theme
+   - Header.tsx - Supprimé toggle theme
+   - sonner.tsx - Hardcodé theme="light"
+
+---
+
+## ✅ Fix Critique Appliqué (2025-01-XX)
+
+### Problème: `useTheme must be used within a ThemeProvider`
+
+**Cause:** ThemeProvider supprimé de App.tsx mais 4 composants utilisaient encore useTheme()
+
+**Fichiers corrigés:**
+- ✅ `src/components/FloatingSidebar.tsx` - Supprimé toggle dark mode
+- ✅ `src/components/Navbar.tsx` - Supprimé toggle dark mode
+- ✅ `src/components/layout/Header.tsx` - Supprimé toggle dark mode (desktop + mobile)
+- ✅ `src/components/ui/sonner.tsx` - Hardcodé theme="light"
+- ✅ Supprimé imports `Moon`, `Sun` inutilisés
+
+**Résultat:** App fonctionne maintenant en light mode uniquement (Antigravity design)
 
 ---
 
