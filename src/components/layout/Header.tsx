@@ -3,7 +3,7 @@ import { Menu, LogOut, Settings, User as UserIcon, Calendar, Bot } from 'lucide-
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,15 +13,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { NotificationCenter } from '@/components/NotificationCenter';
-import { AuthModal } from '@/components/AuthModal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export const Header = () => {
   const { language, setLanguage, t } = useLanguage();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { profile, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authModalTab, setAuthModalTab] = useState<'login' | 'signup'>('login');
 
   const languageLabels = {
     fr: { flag: '🇫🇷', label: 'Français' },
@@ -29,8 +27,8 @@ export const Header = () => {
     en: { flag: '🇬🇧', label: 'English' },
   };
 
-  const userInitials = user?.name
-    .split(' ')
+  const userInitials = profile?.full_name
+    ?.split(' ')
     .map(n => n[0])
     .join('')
     .toUpperCase()
@@ -117,16 +115,16 @@ export const Header = () => {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user?.avatar} />
+                      <AvatarImage src={profile?.avatar_url || undefined} />
                       <AvatarFallback>{userInitials}</AvatarFallback>
                     </Avatar>
-                    <span className="hidden lg:inline">{user?.name}</span>
+                    <span className="hidden lg:inline">{profile?.full_name}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="px-2 py-1.5">
-                    <p className="text-sm font-medium">{user?.name}</p>
-                    <p className="text-xs text-muted-foreground">{user?.email}</p>
+                    <p className="text-sm font-medium">{profile?.full_name}</p>
+                    <p className="text-xs text-muted-foreground">{profile?.email}</p>
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
@@ -135,7 +133,7 @@ export const Header = () => {
                       {t('header', 'profile')}
                     </Link>
                   </DropdownMenuItem>
-                  {user?.role === 'patient' && (
+                  {profile?.roles.includes('patient') && (
                     <DropdownMenuItem asChild>
                       <Link to="/dashboard" className="cursor-pointer">
                         <Calendar className="mr-2 h-4 w-4" />
@@ -161,20 +159,14 @@ export const Header = () => {
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  onClick={() => {
-                    setAuthModalTab('login');
-                    setAuthModalOpen(true);
-                  }}
+                  onClick={() => navigate('/auth')}
                 >
                   {t('header', 'signin')}
                 </Button>
                 <Button 
                   size="sm" 
                   className="bg-gradient-to-r from-primary to-accent hover:opacity-90"
-                  onClick={() => {
-                    setAuthModalTab('signup');
-                    setAuthModalOpen(true);
-                  }}
+                  onClick={() => navigate('/auth')}
                 >
                   {t('header', 'signup')}
                 </Button>
@@ -247,8 +239,7 @@ export const Header = () => {
                         variant="outline" 
                         className="w-full" 
                         onClick={() => { 
-                          setAuthModalTab('login'); 
-                          setAuthModalOpen(true); 
+                          navigate('/auth');
                           setMobileMenuOpen(false); 
                         }}
                       >
@@ -257,8 +248,7 @@ export const Header = () => {
                       <Button 
                         className="w-full bg-gradient-to-r from-primary to-accent" 
                         onClick={() => { 
-                          setAuthModalTab('signup'); 
-                          setAuthModalOpen(true); 
+                          navigate('/auth');
                           setMobileMenuOpen(false); 
                         }}
                       >
@@ -272,12 +262,6 @@ export const Header = () => {
           </Sheet>
         </div>
       </div>
-
-      <AuthModal 
-        open={authModalOpen} 
-        onOpenChange={setAuthModalOpen} 
-        defaultTab={authModalTab}
-      />
     </header>
   );
 };

@@ -17,7 +17,7 @@ import { format } from 'date-fns';
 import { fr, ar, enUS } from 'date-fns/locale';
 
 const PatientDashboard = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { profile, isAuthenticated } = useAuth();
   const { t, language } = useLanguage();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -25,18 +25,18 @@ const PatientDashboard = () => {
   const locales = { fr, ar, en: enUS };
 
   useEffect(() => {
-    if (user?.email) {
+    if (profile?.email) {
       loadData();
     }
-  }, [user]);
+  }, [profile]);
 
   const loadData = () => {
-    if (user?.email) {
-      const userAppointments = getAppointmentsByPatient(user.email);
+    if (profile?.email) {
+      const userAppointments = getAppointmentsByPatient(profile.email);
       setAppointments(userAppointments);
       
       const allReviews = getReviews();
-      const userReviews = allReviews.filter(r => r.patientId === user.id);
+      const userReviews = allReviews.filter(r => r.patientId === profile.id);
       setReviews(userReviews);
     }
   };
@@ -102,7 +102,7 @@ const PatientDashboard = () => {
               Mon Tableau de Bord
             </h1>
             <p className="text-muted-foreground">
-              Bienvenue, {user?.name}
+              Bienvenue, {profile?.full_name}
             </p>
           </div>
 

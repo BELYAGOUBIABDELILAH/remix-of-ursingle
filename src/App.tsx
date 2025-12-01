@@ -9,6 +9,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import AntigravityIndex from "./pages/AntigravityIndex";
+import AuthPage from "./pages/AuthPage";
 import WhyPage from "./pages/WhyPage";
 import HowPage from "./pages/HowPage";
 import MapPage from "./pages/MapPage";
@@ -62,6 +63,14 @@ const AppRoutes = () => {
         element={
           <PageTransition>
             <AntigravityIndex />
+          </PageTransition>
+        } 
+      />
+      <Route 
+        path="/auth" 
+        element={
+          <PageTransition>
+            <AuthPage />
           </PageTransition>
         } 
       />
