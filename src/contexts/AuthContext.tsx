@@ -1,80 +1,130 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { User, Session, AuthError } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-export interface User {
+export type UserRole = 'patient' | 'provider' | 'admin';
+
+export interface UserProfile {
   id: string;
   email: string;
-  name: string;
-  avatar?: string;
-  role: 'patient' | 'provider' | 'admin';
-  createdAt: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  roles: UserRole[];
 }
 
 interface AuthContextType {
   user: User | null;
+  profile: UserProfile | null;
+  session: Session | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string, role: 'patient' | 'provider') => Promise<void>;
+  signup: (email: string, password: string, fullName: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
-  updateProfile: (updates: Partial<User>) => Promise<void>;
+  updateProfile: (updates: { full_name?: string; avatar_url?: string }) => Promise<void>;
+  hasRole: (role: UserRole) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'cityhealth_auth_user';
-const USERS_KEY = 'cityhealth_users';
-
-const getMockUsers = (): User[] => {
-  try {
-    const stored = localStorage.getItem(USERS_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-};
-
-const saveMockUsers = (users: User[]) => {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-};
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          setUser(JSON.parse(stored));
-        }
-      } catch (error) {
-        console.error('Auth check failed:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // Fetch user profile and roles
+  const fetchUserProfile = async (userId: string, userEmail: string) => {
+    try {
+      // Fetch profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-    checkAuth();
+      if (profileError) throw profileError;
+
+      // Fetch roles
+      const { data: rolesData, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId);
+
+      if (rolesError) throw rolesError;
+
+      const roles = rolesData.map(r => r.role as UserRole);
+
+      setProfile({
+        id: profileData.id,
+        email: userEmail, // Use email from auth user
+        full_name: profileData.full_name,
+        avatar_url: profileData.avatar_url,
+        roles,
+      });
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      setProfile(null);
+    }
+  };
+
+  useEffect(() => {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+
+        // Fetch profile when user signs in
+        if (currentSession?.user) {
+          // Use setTimeout to avoid potential deadlock
+          setTimeout(() => {
+            fetchUserProfile(currentSession.user.id, currentSession.user.email || '');
+          }, 0);
+        } else {
+          setProfile(null);
+        }
+
+        // Handle specific auth events
+        if (event === 'SIGNED_OUT') {
+          setProfile(null);
+        }
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      
+      if (currentSession?.user) {
+        fetchUserProfile(currentSession.user.id, currentSession.user.email || '');
+      }
+      
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const users = getMockUsers();
-      const foundUser = users.find(u => u.email === email);
-      
-      if (!foundUser) {
-        throw new Error('Email ou mot de passe incorrect');
-      }
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-      setUser(foundUser);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(foundUser));
+      if (error) throw error;
+
       toast.success('Connexion réussie!');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Échec de la connexion';
+      const authError = error as AuthError;
+      const message = authError.message === 'Invalid login credentials'
+        ? 'Email ou mot de passe incorrect'
+        : authError.message;
       toast.error(message);
       throw error;
     } finally {
@@ -82,31 +132,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signup = async (email: string, password: string, name: string, role: 'patient' | 'provider') => {
+  const signup = async (email: string, password: string, fullName: string) => {
     setIsLoading(true);
     try {
-      const users = getMockUsers();
+      const redirectUrl = `${window.location.origin}/`;
       
-      if (users.some(u => u.email === email)) {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            full_name: fullName,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.user?.identities?.length === 0) {
         throw new Error('Un compte existe déjà avec cet email');
       }
 
-      const newUser: User = {
-        id: crypto.randomUUID(),
-        email,
-        name,
-        role,
-        createdAt: new Date().toISOString(),
-      };
-
-      users.push(newUser);
-      saveMockUsers(users);
-      
-      setUser(newUser);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
-      toast.success('Compte créé avec succès!');
+      toast.success('Compte créé avec succès! Vérifiez votre email pour confirmer.');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Échec de l\'inscription';
+      const authError = error as AuthError;
+      const message = authError.message || 'Échec de l\'inscription';
       toast.error(message);
       throw error;
     } finally {
@@ -117,30 +168,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const loginWithGoogle = async () => {
     setIsLoading(true);
     try {
-      const mockGoogleUser: User = {
-        id: crypto.randomUUID(),
-        email: 'demo@gmail.com',
-        name: 'Utilisateur Demo',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=demo',
-        role: 'patient',
-        createdAt: new Date().toISOString(),
-      };
-
-      const users = getMockUsers();
-      const existingUser = users.find(u => u.email === mockGoogleUser.email);
+      const redirectUrl = `${window.location.origin}/`;
       
-      const finalUser = existingUser || mockGoogleUser;
-      
-      if (!existingUser) {
-        users.push(mockGoogleUser);
-        saveMockUsers(users);
-      }
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+        },
+      });
 
-      setUser(finalUser);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(finalUser));
-      toast.success('Connexion Google réussie!');
+      if (error) throw error;
     } catch (error) {
-      toast.error('Échec de la connexion Google');
+      const authError = error as AuthError;
+      toast.error(authError.message || 'Échec de la connexion Google');
       throw error;
     } finally {
       setIsLoading(false);
@@ -149,41 +189,58 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
       setUser(null);
-      localStorage.removeItem(STORAGE_KEY);
+      setSession(null);
+      setProfile(null);
+      
       toast.success('Déconnexion réussie');
     } catch (error) {
-      toast.error('Échec de la déconnexion');
+      const authError = error as AuthError;
+      toast.error(authError.message || 'Échec de la déconnexion');
       throw error;
     }
   };
 
-  const updateProfile = async (updates: Partial<User>) => {
+  const updateProfile = async (updates: { full_name?: string; avatar_url?: string }) => {
     if (!user) return;
 
     try {
-      const updatedUser = { ...user, ...updates };
-      const users = getMockUsers();
-      const index = users.findIndex(u => u.id === user.id);
-      
-      if (index !== -1) {
-        users[index] = updatedUser;
-        saveMockUsers(users);
-      }
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
 
-      setUser(updatedUser);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedUser));
+      if (error) throw error;
+
+      // Refresh profile
+      if (user.email) {
+        await fetchUserProfile(user.id, user.email);
+      }
+      
       toast.success('Profil mis à jour');
     } catch (error) {
+      console.error('Profile update error:', error);
       toast.error('Échec de la mise à jour du profil');
       throw error;
     }
+  };
+
+  const hasRole = (role: UserRole): boolean => {
+    return profile?.roles.includes(role) ?? false;
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        profile,
+        session,
         isAuthenticated: !!user,
         isLoading,
         login,
@@ -191,6 +248,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         loginWithGoogle,
         logout,
         updateProfile,
+        hasRole,
       }}
     >
       {children}

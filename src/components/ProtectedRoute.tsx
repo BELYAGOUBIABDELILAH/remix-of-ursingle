@@ -1,14 +1,14 @@
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, UserRole } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requireRole?: 'patient' | 'provider' | 'admin';
+  requireRole?: UserRole;
 }
 
 export const ProtectedRoute = ({ children, requireRole }: ProtectedRouteProps) => {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, hasRole } = useAuth();
 
   if (isLoading) {
     return (
@@ -19,10 +19,12 @@ export const ProtectedRoute = ({ children, requireRole }: ProtectedRouteProps) =
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/auth" replace />;
   }
 
-  if (requireRole && user?.role !== requireRole) {
+  // Server-side role validation happens via RLS and has_role() function
+  // Client-side check is for UX only - real security is enforced by database policies
+  if (requireRole && !hasRole(requireRole)) {
     return <Navigate to="/" replace />;
   }
 

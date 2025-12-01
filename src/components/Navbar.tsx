@@ -17,7 +17,7 @@ import {
 import { useRippleEffect } from '@/lib/animations';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
-import { AuthModal } from '@/components/AuthModal';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -131,15 +131,11 @@ const SubMenuItem = ({ to, icon, label, active, onClick }: NavItemProps) => {
 
 export const Navbar = () => {
   const [active, setActive] = useState('home');
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const navigate = useNavigate();
   const { isAuthenticated, logout } = useAuth();
   
-  const handleOpenAuthModal = () => {
-    setIsAuthModalOpen(true);
-  };
-
-  const handleCloseAuthModal = () => {
-    setIsAuthModalOpen(false);
+  const handleOpenAuth = () => {
+    navigate('/auth');
   };
 
   const handleNavItemClick = (id: string) => {
@@ -228,7 +224,7 @@ export const Navbar = () => {
                   <Button
                     variant="ghost"
                     className="flex items-center gap-2 px-4 py-3 rounded-lg hover:bg-primary hover:text-primary-foreground"
-                    onClick={handleOpenAuthModal}
+                    onClick={handleOpenAuth}
                   >
                     <LogIn size={20} />
                     {active === 'login' && <span className="font-medium">Login</span>}
@@ -242,8 +238,6 @@ export const Navbar = () => {
           </nav>
         </header>
       </TooltipProvider>
-      
-      <AuthModal open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen} />
     </>
   );
 };

@@ -12,25 +12,24 @@ import { Switch } from '@/components/ui/switch';
 import { useNotifications } from '@/hooks/useNotifications';
 
 export default function UserProfilePage() {
-  const { user, updateProfile, logout } = useAuth();
+  const { profile, updateProfile, logout } = useAuth();
   const { preferences, updatePreferences } = useNotifications();
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(user?.name || '');
-  const [email, setEmail] = useState(user?.email || '');
+  const [fullName, setFullName] = useState(profile?.full_name || '');
 
-  if (!user) return null;
+  if (!profile) return null;
 
   const handleSave = async () => {
-    await updateProfile({ name, email });
+    await updateProfile({ full_name: fullName });
     setIsEditing(false);
   };
 
-  const initials = user.name
-    .split(' ')
+  const initials = profile.full_name
+    ?.split(' ')
     .map(n => n[0])
     .join('')
     .toUpperCase()
-    .slice(0, 2);
+    .slice(0, 2) || 'U';
 
   return (
     <div className="min-h-screen bg-background">
@@ -57,7 +56,7 @@ export default function UserProfilePage() {
               <CardContent className="space-y-6">
                 <div className="flex items-center gap-6">
                   <Avatar className="h-20 w-20">
-                    <AvatarImage src={user.avatar} />
+                    <AvatarImage src={profile.avatar_url || undefined} />
                     <AvatarFallback className="text-lg">{initials}</AvatarFallback>
                   </Avatar>
                   <div>
@@ -73,8 +72,8 @@ export default function UserProfilePage() {
                       <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
                         disabled={!isEditing}
                         className="pl-10"
                       />
@@ -88,27 +87,25 @@ export default function UserProfilePage() {
                       <Input
                         id="email"
                         type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        disabled={!isEditing}
-                        className="pl-10"
+                        value={profile.email}
+                        disabled
+                        className="pl-10 bg-muted"
                       />
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      L'email ne peut pas être modifié
+                    </p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Type de compte</Label>
-                    <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                    <Label>Rôles</Label>
+                    <div className="flex flex-wrap gap-2 p-3 bg-muted rounded-lg">
                       <Shield className="h-4 w-4 text-primary" />
-                      <span className="capitalize">{user.role}</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Membre depuis</Label>
-                    <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-                      <Calendar className="h-4 w-4 text-primary" />
-                      <span>{new Date(user.createdAt).toLocaleDateString('fr-FR')}</span>
+                      {profile.roles.map(role => (
+                        <span key={role} className="capitalize px-2 py-1 bg-primary/10 rounded text-sm">
+                          {role}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 </div>
