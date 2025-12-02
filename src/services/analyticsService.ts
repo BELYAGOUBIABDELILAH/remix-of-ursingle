@@ -1,3 +1,6 @@
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
 interface AnalyticsEventData {
   event_type: string;
   event_data?: Record<string, any>;
@@ -9,6 +12,7 @@ class AnalyticsService {
   private queue: AnalyticsEventData[] = [];
   private flushInterval: number = 5000; // 5 seconds
   private maxQueueSize: number = 10;
+  private collectionName = 'analytics_events';
 
   constructor() {
     this.sessionId = this.getOrCreateSessionId();
@@ -47,24 +51,15 @@ class AnalyticsService {
     this.queue = [];
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analytics-track`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({
-            ...events[0],
-            session_id: this.sessionId,
-            page_url: window.location.href,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        console.error('Analytics tracking failed:', response.statusText);
+      // Store analytics events in Firestore
+      for (const event of events) {
+        await addDoc(collection(db, this.collectionName), {
+          ...event,
+          session_id: this.sessionId,
+          page_url: window.location.href,
+          user_agent: navigator.userAgent,
+          timestamp: serverTimestamp()
+        });
       }
     } catch (error) {
       console.error('Analytics error:', error);

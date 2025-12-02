@@ -1,6 +1,25 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, Session, AuthError } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { 
+  User,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  updateProfile as firebaseUpdateProfile
+} from 'firebase/auth';
+import { 
+  doc, 
+  setDoc, 
+  getDoc, 
+  updateDoc, 
+  collection, 
+  query, 
+  where, 
+  getDocs,
+  serverTimestamp 
+} from 'firebase/firestore';
+import { auth, db, googleProvider } from '@/lib/firebase';
 import { toast } from 'sonner';
 
 export type UserRole = 'patient' | 'provider' | 'admin';
@@ -16,7 +35,7 @@ export interface UserProfile {
 interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
-  session: Session | null;
+  session: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -31,35 +50,50 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch user profile and roles
+  // Fetch user profile and roles from Firestore
   const fetchUserProfile = async (userId: string, userEmail: string) => {
     try {
       // Fetch profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      const profileRef = doc(db, 'profiles', userId);
+      const profileSnap = await getDoc(profileRef);
 
-      if (profileError) throw profileError;
+      if (!profileSnap.exists()) {
+        // Create profile if it doesn't exist
+        await setDoc(profileRef, {
+          id: userId,
+          email: userEmail,
+          full_name: null,
+          avatar_url: null,
+          created_at: serverTimestamp(),
+          updated_at: serverTimestamp()
+        });
+        
+        setProfile({
+          id: userId,
+          email: userEmail,
+          full_name: null,
+          avatar_url: null,
+          roles: []
+        });
+        return;
+      }
+
+      const profileData = profileSnap.data();
 
       // Fetch roles
-      const { data: rolesData, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId);
-
-      if (rolesError) throw rolesError;
-
-      const roles = rolesData.map(r => r.role as UserRole);
+      const rolesQuery = query(
+        collection(db, 'user_roles'),
+        where('user_id', '==', userId)
+      );
+      const rolesSnap = await getDocs(rolesQuery);
+      const roles = rolesSnap.docs.map(doc => doc.data().role as UserRole);
 
       setProfile({
         id: profileData.id,
-        email: userEmail, // Use email from auth user
+        email: userEmail,
         full_name: profileData.full_name,
         avatar_url: profileData.avatar_url,
         roles,
@@ -71,60 +105,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
+    // Set up Firebase auth state listener
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser);
 
+      if (firebaseUser) {
         // Fetch profile when user signs in
-        if (currentSession?.user) {
-          // Use setTimeout to avoid potential deadlock
-          setTimeout(() => {
-            fetchUserProfile(currentSession.user.id, currentSession.user.email || '');
-          }, 0);
-        } else {
-          setProfile(null);
-        }
-
-        // Handle specific auth events
-        if (event === 'SIGNED_OUT') {
-          setProfile(null);
-        }
+        setTimeout(() => {
+          fetchUserProfile(firebaseUser.uid, firebaseUser.email || '');
+        }, 0);
+      } else {
+        setProfile(null);
       }
-    );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      
-      if (currentSession?.user) {
-        fetchUserProfile(currentSession.user.id, currentSession.user.email || '');
-      }
-      
       setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
+      await signInWithEmailAndPassword(auth, email, password);
       toast.success('Connexion réussie!');
-    } catch (error) {
-      const authError = error as AuthError;
-      const message = authError.message === 'Invalid login credentials'
+    } catch (error: any) {
+      const message = error.code === 'auth/invalid-credential'
         ? 'Email ou mot de passe incorrect'
-        : authError.message;
+        : error.message;
       toast.error(message);
       throw error;
     } finally {
@@ -135,29 +143,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signup = async (email: string, password: string, fullName: string) => {
     setIsLoading(true);
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      const { user: newUser } = await createUserWithEmailAndPassword(auth, email, password);
       
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            full_name: fullName,
-          },
-        },
+      // Update Firebase Auth profile
+      await firebaseUpdateProfile(newUser, {
+        displayName: fullName
       });
 
-      if (error) throw error;
+      // Create Firestore profile
+      await setDoc(doc(db, 'profiles', newUser.uid), {
+        id: newUser.uid,
+        email: newUser.email,
+        full_name: fullName,
+        avatar_url: null,
+        created_at: serverTimestamp(),
+        updated_at: serverTimestamp()
+      });
 
-      if (data.user?.identities?.length === 0) {
-        throw new Error('Un compte existe déjà avec cet email');
-      }
+      // Assign default 'patient' role
+      await setDoc(doc(db, 'user_roles', `${newUser.uid}_patient`), {
+        user_id: newUser.uid,
+        role: 'patient',
+        created_at: serverTimestamp()
+      });
 
-      toast.success('Compte créé avec succès! Vérifiez votre email pour confirmer.');
-    } catch (error) {
-      const authError = error as AuthError;
-      const message = authError.message || 'Échec de l\'inscription';
+      toast.success('Compte créé avec succès!');
+    } catch (error: any) {
+      const message = error.code === 'auth/email-already-in-use'
+        ? 'Un compte existe déjà avec cet email'
+        : error.message;
       toast.error(message);
       throw error;
     } finally {
@@ -168,19 +182,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const loginWithGoogle = async () => {
     setIsLoading(true);
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      const result = await signInWithPopup(auth, googleProvider);
       
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: redirectUrl,
-        },
-      });
+      // Check if profile exists, create if not
+      const profileRef = doc(db, 'profiles', result.user.uid);
+      const profileSnap = await getDoc(profileRef);
+      
+      if (!profileSnap.exists()) {
+        await setDoc(profileRef, {
+          id: result.user.uid,
+          email: result.user.email,
+          full_name: result.user.displayName,
+          avatar_url: result.user.photoURL,
+          created_at: serverTimestamp(),
+          updated_at: serverTimestamp()
+        });
 
-      if (error) throw error;
-    } catch (error) {
-      const authError = error as AuthError;
-      toast.error(authError.message || 'Échec de la connexion Google');
+        // Assign default 'patient' role
+        await setDoc(doc(db, 'user_roles', `${result.user.uid}_patient`), {
+          user_id: result.user.uid,
+          role: 'patient',
+          created_at: serverTimestamp()
+        });
+      }
+
+      toast.success('Connexion réussie!');
+    } catch (error: any) {
+      toast.error(error.message || 'Échec de la connexion Google');
       throw error;
     } finally {
       setIsLoading(false);
@@ -189,17 +217,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
+      await firebaseSignOut(auth);
       setUser(null);
-      setSession(null);
       setProfile(null);
-      
       toast.success('Déconnexion réussie');
-    } catch (error) {
-      const authError = error as AuthError;
-      toast.error(authError.message || 'Échec de la déconnexion');
+    } catch (error: any) {
+      toast.error(error.message || 'Échec de la déconnexion');
       throw error;
     }
   };
@@ -208,19 +231,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!user) return;
 
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', user.id);
+      const profileRef = doc(db, 'profiles', user.uid);
+      await updateDoc(profileRef, {
+        ...updates,
+        updated_at: serverTimestamp()
+      });
 
-      if (error) throw error;
+      // Update Firebase Auth profile if display name changed
+      if (updates.full_name) {
+        await firebaseUpdateProfile(user, {
+          displayName: updates.full_name
+        });
+      }
 
       // Refresh profile
       if (user.email) {
-        await fetchUserProfile(user.id, user.email);
+        await fetchUserProfile(user.uid, user.email);
       }
       
       toast.success('Profil mis à jour');
@@ -240,7 +266,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{
         user,
         profile,
-        session,
+        session: user,
         isAuthenticated: !!user,
         isLoading,
         login,
