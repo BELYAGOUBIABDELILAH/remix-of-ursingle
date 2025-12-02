@@ -8,8 +8,8 @@ export const useAnalytics = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    analytics.pageView(location.pathname, user?.id);
-  }, [location.pathname, user?.id]);
+    analytics.pageView(location.pathname, user?.uid);
+  }, [location.pathname, user?.uid]);
 
   return analytics;
 };

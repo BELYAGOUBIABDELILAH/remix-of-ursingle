@@ -1,4 +1,7 @@
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
+// Note: This will need a Firebase Cloud Function deployed to handle AI chat
+// For now, using a placeholder URL - update this after deploying your Firebase function
+
+const CHAT_FUNCTION_URL = 'https://us-central1-cityhealth-ec7e7.cloudfunctions.net/aiChat';
 
 type Message = { role: "user" | "assistant"; content: string };
 
@@ -14,11 +17,10 @@ export async function streamChat({
   onError?: (error: Error) => void;
 }) {
   try {
-    const resp = await fetch(CHAT_URL, {
+    const resp = await fetch(CHAT_FUNCTION_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
       body: JSON.stringify({ messages }),
     });
