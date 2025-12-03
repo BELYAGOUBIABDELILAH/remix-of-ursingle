@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,6 +6,7 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import AntigravityIndex from "./pages/AntigravityIndex";
 import AuthPage from "./pages/AuthPage";
@@ -21,7 +21,6 @@ import SearchPage from "./pages/SearchPage";
 import ProvidersPage from "./pages/ProvidersPage";
 import Settings from "./pages/Settings";
 import ManagePage from "./pages/ManagePage";
-import { Header } from "./components/layout/Header";
 import FloatingSidebar from "./components/FloatingSidebar";
 import EmergencyPage from "./pages/EmergencyPage";
 import ProviderProfilePage from "./pages/ProviderProfilePage";
@@ -31,7 +30,6 @@ import AdminDashboard from "./pages/AdminDashboard";
 import UserProfilePage from "./pages/UserProfilePage";
 import PatientDashboard from "./pages/PatientDashboard";
 import AIHealthChat from "./pages/AIHealthChat";
-import AIChatWidget from "./components/AIChatWidget";
 import { AIChatbot } from "./components/AIChatbot";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { seedProvidersIfNeeded } from "@/data/providers";
@@ -243,22 +241,24 @@ const AppRoutes = () => {
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
-        <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <SeedInit />
-              <div className="min-h-screen bg-white">
-                <FloatingSidebar />
-                <AIChatbot />
-                <AppRoutes />
-              </div>
-            </BrowserRouter>
-          </TooltipProvider>
-        </AuthProvider>
-      </LanguageProvider>
+      <ThemeProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <SeedInit />
+                <div className="min-h-screen bg-background text-foreground">
+                  <FloatingSidebar />
+                  <AIChatbot />
+                  <AppRoutes />
+                </div>
+              </BrowserRouter>
+            </TooltipProvider>
+          </AuthProvider>
+        </LanguageProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   </ErrorBoundary>
 );
