@@ -3,56 +3,53 @@
 @tailwind utilities;
 
 /* ============================================
-   GOOGLE ANTIGRAVITY DESIGN SYSTEM
-   Ultra-minimal, agentic, Material Design 3
+   CITYHEALTH DESIGN SYSTEM
+   Clean, accessible healthcare design
    ============================================ */
 
 @layer base {
   :root {
-    /* ====== COLORS - Pure Google Antigravity ====== */
-    /* Pure white background - no gradients */
+    /* ====== COLORS - Light Mode ====== */
     --background: 0 0% 100%;
-    --foreground: 220 9% 13%; /* #202124 - Primary text */
+    --foreground: 220 9% 13%;
     
-    /* Card remains pure white */
     --card: 0 0% 100%;
     --card-foreground: 220 9% 13%;
     
-    /* Subtle popover */
     --popover: 0 0% 100%;
     --popover-foreground: 220 9% 13%;
     
     /* Google Blue Accent */
-    --primary: 217 89% 61%; /* #4285F4 */
+    --primary: 217 89% 61%;
     --primary-foreground: 0 0% 100%;
     
-    /* Soft secondary for buttons */
-    --secondary: 220 9% 46%; /* #5F6368 - Secondary text */
+    /* Secondary */
+    --secondary: 220 9% 46%;
     --secondary-foreground: 0 0% 100%;
     
-    /* Light grey muted */
-    --muted: 220 14% 96%; /* #F1F3F4 */
+    /* Muted */
+    --muted: 220 14% 96%;
     --muted-foreground: 220 9% 46%;
     
-    /* Accent = Google Blue */
+    /* Accent */
     --accent: 217 89% 61%;
     --accent-foreground: 0 0% 100%;
     
-    /* Borders - ultra subtle */
+    /* Borders */
     --border: 220 13% 91%;
     --input: 220 13% 91%;
     --ring: 217 89% 61%;
     
-    /* Destructive (red for emergencies) */
+    /* Destructive */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     
-    /* Chart colors (Google Material palette) */
-    --chart-1: 217 89% 61%; /* Blue */
-    --chart-2: 142 76% 36%; /* Green */
-    --chart-3: 39 100% 57%; /* Yellow */
-    --chart-4: 14 100% 57%; /* Orange */
-    --chart-5: 0 84% 60%; /* Red */
+    /* Chart colors */
+    --chart-1: 217 89% 61%;
+    --chart-2: 142 76% 36%;
+    --chart-3: 39 100% 57%;
+    --chart-4: 14 100% 57%;
+    --chart-5: 0 84% 60%;
     
     /* ====== SPACING ====== */
     --spacing-xs: 0.25rem;
@@ -64,17 +61,46 @@
     --spacing-3xl: 4rem;
     
     /* ====== RADIUS ====== */
-    --radius: 0.5rem; /* Standard */
-    --radius-pill: 9999px; /* Pill buttons */
+    --radius: 0.5rem;
+    --radius-pill: 9999px;
     
-    /* ====== SHADOWS - Soft Material shadows ====== */
+    /* ====== SHADOWS ====== */
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     --shadow-lg: 0 10px 30px -5px rgba(0, 0, 0, 0.1);
     --shadow-xl: 0 20px 40px -10px rgba(0, 0, 0, 0.15);
   }
 
-  /* NO DARK MODE - Removed completely */
+  /* ====== DARK MODE ====== */
+  .dark {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    
+    --card: 222 47% 14%;
+    --card-foreground: 210 40% 98%;
+    
+    --popover: 222 47% 14%;
+    --popover-foreground: 210 40% 98%;
+    
+    --primary: 217 89% 61%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+    
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 217 89% 61%;
+    
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 210 40% 98%;
+  }
   
   * {
     @apply border-border;
@@ -127,6 +153,15 @@
     @apply btn-pill bg-muted text-foreground hover:bg-muted/80;
   }
   
+  /* ====== GLASS PANELS ====== */
+  .glass-panel {
+    @apply bg-card/80 backdrop-blur-sm border border-border/50;
+  }
+  
+  .glass-card {
+    @apply bg-card border border-border shadow-sm;
+  }
+  
   /* ====== SHADOWS ====== */
   .shadow-soft {
     box-shadow: var(--shadow-md);
@@ -134,6 +169,16 @@
   
   .shadow-lifted {
     box-shadow: var(--shadow-lg);
+  }
+  
+  /* ====== VERIFIED BADGE ====== */
+  .verified-badge {
+    @apply bg-primary/10 text-primary border-primary/20;
+  }
+  
+  /* ====== RATING STARS ====== */
+  .rating-stars {
+    @apply text-yellow-500;
   }
   
   /* ====== SPACING UTILITIES ====== */
@@ -147,7 +192,7 @@
 }
 
 @layer utilities {
-  /* ====== ANIMATIONS - Minimal, smooth ====== */
+  /* ====== ANIMATIONS ====== */
   .animate-fade-in {
     animation: fadeIn 0.6s ease-out;
   }
@@ -222,4 +267,18 @@
 ::selection {
   background: hsl(var(--primary) / 0.2);
   color: hsl(var(--foreground));
+}
+
+/* ====== LEAFLET MAP FIXES ====== */
+.leaflet-container {
+  font-family: inherit;
+  z-index: 1;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: var(--radius);
+}
+
+.leaflet-popup-content {
+  margin: 12px 16px;
 }

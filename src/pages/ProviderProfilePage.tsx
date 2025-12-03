@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, Star, ShieldCheck, Phone, Share2, Flag, Calendar, Languages, Award, Image as ImageIcon } from "lucide-react";
+import { MapPin, Star, Phone, Share2, Flag, Calendar, Languages, Award, Image as ImageIcon, Heart, Navigation } from "lucide-react";
 import { getProviderById } from "@/data/providers";
 import { BookingModal } from "@/components/BookingModal";
 import { ReviewSystem } from "@/components/ReviewSystem";
+import { useAuth } from "@/contexts/AuthContext";
+import { favoritesService } from "@/services/favoritesService";
+import { toast } from "sonner";
+import ProviderMap from "@/components/ProviderMap";
 
 const mockProvider = {
   id: "1",
@@ -24,16 +28,74 @@ const mockProvider = {
   experience: "15 years",
   diplomas: ["MD, University of Oran", "Cardiology Specialization"],
   description: "Specialist in cardiology providing comprehensive heart care and diagnostics.",
+  lat: 35.1833,
+  lng: -0.6333,
 };
 
 const ProviderProfilePage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
   const provider = useMemo(() => mockProvider, [id]);
   const [bookingOpen, setBookingOpen] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
 
   useEffect(() => {
     document.title = `${provider.name} – CityHealth Profile`;
   }, [provider.name]);
+
+  useEffect(() => {
+    const checkFavorite = async () => {
+      if (user?.uid && provider.id) {
+        try {
+          const favorites = await favoritesService.getUserFavorites(user.uid);
+          setIsFavorite(favorites.includes(provider.id));
+        } catch (error) {
+          console.error("Error checking favorite:", error);
+        }
+      }
+    };
+    checkFavorite();
+  }, [user?.uid, provider.id]);
+
+  const handleFavoriteClick = async () => {
+    if (!isAuthenticated) {
+      toast.error("Connexion requise", {
+        description: "Veuillez vous connecter pour ajouter aux favoris",
+        action: {
+          label: "Se connecter",
+          onClick: () => navigate("/auth"),
+        },
+      });
+      return;
+    }
+
+    if (!user?.uid) return;
+
+    setFavoriteLoading(true);
+    try {
+      if (isFavorite) {
+        await favoritesService.removeFavorite(user.uid, provider.id);
+        setIsFavorite(false);
+        toast.success("Retiré des favoris");
+      } else {
+        await favoritesService.addFavorite(user.uid, provider.id);
+        setIsFavorite(true);
+        toast.success("Ajouté aux favoris");
+      }
+    } catch (error) {
+      console.error("Error updating favorite:", error);
+      toast.error("Erreur lors de la mise à jour");
+    } finally {
+      setFavoriteLoading(false);
+    }
+  };
+
+  const handleGetDirections = () => {
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${provider.lat},${provider.lng}`;
+    window.open(url, '_blank');
+  };
 
   return (
     <main className="pt-24 pb-16 px-4 max-w-6xl mx-auto">
@@ -57,12 +119,19 @@ const ProviderProfilePage = () => {
               <span className="text-muted-foreground">{provider.reviews} reviews</span>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button onClick={() => setBookingOpen(true)}>
               <Calendar className="h-4 w-4 mr-2" />
               Book Appointment
             </Button>
-            <Button variant="outline">Add to Favorites</Button>
+            <Button 
+              variant={isFavorite ? "default" : "outline"} 
+              onClick={handleFavoriteClick}
+              disabled={favoriteLoading}
+            >
+              <Heart className={`h-4 w-4 mr-2 ${isFavorite ? "fill-current" : ""}`} />
+              {isFavorite ? "Favori" : "Ajouter aux Favoris"}
+            </Button>
             <Button variant="ghost"><Share2 className="h-4 w-4" /></Button>
             <Button variant="ghost"><Flag className="h-4 w-4" /></Button>
           </div>
@@ -131,10 +200,20 @@ const ProviderProfilePage = () => {
           <Card className="glass-card">
             <CardHeader className="py-4"><CardTitle>Location</CardTitle></CardHeader>
             <CardContent>
-              <div className="rounded-lg h-56 bg-gradient-to-br from-muted/50 to-secondary/20 grid place-items-center text-muted-foreground">
-                Google Maps placeholder
-              </div>
-              <Button variant="outline" className="w-full mt-3">Open in Maps</Button>
+              <ProviderMap 
+                lat={provider.lat} 
+                lng={provider.lng} 
+                name={provider.name}
+                address={provider.address}
+              />
+              <Button 
+                variant="outline" 
+                className="w-full mt-3"
+                onClick={handleGetDirections}
+              >
+                <Navigation className="h-4 w-4 mr-2" />
+                Itinéraire
+              </Button>
             </CardContent>
           </Card>
 
