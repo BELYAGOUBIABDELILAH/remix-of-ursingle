@@ -21,19 +21,24 @@ import {
 } from '@/components/ui/select';
 import { 
   CheckCircle, XCircle, Eye, Users, Building2, TrendingUp,
-  AlertCircle, Activity, Search, Filter, BarChart3, Settings
+  AlertCircle, Activity, Search, Settings, Shield, Megaphone, Mail
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { VerificationQueue } from '@/components/admin/VerificationQueue';
+import { MedicalAdsModeration } from '@/components/admin/MedicalAdsModeration';
+import { notificationService } from '@/services/notificationService';
 
 export default function AdminDashboard() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const [stats] = useState({
+  const [stats, setStats] = useState({
     totalUsers: 15847,
     totalProviders: 342,
     pendingApprovals: 23,
+    pendingVerifications: 0,
+    pendingAds: 0,
     monthlyGrowth: 12,
     activeUsers: 8934,
     verifiedProviders: 298,
@@ -71,13 +76,41 @@ export default function AdminDashboard() {
     { type: 'update', user: 'Dr. Sara M.', action: 'Mise à jour du profil', time: 'Il y a 6h' },
   ]);
 
+  const [sentNotifications, setSentNotifications] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Calculate pending counts
+    const verificationRequests = JSON.parse(localStorage.getItem('ch_verification_requests') || '[]');
+    const medicalAds = JSON.parse(localStorage.getItem('ch_medical_ads') || '[]');
+    
+    setStats(prev => ({
+      ...prev,
+      pendingVerifications: verificationRequests.filter((r: any) => r.status === 'pending').length,
+      pendingAds: medicalAds.filter((a: any) => a.status === 'pending').length,
+      pendingApprovals: pendingProviders.filter(p => p.status === 'pending').length,
+    }));
+
+    // Load sent notifications
+    setSentNotifications(notificationService.getSentNotifications());
+  }, [pendingProviders]);
+
   const handleApprove = (id: string) => {
+    const provider = pendingProviders.find(p => p.id === id);
     const updated = pendingProviders.map(p => 
       p.id === id ? { ...p, status: 'approved' } : p
     );
     setPendingProviders(updated);
     localStorage.setItem('ch_pending_registrations', JSON.stringify(updated));
     
+    // Send notification
+    if (provider) {
+      notificationService.sendVerificationNotification({
+        type: 'verification_approved',
+        providerEmail: provider.email,
+        providerName: provider.providerName
+      });
+    }
+
     toast({
       title: "Profil approuvé",
       description: "Le professionnel a été notifié par email.",
@@ -85,12 +118,23 @@ export default function AdminDashboard() {
   };
 
   const handleReject = (id: string) => {
+    const provider = pendingProviders.find(p => p.id === id);
     const updated = pendingProviders.map(p => 
       p.id === id ? { ...p, status: 'rejected' } : p
     );
     setPendingProviders(updated);
     localStorage.setItem('ch_pending_registrations', JSON.stringify(updated));
     
+    // Send notification
+    if (provider) {
+      notificationService.sendVerificationNotification({
+        type: 'verification_rejected',
+        providerEmail: provider.email,
+        providerName: provider.providerName,
+        reason: 'Documents non conformes ou informations incomplètes'
+      });
+    }
+
     toast({
       title: "Profil rejeté",
       description: "Le professionnel a été notifié par email.",
@@ -123,7 +167,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
           <Card>
             <CardHeader className="pb-3">
               <CardDescription>Total Utilisateurs</CardDescription>
@@ -158,7 +202,7 @@ export default function AdminDashboard() {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardDescription>En attente</CardDescription>
+              <CardDescription>Inscriptions en attente</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
@@ -173,15 +217,30 @@ export default function AdminDashboard() {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardDescription>Utilisateurs actifs</CardDescription>
+              <CardDescription>Vérifications</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-3xl font-bold">{stats.activeUsers.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">Dernières 24h</p>
+                  <p className="text-3xl font-bold text-blue-500">{stats.pendingVerifications}</p>
+                  <p className="text-xs text-muted-foreground">Demandes</p>
                 </div>
-                <Activity className="h-8 w-8 text-primary" />
+                <Shield className="h-8 w-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardDescription>Annonces</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-3xl font-bold text-purple-500">{stats.pendingAds}</p>
+                  <p className="text-xs text-muted-foreground">À modérer</p>
+                </div>
+                <Megaphone className="h-8 w-8 text-purple-500" />
               </div>
             </CardContent>
           </Card>
@@ -189,12 +248,23 @@ export default function AdminDashboard() {
 
         {/* Main Content */}
         <Tabs defaultValue="approvals" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="approvals">
-              Approbations ({stats.pendingApprovals})
+              Inscriptions ({stats.pendingApprovals})
+            </TabsTrigger>
+            <TabsTrigger value="verifications">
+              <Shield className="h-4 w-4 mr-1" />
+              Vérifications ({stats.pendingVerifications})
+            </TabsTrigger>
+            <TabsTrigger value="ads">
+              <Megaphone className="h-4 w-4 mr-1" />
+              Annonces ({stats.pendingAds})
+            </TabsTrigger>
+            <TabsTrigger value="notifications">
+              <Mail className="h-4 w-4 mr-1" />
+              Notifications
             </TabsTrigger>
             <TabsTrigger value="analytics">Analytiques</TabsTrigger>
-            <TabsTrigger value="moderation">Modération</TabsTrigger>
             <TabsTrigger value="settings">Configuration</TabsTrigger>
           </TabsList>
 
@@ -343,6 +413,51 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
 
+          {/* Verifications Tab */}
+          <TabsContent value="verifications">
+            <VerificationQueue />
+          </TabsContent>
+
+          {/* Medical Ads Tab */}
+          <TabsContent value="ads">
+            <MedicalAdsModeration />
+          </TabsContent>
+
+          {/* Notifications Tab */}
+          <TabsContent value="notifications">
+            <Card>
+              <CardHeader>
+                <CardTitle>Notifications envoyées</CardTitle>
+                <CardDescription>Historique des emails et notifications</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {sentNotifications.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Mail className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Aucune notification envoyée</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {sentNotifications.slice(-10).reverse().map((notif: any) => (
+                      <div key={notif.id} className="flex items-start gap-4 p-4 border rounded-lg">
+                        <Mail className="h-5 w-5 text-primary mt-0.5" />
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{notif.subject}</p>
+                          <p className="text-xs text-muted-foreground">
+                            À: {notif.recipient}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="text-green-500">
+                          {notif.status}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Analytics Tab */}
           <TabsContent value="analytics">
             <div className="grid gap-6">
@@ -403,19 +518,6 @@ export default function AdminDashboard() {
             </div>
           </TabsContent>
 
-          {/* Moderation Tab */}
-          <TabsContent value="moderation">
-            <Card>
-              <CardHeader>
-                <CardTitle>Modération de contenu</CardTitle>
-                <CardDescription>Gérer les signalements et le contenu</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Aucun signalement en attente</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           {/* Settings Tab */}
           <TabsContent value="settings">
             <Card>
@@ -427,23 +529,23 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <p className="font-medium">Mode maintenance</p>
-                    <p className="text-sm text-muted-foreground">Désactiver temporairement la plateforme</p>
+                    <p className="text-sm text-muted-foreground">Désactiver l'accès public temporairement</p>
                   </div>
-                  <Button variant="outline">Activer</Button>
-                </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Critères de vérification</p>
-                    <p className="text-sm text-muted-foreground">Modifier les exigences d'approbation</p>
-                  </div>
-                  <Button variant="outline">Configurer</Button>
+                  <Badge variant="outline">Désactivé</Badge>
                 </div>
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <p className="font-medium">Notifications email</p>
-                    <p className="text-sm text-muted-foreground">Gérer les modèles d'emails</p>
+                    <p className="text-sm text-muted-foreground">Envoi automatique des notifications</p>
                   </div>
-                  <Button variant="outline">Modifier</Button>
+                  <Badge className="bg-green-500">Activé</Badge>
+                </div>
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <p className="font-medium">Modération automatique</p>
+                    <p className="text-sm text-muted-foreground">Filtrage IA du contenu</p>
+                  </div>
+                  <Badge variant="outline">Désactivé</Badge>
                 </div>
               </CardContent>
             </Card>

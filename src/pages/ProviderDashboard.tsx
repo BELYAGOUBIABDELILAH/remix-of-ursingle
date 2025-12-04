@@ -7,15 +7,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Eye, Phone, MapPin, TrendingUp, Calendar, Star, 
-  Upload, Settings, BarChart3, Users, Clock 
+  Upload, Settings, BarChart3, Clock, Megaphone, Shield
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { ProfileProgressBar, calculateProfileCompletion } from '@/components/provider/ProfileProgressBar';
+import { VerificationRequest, type VerificationStatus } from '@/components/provider/VerificationRequest';
+import { MedicalAdsManager } from '@/components/provider/MedicalAdsManager';
 
 export default function ProviderDashboard() {
   const { toast } = useToast();
-  const [stats, setStats] = useState({
+  const [stats] = useState({
     profileViews: 1247,
     phoneClicks: 89,
     appointments: 23,
@@ -24,19 +28,45 @@ export default function ProviderDashboard() {
   });
 
   const [profile, setProfile] = useState({
+    id: 'provider-1',
     name: 'Dr. Ahmed Benali',
+    type: 'doctor',
     specialty: 'Cardiologie',
+    email: 'dr.benali@example.com',
     phone: '+213 48 50 10 20',
     address: '15 Rue principale, Centre Ville',
     description: 'Cardiologue expérimenté avec plus de 15 ans de pratique. Spécialisé dans les maladies cardiovasculaires et la prévention.',
     schedule: 'Lun-Ven: 9h-17h\nSam: 9h-13h',
+    license: 'license-2024-001.pdf',
+    photos: [] as string[],
+    languages: ['Français', 'Arabe'],
+    accessible: true,
+    emergency: false,
   });
+
+  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('none');
+
+  useEffect(() => {
+    // Load verification status from localStorage
+    const registrations = JSON.parse(localStorage.getItem('ch_pending_registrations') || '[]');
+    const currentProvider = registrations.find((r: any) => r.id === profile.id);
+    if (currentProvider?.verificationStatus) {
+      setVerificationStatus(currentProvider.verificationStatus);
+    }
+    if (currentProvider?.verified) {
+      setVerificationStatus('approved');
+    }
+  }, [profile.id]);
 
   const [recentActivity] = useState([
     { type: 'view', date: '2025-01-10', count: 47 },
     { type: 'contact', date: '2025-01-09', count: 12 },
     { type: 'appointment', date: '2025-01-08', count: 5 },
   ]);
+
+  const profileFields = calculateProfileCompletion(profile);
+  const isProfileComplete = profileFields.filter(f => f.required && !f.completed).length === 0;
+  const isVerified = verificationStatus === 'approved';
 
   const handleProfileUpdate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +90,14 @@ export default function ProviderDashboard() {
               <div>
                 <h1 className="text-3xl font-bold">{profile.name}</h1>
                 <p className="text-muted-foreground">{profile.specialty}</p>
-                <Badge variant="secondary" className="mt-1">✅ Vérifié</Badge>
+                {isVerified ? (
+                  <Badge className="mt-1 bg-green-500 hover:bg-green-600">
+                    <Shield className="h-3 w-3 mr-1" />
+                    Vérifié
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="mt-1">Non vérifié</Badge>
+                )}
               </div>
             </div>
             <Button>
@@ -68,6 +105,11 @@ export default function ProviderDashboard() {
               Paramètres
             </Button>
           </div>
+        </div>
+
+        {/* Profile Progress */}
+        <div className="mb-8">
+          <ProfileProgressBar fields={profileFields} />
         </div>
 
         {/* Stats Grid */}
@@ -160,8 +202,16 @@ export default function ProviderDashboard() {
 
         {/* Main Content */}
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="profile">Mon Profil</TabsTrigger>
+            <TabsTrigger value="verification">
+              <Shield className="h-4 w-4 mr-1" />
+              Vérification
+            </TabsTrigger>
+            <TabsTrigger value="ads">
+              <Megaphone className="h-4 w-4 mr-1" />
+              Annonces
+            </TabsTrigger>
             <TabsTrigger value="analytics">Statistiques</TabsTrigger>
             <TabsTrigger value="reviews">Avis ({stats.reviewsCount})</TabsTrigger>
           </TabsList>
@@ -235,6 +285,25 @@ export default function ProviderDashboard() {
                     />
                   </div>
 
+                  <div className="flex gap-6">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="accessible"
+                        checked={profile.accessible}
+                        onCheckedChange={(checked) => setProfile({...profile, accessible: !!checked})}
+                      />
+                      <Label htmlFor="accessible" className="font-normal">Accès PMR</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="emergency"
+                        checked={profile.emergency}
+                        onCheckedChange={(checked) => setProfile({...profile, emergency: !!checked})}
+                      />
+                      <Label htmlFor="emergency" className="font-normal">Service d'urgence 24/7</Label>
+                    </div>
+                  </div>
+
                   <div>
                     <Label>Photos du cabinet</Label>
                     <div className="mt-2 border-2 border-dashed rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer">
@@ -245,9 +314,19 @@ export default function ProviderDashboard() {
                         multiple
                         className="hidden"
                         id="photos"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          setProfile({
+                            ...profile, 
+                            photos: files.map(f => URL.createObjectURL(f))
+                          });
+                        }}
                       />
                       <Label htmlFor="photos" className="cursor-pointer">
-                        Cliquez pour ajouter des photos
+                        {profile.photos.length > 0 
+                          ? `${profile.photos.length} photo(s) sélectionnée(s)`
+                          : 'Cliquez pour ajouter des photos'
+                        }
                       </Label>
                     </div>
                   </div>
@@ -258,6 +337,26 @@ export default function ProviderDashboard() {
                 </form>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Verification Tab */}
+          <TabsContent value="verification">
+            <VerificationRequest
+              providerId={profile.id}
+              providerName={profile.name}
+              currentStatus={verificationStatus}
+              profileComplete={isProfileComplete}
+              onStatusChange={setVerificationStatus}
+            />
+          </TabsContent>
+
+          {/* Medical Ads Tab */}
+          <TabsContent value="ads">
+            <MedicalAdsManager
+              providerId={profile.id}
+              providerName={profile.name}
+              isVerified={isVerified}
+            />
           </TabsContent>
 
           {/* Analytics Tab */}
