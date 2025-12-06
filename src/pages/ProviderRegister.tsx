@@ -1,382 +1,166 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Save } from 'lucide-react';
+import { ProgressIndicator } from '@/components/provider/registration/ProgressIndicator';
+import { Step1AccountCreation } from '@/components/provider/registration/Step1AccountCreation';
+import { Step2BasicInfo } from '@/components/provider/registration/Step2BasicInfo';
+import { Step3Location } from '@/components/provider/registration/Step3Location';
+import { Step4Services } from '@/components/provider/registration/Step4Services';
+import { Step5Profile } from '@/components/provider/registration/Step5Profile';
+import { Step6Review } from '@/components/provider/registration/Step6Review';
+import { ProviderFormData, getInitialFormData } from '@/components/provider/registration/types';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, Building2, MapPin, Phone, Mail, Globe, Clock, FileText } from 'lucide-react';
-import { SPECIALTIES, PROVIDER_TYPES, AREAS } from '@/data/providers';
+
+const STEPS = [
+  { number: 1, title: 'Compte', description: 'Créer votre compte' },
+  { number: 2, title: 'Établissement', description: 'Informations de base' },
+  { number: 3, title: 'Localisation', description: 'Adresse & horaires' },
+  { number: 4, title: 'Services', description: 'Spécialisations' },
+  { number: 5, title: 'Profil', description: 'Photos & description' },
+  { number: 6, title: 'Validation', description: 'Vérifier & soumettre' },
+];
 
 export default function ProviderRegister() {
-  const navigate = useNavigate();
   const { toast } = useToast();
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    // Basic Info
-    providerName: '',
-    type: '',
-    specialty: '',
-    email: '',
-    phone: '',
-    
-    // Location
-    address: '',
-    area: '',
-    
-    // Services
-    description: '',
-    languages: [] as string[],
-    emergency: false,
-    accessible: false,
-    
-    // Schedule
-    schedule: '',
-    
-    // Documents
-    license: null as File | null,
-    photos: [] as File[],
-  });
+  const [currentStep, setCurrentStep] = useState(1);
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+  const [formData, setFormData] = useState<ProviderFormData>(getInitialFormData);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Mock registration - in real app, upload to backend
-    toast({
-      title: "Demande envoyée !",
-      description: "Votre demande d'inscription est en cours de vérification. Vous recevrez un email sous 24-48h.",
-    });
-    
-    // Store pending registration in localStorage for demo
-    const pendingRegistrations = JSON.parse(localStorage.getItem('ch_pending_registrations') || '[]');
-    pendingRegistrations.push({
-      ...formData,
-      id: Date.now().toString(),
-      status: 'pending',
-      submittedAt: new Date().toISOString(),
-    });
-    localStorage.setItem('ch_pending_registrations', JSON.stringify(pendingRegistrations));
-    
-    setTimeout(() => navigate('/'), 2000);
+  // Auto-save to localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('ch_provider_registration_draft');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setFormData(parsed.formData);
+        setCurrentStep(parsed.currentStep || 1);
+        setCompletedSteps(parsed.completedSteps || []);
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('ch_provider_registration_draft', JSON.stringify({
+      formData,
+      currentStep,
+      completedSteps,
+    }));
+  }, [formData, currentStep, completedSteps]);
+
+  const updateFormData = (data: Partial<ProviderFormData>) => {
+    setFormData(prev => ({ ...prev, ...data, updatedAt: new Date().toISOString() }));
   };
 
-  const nextStep = () => setStep(prev => Math.min(prev + 1, 4));
-  const prevStep = () => setStep(prev => Math.max(prev - 1, 1));
+  const goToStep = (step: number) => {
+    setCurrentStep(step);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const nextStep = () => {
+    if (!completedSteps.includes(currentStep)) {
+      setCompletedSteps(prev => [...prev, currentStep]);
+    }
+    goToStep(Math.min(currentStep + 1, 6));
+  };
+
+  const prevStep = () => goToStep(Math.max(currentStep - 1, 1));
+
+  const handleSaveAndExit = () => {
+    toast({
+      title: "Progression sauvegardée",
+      description: "Vous pouvez reprendre votre inscription plus tard.",
+    });
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20 py-12 px-4">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-secondary/10 py-8 px-4">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2">Inscription Professionnel</h1>
-          <p className="text-muted-foreground">Rejoignez CityHealth et développez votre visibilité</p>
+          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mb-2">
+            Inscription Professionnel
+          </h1>
+          <p className="text-muted-foreground">
+            Rejoignez CityHealth et connectez-vous avec des milliers de patients
+          </p>
         </div>
 
-        {/* Progress Steps */}
-        <div className="flex justify-between mb-8">
-          {[1, 2, 3, 4].map((s) => (
-            <div key={s} className="flex-1 flex items-center">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
-                step >= s ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-              }`}>
-                {s}
-              </div>
-              {s < 4 && <div className={`flex-1 h-1 mx-2 ${step > s ? 'bg-primary' : 'bg-muted'}`} />}
-            </div>
-          ))}
+        {/* Progress */}
+        <div className="mb-8">
+          <ProgressIndicator 
+            steps={STEPS} 
+            currentStep={currentStep} 
+            completedSteps={completedSteps} 
+          />
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                {step === 1 && 'Informations de base'}
-                {step === 2 && 'Localisation'}
-                {step === 3 && 'Services et disponibilité'}
-                {step === 4 && 'Documents et photos'}
-              </CardTitle>
-              <CardDescription>
-                Étape {step} sur 4
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Step 1: Basic Info */}
-              {step === 1 && (
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="providerName">Nom du cabinet / établissement *</Label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="providerName"
-                        placeholder="Ex: Cabinet Dr. Benali"
-                        className="pl-10"
-                        value={formData.providerName}
-                        onChange={(e) => setFormData({...formData, providerName: e.target.value})}
-                        required
-                      />
-                    </div>
-                  </div>
+        {/* Save Button */}
+        <div className="flex justify-end mb-4">
+          <Button variant="ghost" size="sm" onClick={handleSaveAndExit}>
+            <Save className="h-4 w-4 mr-2" />
+            Sauvegarder et quitter
+          </Button>
+        </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="type">Type *</Label>
-                      <Select
-                        value={formData.type}
-                        onValueChange={(value) => setFormData({...formData, type: value})}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionnez" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PROVIDER_TYPES.map((type) => (
-                            <SelectItem key={type} value={type}>
-                              {type === 'doctor' ? 'Médecin' : 
-                               type === 'clinic' ? 'Clinique' :
-                               type === 'pharmacy' ? 'Pharmacie' :
-                               type === 'lab' ? 'Laboratoire' : 'Hôpital'}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+        {/* Form Card */}
+        <Card className="shadow-xl border-0 bg-card/80 backdrop-blur">
+          <CardContent className="p-6 md:p-8">
+            {currentStep === 1 && (
+              <Step1AccountCreation 
+                formData={formData} 
+                updateFormData={updateFormData} 
+                onNext={nextStep} 
+              />
+            )}
+            {currentStep === 2 && (
+              <Step2BasicInfo 
+                formData={formData} 
+                updateFormData={updateFormData} 
+                onNext={nextStep} 
+                onPrev={prevStep} 
+              />
+            )}
+            {currentStep === 3 && (
+              <Step3Location 
+                formData={formData} 
+                updateFormData={updateFormData} 
+                onNext={nextStep} 
+                onPrev={prevStep} 
+              />
+            )}
+            {currentStep === 4 && (
+              <Step4Services 
+                formData={formData} 
+                updateFormData={updateFormData} 
+                onNext={nextStep} 
+                onPrev={prevStep} 
+              />
+            )}
+            {currentStep === 5 && (
+              <Step5Profile 
+                formData={formData} 
+                updateFormData={updateFormData} 
+                onNext={nextStep} 
+                onPrev={prevStep} 
+              />
+            )}
+            {currentStep === 6 && (
+              <Step6Review 
+                formData={formData} 
+                onPrev={prevStep} 
+                onEditStep={goToStep} 
+              />
+            )}
+          </CardContent>
+        </Card>
 
-                    <div>
-                      <Label htmlFor="specialty">Spécialité</Label>
-                      <Select
-                        value={formData.specialty}
-                        onValueChange={(value) => setFormData({...formData, specialty: value})}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionnez" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {SPECIALTIES.map((spec) => (
-                            <SelectItem key={spec} value={spec}>{spec}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="email">Email *</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="email"
-                          type="email"
-                          placeholder="contact@example.com"
-                          className="pl-10"
-                          value={formData.email}
-                          onChange={(e) => setFormData({...formData, email: e.target.value})}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="phone">Téléphone *</Label>
-                      <div className="relative">
-                        <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="phone"
-                          type="tel"
-                          placeholder="+213 XX XX XX XX"
-                          className="pl-10"
-                          value={formData.phone}
-                          onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                          required
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 2: Location */}
-              {step === 2 && (
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="address">Adresse complète *</Label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="address"
-                        placeholder="Numéro, rue, quartier"
-                        className="pl-10"
-                        value={formData.address}
-                        onChange={(e) => setFormData({...formData, address: e.target.value})}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="area">Quartier *</Label>
-                    <Select
-                      value={formData.area}
-                      onValueChange={(value) => setFormData({...formData, area: value})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionnez" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {AREAS.map((area) => (
-                          <SelectItem key={area} value={area}>{area}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 3: Services */}
-              {step === 3 && (
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="description">Description des services *</Label>
-                    <Textarea
-                      id="description"
-                      placeholder="Décrivez vos services, équipements, approche médicale..."
-                      rows={4}
-                      value={formData.description}
-                      onChange={(e) => setFormData({...formData, description: e.target.value})}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Langues parlées</Label>
-                    <div className="flex gap-4 mt-2">
-                      {['Français', 'Arabe', 'Anglais'].map((lang) => (
-                        <div key={lang} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={lang}
-                            checked={formData.languages.includes(lang)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setFormData({...formData, languages: [...formData.languages, lang]});
-                              } else {
-                                setFormData({...formData, languages: formData.languages.filter(l => l !== lang)});
-                              }
-                            }}
-                          />
-                          <Label htmlFor={lang} className="font-normal">{lang}</Label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="emergency"
-                        checked={formData.emergency}
-                        onCheckedChange={(checked) => setFormData({...formData, emergency: !!checked})}
-                      />
-                      <Label htmlFor="emergency" className="font-normal">Service d'urgence</Label>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="accessible"
-                        checked={formData.accessible}
-                        onCheckedChange={(checked) => setFormData({...formData, accessible: !!checked})}
-                      />
-                      <Label htmlFor="accessible" className="font-normal">Accès PMR</Label>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="schedule">Horaires d'ouverture *</Label>
-                    <div className="relative">
-                      <Clock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Textarea
-                        id="schedule"
-                        placeholder="Ex: Lun-Ven: 8h-18h, Sam: 8h-12h"
-                        rows={3}
-                        className="pl-10"
-                        value={formData.schedule}
-                        onChange={(e) => setFormData({...formData, schedule: e.target.value})}
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 4: Documents */}
-              {step === 4 && (
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="license">Licence professionnelle / Agrément *</Label>
-                    <div className="mt-2 border-2 border-dashed rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer">
-                      <FileText className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
-                      <Input
-                        id="license"
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        className="hidden"
-                        onChange={(e) => setFormData({...formData, license: e.target.files?.[0] || null})}
-                        required
-                      />
-                      <Label htmlFor="license" className="cursor-pointer">
-                        {formData.license ? formData.license.name : 'Cliquez pour télécharger (PDF, JPG, PNG)'}
-                      </Label>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="photos">Photos du cabinet (optionnel)</Label>
-                    <div className="mt-2 border-2 border-dashed rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer">
-                      <Upload className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
-                      <Input
-                        id="photos"
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        onChange={(e) => setFormData({...formData, photos: Array.from(e.target.files || [])})}
-                      />
-                      <Label htmlFor="photos" className="cursor-pointer">
-                        {formData.photos.length > 0 ? `${formData.photos.length} photo(s) sélectionnée(s)` : 'Cliquez pour ajouter des photos'}
-                      </Label>
-                    </div>
-                  </div>
-
-                  <div className="bg-muted p-4 rounded-lg">
-                    <p className="text-sm text-muted-foreground">
-                      📋 Votre demande sera examinée par notre équipe sous 24-48h. 
-                      Vous recevrez un email de confirmation une fois votre profil validé.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Navigation Buttons */}
-              <div className="flex justify-between pt-6">
-                {step > 1 && (
-                  <Button type="button" variant="outline" onClick={prevStep}>
-                    Précédent
-                  </Button>
-                )}
-                {step < 4 ? (
-                  <Button type="button" onClick={nextStep} className="ml-auto">
-                    Suivant
-                  </Button>
-                ) : (
-                  <Button type="submit" className="ml-auto">
-                    Soumettre la demande
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </form>
+        {/* Help Text */}
+        <p className="text-center text-sm text-muted-foreground mt-6">
+          Besoin d'aide ? <a href="/contact" className="text-primary hover:underline">Contactez-nous</a>
+        </p>
       </div>
     </div>
   );
