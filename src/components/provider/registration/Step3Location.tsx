@@ -1,16 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { 
-  MapPin, Clock, Home, Plus, Trash2
+  MapPin, Clock, Home, Plus, Trash2, Navigation, AlertTriangle, Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProviderFormData, WeeklySchedule, AdditionalLocation } from './types';
 import { AREAS } from '@/data/providers';
+import { useToast } from '@/hooks/use-toast';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Fix Leaflet default marker icon issue
+const defaultIcon = L.icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
 
 interface Step3Props {
   formData: ProviderFormData;
@@ -29,8 +44,82 @@ const DAYS_FR: Record<keyof WeeklySchedule, string> = {
   sunday: 'Dimanche',
 };
 
+// Default center: Sidi Bel Abbès, Algeria
+const DEFAULT_CENTER: [number, number] = [35.1975, -0.6300];
+
 export function Step3Location({ formData, updateFormData, onNext, onPrev }: Step3Props) {
+  const { toast } = useToast();
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isLocating, setIsLocating] = useState(false);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
+
+  // Check if provider type should show 24/7 emergency toggle
+  const show24_7EmergencyToggle = ['pharmacy', 'birth_hospital', 'hospital'].includes(formData.providerType);
+
+  // Initialize map
+  useEffect(() => {
+    if (!mapRef.current || mapInstanceRef.current) return;
+
+    const initialCenter: [number, number] = formData.lat && formData.lng 
+      ? [formData.lat, formData.lng] 
+      : DEFAULT_CENTER;
+    const initialZoom = formData.lat && formData.lng ? 16 : 13;
+
+    const map = L.map(mapRef.current, {
+      center: initialCenter,
+      zoom: initialZoom,
+      scrollWheelZoom: true,
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+
+    // Add click handler to set location
+    map.on('click', (e: L.LeafletMouseEvent) => {
+      const { lat, lng } = e.latlng;
+      updateFormData({ lat, lng });
+      toast({
+        title: "Position définie",
+        description: `Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)}`,
+      });
+    });
+
+    mapInstanceRef.current = map;
+
+    // Add initial marker if position exists
+    if (formData.lat && formData.lng) {
+      markerRef.current = L.marker([formData.lat, formData.lng], { icon: defaultIcon }).addTo(map);
+    }
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        markerRef.current = null;
+      }
+    };
+  }, []);
+
+  // Update marker when position changes
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+
+    // Remove existing marker
+    if (markerRef.current) {
+      markerRef.current.remove();
+      markerRef.current = null;
+    }
+
+    // Add new marker if position exists
+    if (formData.lat && formData.lng) {
+      markerRef.current = L.marker([formData.lat, formData.lng], { icon: defaultIcon })
+        .addTo(mapInstanceRef.current);
+      mapInstanceRef.current.flyTo([formData.lat, formData.lng], 16, { duration: 1 });
+    }
+  }, [formData.lat, formData.lng]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -50,6 +139,39 @@ export function Step3Location({ formData, updateFormData, onNext, onPrev }: Step
     if (validateForm()) {
       onNext();
     }
+  };
+
+  const handleDetectLocation = () => {
+    if (!navigator.geolocation) {
+      toast({
+        title: "Géolocalisation non supportée",
+        description: "Votre navigateur ne supporte pas la géolocalisation.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        updateFormData({ lat: latitude, lng: longitude });
+        setIsLocating(false);
+        toast({
+          title: "Position détectée",
+          description: "Votre position a été définie avec succès.",
+        });
+      },
+      () => {
+        setIsLocating(false);
+        toast({
+          title: "Erreur de géolocalisation",
+          description: "Impossible de détecter votre position. Vérifiez les permissions.",
+          variant: "destructive",
+        });
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   const updateSchedule = (day: keyof WeeklySchedule, field: string, value: string | boolean) => {
@@ -164,15 +286,79 @@ export function Step3Location({ formData, updateFormData, onNext, onPrev }: Step
           </div>
         </div>
 
-        {/* Map Placeholder */}
-        <div className="h-48 bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-muted-foreground/20">
-          <div className="text-center text-muted-foreground">
-            <MapPin className="h-8 w-8 mx-auto mb-2" />
-            <p className="text-sm">Carte interactive</p>
-            <p className="text-xs">Cliquez pour définir votre emplacement exact</p>
-          </div>
-        </div>
+        {/* Interactive Leaflet Map */}
+        <Card className="overflow-hidden">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium">
+                Définir votre position exacte
+              </CardTitle>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleDetectLocation}
+                disabled={isLocating}
+              >
+                {isLocating ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Navigation className="h-4 w-4 mr-2" />
+                )}
+                Détecter ma position
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div ref={mapRef} className="h-64 w-full" />
+            <div className="p-3 bg-muted/50 text-xs text-muted-foreground">
+              {formData.lat && formData.lng ? (
+                <span className="flex items-center gap-2">
+                  <MapPin className="h-3 w-3 text-primary" />
+                  Position: {formData.lat.toFixed(6)}, {formData.lng.toFixed(6)}
+                </span>
+              ) : (
+                "Cliquez sur la carte pour définir votre emplacement exact"
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* 24/7 Emergency Toggle - Only for Pharmacies & Birth Hospitals */}
+      {show24_7EmergencyToggle && (
+        <Card className="border-orange-500/30 bg-gradient-to-r from-orange-500/5 to-transparent">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center">
+                  <AlertTriangle className="h-5 w-5 text-orange-500" />
+                </div>
+                <div>
+                  <Label className="text-base font-medium">Service d'urgence 24h/24</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {formData.providerType === 'pharmacy' 
+                      ? 'Pharmacie de garde disponible 24/7'
+                      : formData.providerType === 'birth_hospital'
+                      ? 'Maternité avec service d\'urgence obstétrique'
+                      : 'Service d\'urgences disponible en permanence'
+                    }
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={formData.is24_7}
+                onCheckedChange={(checked) => updateFormData({ is24_7: checked })}
+              />
+            </div>
+            {formData.is24_7 && (
+              <Badge variant="outline" className="mt-3 border-orange-500/50 text-orange-600 bg-orange-500/10">
+                🚨 Service d'urgence activé
+              </Badge>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Schedule */}
       <Card>
@@ -182,21 +368,23 @@ export function Step3Location({ formData, updateFormData, onNext, onPrev }: Step
               <Clock className="h-5 w-5" />
               Horaires d'ouverture
             </CardTitle>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="is24_7"
-                checked={formData.is24_7}
-                onCheckedChange={(checked) => updateFormData({ is24_7: checked })}
-              />
-              <Label htmlFor="is24_7" className="text-sm">Ouvert 24h/24</Label>
-            </div>
+            {!show24_7EmergencyToggle && (
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="is24_7"
+                  checked={formData.is24_7}
+                  onCheckedChange={(checked) => updateFormData({ is24_7: checked })}
+                />
+                <Label htmlFor="is24_7" className="text-sm">Ouvert 24h/24</Label>
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent>
           {!formData.is24_7 && (
             <div className="space-y-3">
               {(Object.keys(DAYS_FR) as Array<keyof WeeklySchedule>).map((day) => (
-                <div key={day} className="flex items-center gap-4">
+                <div key={day} className="flex items-center gap-4 flex-wrap">
                   <div className="w-24">
                     <Label className="text-sm">{DAYS_FR[day]}</Label>
                   </div>

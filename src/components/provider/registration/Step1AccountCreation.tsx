@@ -7,10 +7,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { 
   Building2, Stethoscope, Pill, FlaskConical, Hospital,
-  Mail, Lock, Eye, EyeOff, Chrome, Baby, Droplet, Camera, Package
+  Mail, Lock, Eye, EyeOff, Baby, Droplet, Scan, Package,
+  Sparkles, Shield, Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProviderFormData, PROVIDER_TYPE_LABELS, ProviderTypeKey } from './types';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Step1Props {
   formData: ProviderFormData;
@@ -18,20 +20,71 @@ interface Step1Props {
   onNext: () => void;
 }
 
-// Icons for all provider types
-const providerTypeIcons: Record<string, React.ReactNode> = {
-  hospital: <Hospital className="h-6 w-6" />,
-  birth_hospital: <Baby className="h-6 w-6" />,
-  clinic: <Building2 className="h-6 w-6" />,
-  doctor: <Stethoscope className="h-6 w-6" />,
-  pharmacy: <Pill className="h-6 w-6" />,
-  lab: <FlaskConical className="h-6 w-6" />,
-  blood_cabin: <Droplet className="h-6 w-6" />,
-  radiology_center: <Camera className="h-6 w-6" />,
-  medical_equipment: <Package className="h-6 w-6" />,
+// Premium icons with color themes for each provider type
+const PROVIDER_TYPE_CONFIG: Record<string, { 
+  icon: React.ReactNode; 
+  color: string; 
+  bgColor: string;
+  description: string;
+}> = {
+  hospital: { 
+    icon: <Hospital className="h-7 w-7" />, 
+    color: 'text-red-500',
+    bgColor: 'bg-red-500/10 border-red-500/20 hover:border-red-500/50',
+    description: 'CHU, EPH, Hôpital privé'
+  },
+  birth_hospital: { 
+    icon: <Baby className="h-7 w-7" />, 
+    color: 'text-pink-500',
+    bgColor: 'bg-pink-500/10 border-pink-500/20 hover:border-pink-500/50',
+    description: 'Maternité, Clinique d\'accouchement'
+  },
+  clinic: { 
+    icon: <Building2 className="h-7 w-7" />, 
+    color: 'text-blue-500',
+    bgColor: 'bg-blue-500/10 border-blue-500/20 hover:border-blue-500/50',
+    description: 'Polyclinique, Centre médical'
+  },
+  doctor: { 
+    icon: <Stethoscope className="h-7 w-7" />, 
+    color: 'text-emerald-500',
+    bgColor: 'bg-emerald-500/10 border-emerald-500/20 hover:border-emerald-500/50',
+    description: 'Médecin généraliste ou spécialiste'
+  },
+  pharmacy: { 
+    icon: <Pill className="h-7 w-7" />, 
+    color: 'text-green-500',
+    bgColor: 'bg-green-500/10 border-green-500/20 hover:border-green-500/50',
+    description: 'Officine, Pharmacie de garde'
+  },
+  lab: { 
+    icon: <FlaskConical className="h-7 w-7" />, 
+    color: 'text-purple-500',
+    bgColor: 'bg-purple-500/10 border-purple-500/20 hover:border-purple-500/50',
+    description: 'Analyses médicales, Biologie'
+  },
+  blood_cabin: { 
+    icon: <Droplet className="h-7 w-7" />, 
+    color: 'text-rose-600',
+    bgColor: 'bg-rose-600/10 border-rose-600/20 hover:border-rose-600/50',
+    description: 'Don de sang, Transfusion'
+  },
+  radiology_center: { 
+    icon: <Scan className="h-7 w-7" />, 
+    color: 'text-cyan-500',
+    bgColor: 'bg-cyan-500/10 border-cyan-500/20 hover:border-cyan-500/50',
+    description: 'Scanner, IRM, Radio, Écho'
+  },
+  medical_equipment: { 
+    icon: <Package className="h-7 w-7" />, 
+    color: 'text-amber-500',
+    bgColor: 'bg-amber-500/10 border-amber-500/20 hover:border-amber-500/50',
+    description: 'Vente & location matériel médical'
+  },
 };
 
 export function Step1AccountCreation({ formData, updateFormData, onNext }: Step1Props) {
+  const { isRTL } = useLanguage();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -71,46 +124,91 @@ export function Step1AccountCreation({ formData, updateFormData, onNext }: Step1
 
   return (
     <div className="space-y-8">
-      {/* Welcome Message */}
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-foreground mb-2">
+      {/* Premium Welcome Message */}
+      <div className="text-center space-y-4">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 mb-2">
+          <Sparkles className="h-8 w-8 text-primary" />
+        </div>
+        <h2 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
           Bienvenue sur CityHealth Pro
         </h2>
-        <p className="text-muted-foreground">
-          Rejoignez notre réseau de professionnels de santé et développez votre visibilité
+        <p className="text-muted-foreground max-w-md mx-auto">
+          Rejoignez notre réseau de professionnels de santé et développez votre visibilité auprès de milliers de patients
         </p>
+        
+        {/* Trust Indicators */}
+        <div className="flex items-center justify-center gap-6 pt-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Shield className="h-4 w-4 text-green-500" />
+            <span>Données sécurisées</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Users className="h-4 w-4 text-blue-500" />
+            <span>+15,000 patients</span>
+          </div>
+        </div>
       </div>
 
-      {/* Provider Type Selection */}
+      {/* Premium Provider Type Selection Grid */}
       <div className="space-y-4">
-        <Label className="text-base font-semibold">
-          Type d'établissement <span className="text-destructive">*</span>
+        <Label className="text-base font-semibold flex items-center gap-2">
+          Sélectionnez votre type d'établissement 
+          <span className="text-destructive">*</span>
         </Label>
-        <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-          {Object.entries(PROVIDER_TYPE_LABELS).map(([type, labels]) => (
-            <Card 
-              key={type}
-              className={cn(
-                "cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary/50",
-                formData.providerType === type 
-                  ? "border-primary bg-primary/5 ring-2 ring-primary/20" 
-                  : "border-border"
-              )}
-              onClick={() => updateFormData({ providerType: type as ProviderTypeKey })}
-            >
-              <CardContent className="p-3 text-center">
-                <div className={cn(
-                  "mx-auto mb-1.5 transition-colors",
-                  formData.providerType === type ? "text-primary" : "text-muted-foreground"
-                )}>
-                  {providerTypeIcons[type]}
-                </div>
-                <p className="text-xs font-medium leading-tight">{labels.fr}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5" dir="rtl">{labels.ar}</p>
-              </CardContent>
-            </Card>
-          ))}
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Object.entries(PROVIDER_TYPE_LABELS).map(([type, labels]) => {
+            const config = PROVIDER_TYPE_CONFIG[type];
+            const isSelected = formData.providerType === type;
+            
+            return (
+              <Card 
+                key={type}
+                className={cn(
+                  "cursor-pointer transition-all duration-300 border-2",
+                  "hover:shadow-lg hover:scale-[1.02]",
+                  isSelected 
+                    ? `ring-2 ring-primary border-primary ${config.bgColor}` 
+                    : `border-border/50 ${config.bgColor}`
+                )}
+                onClick={() => updateFormData({ providerType: type as ProviderTypeKey })}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-4">
+                    <div className={cn(
+                      "p-3 rounded-xl transition-all",
+                      isSelected ? `${config.color} bg-white/80 dark:bg-black/20 shadow-sm` : `${config.color} opacity-70`
+                    )}>
+                      {config.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={cn(
+                        "font-semibold text-base mb-0.5 transition-colors",
+                        isSelected ? "text-foreground" : "text-foreground/80"
+                      )}>
+                        {labels.fr}
+                      </p>
+                      <p className="text-sm text-muted-foreground mb-1" dir="rtl">
+                        {labels.ar}
+                      </p>
+                      <p className="text-xs text-muted-foreground/70 leading-relaxed">
+                        {config.description}
+                      </p>
+                    </div>
+                    {isSelected && (
+                      <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                        <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
+        
         {errors.providerType && (
           <p className="text-sm text-destructive">{errors.providerType}</p>
         )}
@@ -125,12 +223,18 @@ export function Step1AccountCreation({ formData, updateFormData, onNext }: Step1
             Email professionnel <span className="text-destructive">*</span>
           </Label>
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Mail className={cn(
+              "absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground",
+              isRTL ? "right-3" : "left-3"
+            )} />
             <Input
               id="email"
               type="email"
               placeholder="contact@votre-etablissement.dz"
-              className={cn("pl-10", errors.email && "border-destructive")}
+              className={cn(
+                isRTL ? "pr-10" : "pl-10",
+                errors.email && "border-destructive"
+              )}
               value={formData.email}
               onChange={(e) => updateFormData({ email: e.target.value })}
             />
@@ -144,19 +248,28 @@ export function Step1AccountCreation({ formData, updateFormData, onNext }: Step1
               Mot de passe <span className="text-destructive">*</span>
             </Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Lock className={cn(
+                "absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground",
+                isRTL ? "right-3" : "left-3"
+              )} />
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
                 placeholder="Minimum 8 caractères"
-                className={cn("pl-10 pr-10", errors.password && "border-destructive")}
+                className={cn(
+                  isRTL ? "pr-10 pl-10" : "pl-10 pr-10",
+                  errors.password && "border-destructive"
+                )}
                 value={formData.password}
                 onChange={(e) => updateFormData({ password: e.target.value })}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className={cn(
+                  "absolute top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground",
+                  isRTL ? "left-3" : "right-3"
+                )}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -169,19 +282,28 @@ export function Step1AccountCreation({ formData, updateFormData, onNext }: Step1
               Confirmer le mot de passe <span className="text-destructive">*</span>
             </Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Lock className={cn(
+                "absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground",
+                isRTL ? "right-3" : "left-3"
+              )} />
               <Input
                 id="confirmPassword"
                 type={showConfirmPassword ? "text" : "password"}
                 placeholder="Retapez votre mot de passe"
-                className={cn("pl-10 pr-10", errors.confirmPassword && "border-destructive")}
+                className={cn(
+                  isRTL ? "pr-10 pl-10" : "pl-10 pr-10",
+                  errors.confirmPassword && "border-destructive"
+                )}
                 value={formData.confirmPassword}
                 onChange={(e) => updateFormData({ confirmPassword: e.target.value })}
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className={cn(
+                  "absolute top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground",
+                  isRTL ? "left-3" : "right-3"
+                )}
               >
                 {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -189,17 +311,6 @@ export function Step1AccountCreation({ formData, updateFormData, onNext }: Step1
             {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
           </div>
         </div>
-      </div>
-
-      <Separator />
-
-      {/* Google OAuth */}
-      <div className="text-center">
-        <p className="text-sm text-muted-foreground mb-3">Ou inscrivez-vous avec</p>
-        <Button variant="outline" className="w-full max-w-sm">
-          <Chrome className="mr-2 h-4 w-4" />
-          Continuer avec Google
-        </Button>
       </div>
 
       <Separator />
@@ -215,11 +326,11 @@ export function Step1AccountCreation({ formData, updateFormData, onNext }: Step1
         <div className="space-y-1">
           <Label htmlFor="terms" className="text-sm font-normal cursor-pointer">
             J'accepte les{' '}
-            <a href="/terms" className="text-primary hover:underline">
+            <a href="/terms" className="text-primary hover:underline font-medium">
               Conditions d'utilisation
             </a>{' '}
             et la{' '}
-            <a href="/privacy" className="text-primary hover:underline">
+            <a href="/privacy" className="text-primary hover:underline font-medium">
               Politique de confidentialité
             </a>
           </Label>
