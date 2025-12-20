@@ -93,7 +93,8 @@ export default function ProviderRegister() {
           <ProgressIndicator 
             steps={STEPS} 
             currentStep={currentStep} 
-            completedSteps={completedSteps} 
+            completedSteps={completedSteps}
+            onStepClick={goToStep}
           />
         </div>
 

@@ -11,9 +11,17 @@ interface ProgressIndicatorProps {
   steps: Step[];
   currentStep: number;
   completedSteps: number[];
+  onStepClick?: (step: number) => void;
 }
 
-export function ProgressIndicator({ steps, currentStep, completedSteps }: ProgressIndicatorProps) {
+export function ProgressIndicator({ steps, currentStep, completedSteps, onStepClick }: ProgressIndicatorProps) {
+  const handleStepClick = (stepNumber: number) => {
+    // Only allow clicking on completed steps or previous steps
+    if (onStepClick && (completedSteps.includes(stepNumber) || stepNumber < currentStep)) {
+      onStepClick(stepNumber);
+    }
+  };
+
   return (
     <div className="w-full">
       {/* Mobile: Simple progress bar */}
@@ -32,9 +40,30 @@ export function ProgressIndicator({ steps, currentStep, completedSteps }: Progre
             style={{ width: `${(currentStep / steps.length) * 100}%` }}
           />
         </div>
-        <p className="mt-2 text-sm font-medium text-foreground">
-          {steps[currentStep - 1]?.title}
-        </p>
+        <div className="mt-3 flex gap-1 overflow-x-auto pb-2">
+          {steps.map((step) => {
+            const isCompleted = completedSteps.includes(step.number);
+            const isCurrent = currentStep === step.number;
+            const isPast = step.number < currentStep;
+            const isClickable = isCompleted || isPast;
+
+            return (
+              <button
+                key={step.number}
+                onClick={() => handleStepClick(step.number)}
+                disabled={!isClickable}
+                className={cn(
+                  "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                  isCurrent && "bg-primary text-primary-foreground",
+                  (isCompleted || isPast) && !isCurrent && "bg-primary/20 text-primary hover:bg-primary/30 cursor-pointer",
+                  !isCompleted && !isPast && !isCurrent && "bg-muted text-muted-foreground cursor-not-allowed"
+                )}
+              >
+                {step.number}. {step.title}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Desktop: Full step indicator */}
@@ -53,11 +82,17 @@ export function ProgressIndicator({ steps, currentStep, completedSteps }: Progre
             const isCompleted = completedSteps.includes(step.number);
             const isCurrent = currentStep === step.number;
             const isPast = step.number < currentStep;
+            const isClickable = isCompleted || isPast;
 
             return (
-              <div 
-                key={step.number} 
-                className="relative flex flex-col items-center z-10"
+              <button 
+                key={step.number}
+                onClick={() => handleStepClick(step.number)}
+                disabled={!isClickable}
+                className={cn(
+                  "relative flex flex-col items-center z-10 group transition-all",
+                  isClickable && "cursor-pointer"
+                )}
               >
                 <div
                   className={cn(
@@ -66,7 +101,8 @@ export function ProgressIndicator({ steps, currentStep, completedSteps }: Progre
                       ? "bg-primary border-primary text-primary-foreground"
                       : isCurrent
                       ? "bg-background border-primary text-primary shadow-lg shadow-primary/25"
-                      : "bg-muted border-muted-foreground/20 text-muted-foreground"
+                      : "bg-muted border-muted-foreground/20 text-muted-foreground",
+                    isClickable && "group-hover:scale-110 group-hover:shadow-lg"
                   )}
                 >
                   {isCompleted || isPast ? (
@@ -78,15 +114,21 @@ export function ProgressIndicator({ steps, currentStep, completedSteps }: Progre
                 <div className="mt-3 text-center max-w-[120px]">
                   <p className={cn(
                     "text-sm font-medium transition-colors",
-                    isCurrent ? "text-foreground" : "text-muted-foreground"
+                    isCurrent ? "text-foreground" : "text-muted-foreground",
+                    isClickable && "group-hover:text-primary"
                   )}>
                     {step.title}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5 hidden lg:block">
                     {step.description}
                   </p>
+                  {isClickable && !isCurrent && (
+                    <p className="text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity mt-1">
+                      Cliquez pour modifier
+                    </p>
+                  )}
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
