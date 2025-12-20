@@ -1,76 +1,40 @@
-import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
-import { ProgressIndicator } from '@/components/provider/registration/ProgressIndicator';
-import { Step1AccountCreation } from '@/components/provider/registration/Step1AccountCreation';
+import { DynamicProgressBar } from '@/components/provider/registration/DynamicProgressBar';
+import { Step1EliteIdentity } from '@/components/provider/registration/Step1EliteIdentity';
 import { Step2BasicInfo } from '@/components/provider/registration/Step2BasicInfo';
 import { Step3Location } from '@/components/provider/registration/Step3Location';
 import { Step4Services } from '@/components/provider/registration/Step4Services';
 import { Step5MediaUpload } from '@/components/provider/registration/Step5MediaUpload';
-import { Step6Review } from '@/components/provider/registration/Step6Review';
-import { ProviderFormData, getInitialFormData } from '@/components/provider/registration/types';
+import { Step6MirrorPreview } from '@/components/provider/registration/Step6MirrorPreview';
+import { useRegistration, RegistrationProvider } from '@/contexts/RegistrationContext';
 import { useToast } from '@/hooks/use-toast';
 
 const STEPS = [
-  { number: 1, title: 'Compte', description: 'Créer votre compte' },
-  { number: 2, title: 'Établissement', description: 'Informations de base' },
+  { number: 1, title: 'Identité', description: 'Type & Compte' },
+  { number: 2, title: 'Établissement', description: 'Informations' },
   { number: 3, title: 'Localisation', description: 'Adresse & horaires' },
   { number: 4, title: 'Services', description: 'Spécialisations' },
-  { number: 5, title: 'Profil', description: 'Photos & description' },
-  { number: 6, title: 'Validation', description: 'Vérifier & soumettre' },
+  { number: 5, title: 'Profil', description: 'Photos (Optionnel)' },
+  { number: 6, title: 'Aperçu', description: 'Publier' },
 ];
 
-export default function ProviderRegister() {
+function ProviderRegisterContent() {
   const { toast } = useToast();
-  const [currentStep, setCurrentStep] = useState(1);
-  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
-  const [formData, setFormData] = useState<ProviderFormData>(getInitialFormData);
-
-  // Auto-save to localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem('ch_provider_registration_draft');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setFormData(parsed.formData);
-        setCurrentStep(parsed.currentStep || 1);
-        setCompletedSteps(parsed.completedSteps || []);
-      } catch (e) {
-        // Ignore parse errors
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('ch_provider_registration_draft', JSON.stringify({
-      formData,
-      currentStep,
-      completedSteps,
-    }));
-  }, [formData, currentStep, completedSteps]);
-
-  const updateFormData = (data: Partial<ProviderFormData>) => {
-    setFormData(prev => ({ ...prev, ...data, updatedAt: new Date().toISOString() }));
-  };
-
-  const goToStep = (step: number) => {
-    setCurrentStep(step);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const nextStep = () => {
-    if (!completedSteps.includes(currentStep)) {
-      setCompletedSteps(prev => [...prev, currentStep]);
-    }
-    goToStep(Math.min(currentStep + 1, 6));
-  };
-
-  const prevStep = () => goToStep(Math.max(currentStep - 1, 1));
+  const { 
+    formData, 
+    updateFormData, 
+    currentStep, 
+    goToStep, 
+    nextStep, 
+    prevStep,
+    profileScore,
+  } = useRegistration();
 
   const handleSaveAndExit = () => {
     toast({
-      title: "Progression sauvegardée",
+      title: "Brouillon sauvegardé",
       description: "Vous pouvez reprendre votre inscription plus tard.",
     });
   };
@@ -88,12 +52,10 @@ export default function ProviderRegister() {
           </p>
         </div>
 
-        {/* Progress */}
+        {/* Dynamic Progress Bar with Scoring */}
         <div className="mb-8">
-          <ProgressIndicator 
+          <DynamicProgressBar 
             steps={STEPS} 
-            currentStep={currentStep} 
-            completedSteps={completedSteps}
             onStepClick={goToStep}
           />
         </div>
@@ -110,7 +72,7 @@ export default function ProviderRegister() {
         <Card className="shadow-xl border-0 bg-card/80 backdrop-blur">
           <CardContent className="p-6 md:p-8">
             {currentStep === 1 && (
-              <Step1AccountCreation 
+              <Step1EliteIdentity 
                 formData={formData} 
                 updateFormData={updateFormData} 
                 onNext={nextStep} 
@@ -149,7 +111,7 @@ export default function ProviderRegister() {
               />
             )}
             {currentStep === 6 && (
-              <Step6Review 
+              <Step6MirrorPreview 
                 formData={formData} 
                 onPrev={prevStep} 
                 onEditStep={goToStep} 
@@ -164,5 +126,13 @@ export default function ProviderRegister() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function ProviderRegister() {
+  return (
+    <RegistrationProvider>
+      <ProviderRegisterContent />
+    </RegistrationProvider>
   );
 }
