@@ -15,8 +15,10 @@ import {
   MEDICAL_SPECIALTIES, 
   EQUIPMENT_OPTIONS, 
   ACCESSIBILITY_OPTIONS,
-  LANGUAGES_OPTIONS
+  LANGUAGES_OPTIONS,
+  getTypeSpecificFields
 } from './types';
+import { TypeSpecificFields } from './TypeSpecificFields';
 
 interface Step4Props {
   formData: ProviderFormData;
@@ -75,6 +77,8 @@ export function Step4Services({ formData, updateFormData, onNext, onPrev }: Step
     s.toLowerCase().includes(searchSpecialty.toLowerCase())
   );
 
+  const hasTypeSpecificFields = Object.keys(getTypeSpecificFields(formData.providerType)).length > 0;
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -89,6 +93,11 @@ export function Step4Services({ formData, updateFormData, onNext, onPrev }: Step
           Décrivez précisément vos services pour une meilleure visibilité
         </p>
       </div>
+
+      {/* Type-Specific Fields (Blood Cabin, Radiology, Equipment) */}
+      {hasTypeSpecificFields && (
+        <TypeSpecificFields formData={formData} updateFormData={updateFormData} />
+      )}
 
       {/* Service Categories */}
       <Card>

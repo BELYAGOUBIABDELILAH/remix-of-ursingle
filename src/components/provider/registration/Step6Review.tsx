@@ -39,14 +39,20 @@ export function Step6Review({ formData, onPrev, onEditStep }: Step6Props) {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Save to localStorage
+    // Save to localStorage with PENDING status and isPublic = false
     const registrations = JSON.parse(localStorage.getItem('ch_pending_registrations') || '[]');
     registrations.push({
       ...formData,
-      id: Date.now().toString(),
+      id: `reg_${Date.now()}`,
+      facilityNameFr: formData.facilityNameFr,
+      facilityNameAr: formData.facilityNameAr,
+      providerName: formData.facilityNameFr, // For admin dashboard compatibility
+      type: formData.providerType,
       status: 'pending',
       submittedAt: new Date().toISOString(),
+      // VERIFICATION GATE: Default to pending and not public
       verificationStatus: 'pending',
+      isPublic: false,
     });
     localStorage.setItem('ch_pending_registrations', JSON.stringify(registrations));
 

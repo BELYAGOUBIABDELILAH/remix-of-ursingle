@@ -1,31 +1,65 @@
 // Centralized mock data and localStorage utilities for CityHealth
 // NOTE: This is a frontend-only data layer for the MVP (no backend)
 
-export type ProviderType = 'doctor' | 'clinic' | 'pharmacy' | 'lab' | 'hospital'
-export type Lang = 'ar' | 'fr' | 'en'
+// Expanded Provider Types for Algeria Healthcare System
+export type ProviderType = 
+  | 'doctor' 
+  | 'clinic' 
+  | 'pharmacy' 
+  | 'lab' 
+  | 'hospital'
+  | 'birth_hospital'
+  | 'blood_cabin'
+  | 'radiology_center'
+  | 'medical_equipment';
+
+export type Lang = 'ar' | 'fr' | 'en';
+
+export type VerificationStatus = 'pending' | 'verified' | 'rejected';
 
 export interface CityHealthProvider {
-  id: string
-  name: string
-  type: ProviderType
-  specialty?: string
-  rating: number
-  reviewsCount: number
-  distance: number // km from city center (mocked)
-  verified: boolean
-  emergency: boolean
-  accessible: boolean
-  isOpen: boolean
-  address: string
-  city: string
-  area: string
-  phone: string
-  image: string
-  lat: number
-  lng: number
-  languages: Lang[]
-  description: string
+  id: string;
+  name: string;
+  type: ProviderType;
+  specialty?: string;
+  rating: number;
+  reviewsCount: number;
+  distance: number; // km from city center (mocked)
+  verified: boolean;
+  emergency: boolean;
+  accessible: boolean;
+  isOpen: boolean;
+  address: string;
+  city: string;
+  area: string;
+  phone: string;
+  image: string;
+  lat: number;
+  lng: number;
+  languages: Lang[];
+  description: string;
+  // New verification fields
+  verificationStatus: VerificationStatus;
+  isPublic: boolean;
+  // Type-specific fields
+  bloodTypes?: string[];
+  urgentNeed?: boolean;
+  stockStatus?: 'critical' | 'low' | 'normal' | 'high';
+  imagingTypes?: string[];
 }
+
+// Provider Type Labels (French/Arabic)
+export const PROVIDER_TYPE_LABELS: Record<ProviderType, { fr: string; ar: string; icon: string }> = {
+  hospital: { fr: 'Hôpital', ar: 'مستشفى', icon: '🏥' },
+  birth_hospital: { fr: 'Maternité', ar: 'مستشفى الولادة', icon: '👶' },
+  clinic: { fr: 'Clinique', ar: 'عيادة', icon: '🏨' },
+  doctor: { fr: 'Cabinet Médical', ar: 'عيادة طبية', icon: '👨‍⚕️' },
+  pharmacy: { fr: 'Pharmacie', ar: 'صيدلية', icon: '💊' },
+  lab: { fr: 'Laboratoire d\'Analyses', ar: 'مختبر التحاليل', icon: '🔬' },
+  blood_cabin: { fr: 'Centre de Don de Sang', ar: 'مركز التبرع بالدم', icon: '🩸' },
+  radiology_center: { fr: 'Centre de Radiologie', ar: 'مركز الأشعة', icon: '📷' },
+  medical_equipment: { fr: 'Équipement Médical', ar: 'معدات طبية', icon: '🦽' },
+};
 
 export const SPECIALTIES = [
   'Médecine générale',
@@ -37,7 +71,7 @@ export const SPECIALTIES = [
   'Dentisterie',
   'Radiologie',
   'Analyses médicales',
-]
+];
 
 export const PROVIDER_TYPES: ProviderType[] = [
   'doctor',
@@ -45,7 +79,11 @@ export const PROVIDER_TYPES: ProviderType[] = [
   'pharmacy',
   'lab',
   'hospital',
-]
+  'birth_hospital',
+  'blood_cabin',
+  'radiology_center',
+  'medical_equipment',
+];
 
 export const AREAS = [
   'Centre Ville',
@@ -54,7 +92,7 @@ export const AREAS = [
   'Sidi Bel Abbès Ouest',
   'Périphérie Nord',
   'Périphérie Sud',
-]
+];
 
 const STORAGE_KEYS = {
   providers: 'ch_providers_v1',
@@ -113,22 +151,27 @@ function makeDescription(type: ProviderType) {
 }
 
 export function generateMockProviders(count = 50): CityHealthProvider[] {
-  const centerLat = 35.1975
-  const centerLng = -0.6300
-  const list: CityHealthProvider[] = []
+  const centerLat = 35.1975;
+  const centerLng = -0.6300;
+  const list: CityHealthProvider[] = [];
+  
   for (let i = 0; i < count; i++) {
-    const type = randomFrom(PROVIDER_TYPES, i)
-    const specialty = type === 'doctor' ? randomFrom(SPECIALTIES, i) : (type === 'lab' ? 'Analyses médicales' : (type === 'pharmacy' ? 'Pharmacie' : undefined))
-    const rating = Math.min(5, Math.max(3.6, 3.5 + (i % 15) * 0.1 + (i % 3) * 0.05))
-    const distance = pseudoRandom(i, 0.3, 18)
-    const lat = centerLat + (pseudoRandom(i, -0.03, 0.03) as number)
-    const lng = centerLng + (pseudoRandom(i + 3, -0.03, 0.03) as number)
-    const verified = i % 3 !== 0
-    const emergency = type === 'hospital' || (i % 17 === 0)
-    const accessible = i % 4 !== 0
-    const isOpen = i % 5 !== 0
-    const area = randomFrom(AREAS, i)
-    const languages: Lang[] = (() => { const arr: Lang[] = ['fr']; if (i % 2 === 0) arr.push('ar'); if (i % 5 === 0) arr.push('en'); return arr; })()
+    const type = randomFrom(PROVIDER_TYPES, i);
+    const specialty = type === 'doctor' ? randomFrom(SPECIALTIES, i) : (type === 'lab' ? 'Analyses médicales' : (type === 'pharmacy' ? 'Pharmacie' : undefined));
+    const rating = Math.min(5, Math.max(3.6, 3.5 + (i % 15) * 0.1 + (i % 3) * 0.05));
+    const distance = pseudoRandom(i, 0.3, 18);
+    const lat = centerLat + (pseudoRandom(i, -0.03, 0.03) as number);
+    const lng = centerLng + (pseudoRandom(i + 3, -0.03, 0.03) as number);
+    const verified = i % 3 !== 0;
+    const emergency = type === 'hospital' || type === 'birth_hospital' || (i % 17 === 0);
+    const accessible = i % 4 !== 0;
+    const isOpen = i % 5 !== 0;
+    const area = randomFrom(AREAS, i);
+    const languages: Lang[] = (() => { const arr: Lang[] = ['fr']; if (i % 2 === 0) arr.push('ar'); if (i % 5 === 0) arr.push('en'); return arr; })();
+    
+    // Default to verified for mock data display
+    const verificationStatus: VerificationStatus = verified ? 'verified' : 'pending';
+    const isPublic = verificationStatus === 'verified';
 
     const item: CityHealthProvider = {
       id: (i + 1).toString(),
@@ -151,10 +194,22 @@ export function generateMockProviders(count = 50): CityHealthProvider[] {
       lng,
       languages,
       description: makeDescription(type),
-    }
-    list.push(item)
+      verificationStatus,
+      isPublic,
+      // Type-specific fields for blood_cabin
+      ...(type === 'blood_cabin' ? {
+        bloodTypes: ['A+', 'B+', 'O+', 'AB+'].slice(0, (i % 4) + 1),
+        urgentNeed: i % 7 === 0,
+        stockStatus: (['normal', 'low', 'critical', 'high'] as const)[i % 4],
+      } : {}),
+      // Type-specific fields for radiology_center
+      ...(type === 'radiology_center' ? {
+        imagingTypes: ['Radiographie standard', 'Scanner (CT)', 'Échographie'].slice(0, (i % 3) + 1),
+      } : {}),
+    };
+    list.push(item);
   }
-  return list
+  return list;
 }
 
 export function seedProvidersIfNeeded(count = 50) {
