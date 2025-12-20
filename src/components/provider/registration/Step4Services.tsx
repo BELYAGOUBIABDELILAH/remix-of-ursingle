@@ -77,6 +77,25 @@ export function Step4Services({ formData, updateFormData, onNext, onPrev }: Step
     s.toLowerCase().includes(searchSpecialty.toLowerCase())
   );
 
+  // Dynamic service tags based on provider type
+  const getTypeSpecificServices = () => {
+    switch (formData.providerType) {
+      case 'radiology_center':
+        return ['Radiographie standard', 'Scanner (CT)', 'IRM', 'Échographie', 'Mammographie', 'Panoramique dentaire'];
+      case 'pharmacy':
+        return ['Programme médicaments gratuits', 'Garde de nuit', 'Livraison à domicile', 'Préparations magistrales', 'Parapharmacie', 'Conseils nutritionnels'];
+      case 'blood_cabin':
+        return ['Don de sang', 'Don de plasma', 'Don de plaquettes', 'Groupage sanguin', 'Tests de compatibilité'];
+      case 'lab':
+        return ['Analyses sanguines', 'Analyses urinaires', 'Biopsie', 'Tests PCR', 'Sérologie', 'Bilan hormonal'];
+      case 'medical_equipment':
+        return ['Vente matériel', 'Location matériel', 'Réparation', 'Livraison', 'Installation à domicile'];
+      default:
+        return [];
+    }
+  };
+
+  const typeSpecificServices = getTypeSpecificServices();
   const hasTypeSpecificFields = Object.keys(getTypeSpecificFields(formData.providerType)).length > 0;
 
   return (
@@ -97,6 +116,29 @@ export function Step4Services({ formData, updateFormData, onNext, onPrev }: Step
       {/* Type-Specific Fields (Blood Cabin, Radiology, Equipment) */}
       {hasTypeSpecificFields && (
         <TypeSpecificFields formData={formData} updateFormData={updateFormData} />
+      )}
+
+      {/* Dynamic Service Tags for specific provider types */}
+      {typeSpecificServices.length > 0 && (
+        <Card className="border-primary/20">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Services spécifiques à votre activité</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {typeSpecificServices.map((service) => (
+                <Badge
+                  key={service}
+                  variant={formData.serviceCategories.includes(service) ? "default" : "outline"}
+                  className="cursor-pointer transition-all hover:scale-105"
+                  onClick={() => toggleArrayItem('serviceCategories', service)}
+                >
+                  {service}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Service Categories */}
