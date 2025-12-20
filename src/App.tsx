@@ -28,11 +28,13 @@ import ProviderProfilePage from "./pages/ProviderProfilePage";
 import ProviderRegister from "./pages/ProviderRegister";
 import ProviderDashboard from "./pages/ProviderDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
-import UserProfilePage from "./pages/UserProfilePage";
 import PatientDashboard from "./pages/PatientDashboard";
 import AIHealthChat from "./pages/AIHealthChat";
 import RegistrationStatus from "./pages/RegistrationStatus";
 import RegistrationThankYou from "./pages/RegistrationThankYou";
+import ProvidersMapPage from "./pages/ProvidersMapPage";
+import MedicalAssistantPage from "./pages/MedicalAssistantPage";
+import CitizenProfilePage from "./pages/CitizenProfilePage";
 import { AIChatbot } from "./components/AIChatbot";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { seedProvidersIfNeeded } from "@/data/providers";
@@ -247,7 +249,7 @@ const AppRoutes = () => {
         element={
           <PageTransition>
             <ProtectedRoute>
-              <UserProfilePage />
+              <CitizenProfilePage />
             </ProtectedRoute>
           </PageTransition>
         } 
@@ -267,6 +269,22 @@ const AppRoutes = () => {
         element={
           <PageTransition>
             <AIHealthChat />
+          </PageTransition>
+        } 
+      />
+      <Route 
+        path="/providers-map" 
+        element={
+          <PageTransition>
+            <ProvidersMapPage />
+          </PageTransition>
+        } 
+      />
+      <Route 
+        path="/medical-assistant" 
+        element={
+          <PageTransition>
+            <MedicalAssistantPage />
           </PageTransition>
         } 
       />
