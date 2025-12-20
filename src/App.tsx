@@ -13,7 +13,7 @@ import AntigravityIndex from "./pages/AntigravityIndex";
 import AuthPage from "./pages/AuthPage";
 import WhyPage from "./pages/WhyPage";
 import HowPage from "./pages/HowPage";
-import MapPage from "./pages/MapPage";
+import CartePage from "./pages/CartePage";
 import ContactPage from "./pages/ContactPage";
 import FavoritesPage from "./pages/FavoritesPage";
 import NotFound from "./pages/NotFound";
@@ -159,10 +159,10 @@ const AppRoutes = () => {
         } 
       />
       <Route 
-        path="/map"
+        path="/carte"
         element={
           <PageTransition>
-            <MapPage />
+            <CartePage />
           </PageTransition>
         } 
       />
