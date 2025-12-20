@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Menu, LogOut, Settings, User as UserIcon, Calendar, Bot } from 'lucide-react';
+import { Menu, LogOut, Settings, User as UserIcon, Calendar, Bot, Stethoscope } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -41,6 +41,8 @@ export const Header = () => {
     { to: '/emergency', label: t('nav', 'emergency') },
     { to: '/contact', label: t('header', 'contact') },
   ];
+
+  const isProvider = profile?.roles?.includes('provider');
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60">
@@ -110,6 +112,19 @@ export const Header = () => {
 
           {/* User Menu or Auth Buttons - Desktop */}
           <div className="hidden md:flex items-center gap-2">
+            {/* Partner CTA for non-providers */}
+            {!isAuthenticated && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => navigate('/provider/register')}
+                className="hidden lg:flex items-center gap-2 border-primary/50 text-primary hover:bg-primary/10"
+              >
+                <Stethoscope className="h-4 w-4" />
+                Professionnel de santé ?
+              </Button>
+            )}
+
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
