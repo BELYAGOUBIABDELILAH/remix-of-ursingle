@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Menu, LogOut, Settings, User as UserIcon, Calendar, Bot, Stethoscope } from 'lucide-react';
+import { Menu, LogOut, Settings, User as UserIcon, Calendar, Bot, Stethoscope, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,7 +16,7 @@ import { NotificationCenter } from '@/components/NotificationCenter';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export const Header = () => {
-  const { language, setLanguage, t } = useLanguage();
+  const { language, setLanguage, t, isRTL } = useLanguage();
   const { profile, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -37,15 +37,21 @@ export const Header = () => {
   const navLinks = [
     { to: '/', label: t('nav', 'home') },
     { to: '/search', label: t('header', 'providers') },
-    { to: '/ai-health-chat', label: 'Assistant IA', icon: Bot },
+    { to: '/ai-health-chat', label: isRTL ? 'مساعد الذكاء الاصطناعي' : 'Assistant IA', icon: Bot },
     { to: '/emergency', label: t('nav', 'emergency') },
     { to: '/contact', label: t('header', 'contact') },
   ];
 
   const isProvider = profile?.roles?.includes('provider');
 
+  const providerCTAText = {
+    fr: 'Professionnel de santé ?',
+    ar: 'متخصص في الصحة؟',
+    en: 'Healthcare Professional?',
+  };
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60">
+    <header className={`sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60 ${isRTL ? 'rtl' : 'ltr'}`}>
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         {/* Logo */}
         <Link 
@@ -96,7 +102,7 @@ export const Header = () => {
                   onClick={() => setLanguage(lang as 'fr' | 'ar' | 'en')}
                   className="cursor-pointer"
                 >
-                  <span className="mr-2 text-lg">{flag}</span>
+                  <span className={`${isRTL ? 'ml-2' : 'mr-2'} text-lg`}>{flag}</span>
                   {label}
                 </DropdownMenuItem>
               ))}
@@ -113,15 +119,16 @@ export const Header = () => {
           {/* User Menu or Auth Buttons - Desktop */}
           <div className="hidden md:flex items-center gap-2">
             {/* Partner CTA for non-providers */}
-            {!isAuthenticated && (
+            {!isProvider && (
               <Button 
                 variant="outline" 
                 size="sm"
                 onClick={() => navigate('/provider/register')}
-                className="hidden lg:flex items-center gap-2 border-primary/50 text-primary hover:bg-primary/10"
+                className="hidden lg:flex items-center gap-2 border-primary/50 text-primary hover:bg-primary/10 group"
               >
                 <Stethoscope className="h-4 w-4" />
-                Professionnel de santé ?
+                {providerCTAText[language]}
+                <Sparkles className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-accent" />
               </Button>
             )}
 
@@ -144,27 +151,35 @@ export const Header = () => {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link to="/profile" className="cursor-pointer">
-                      <UserIcon className="mr-2 h-4 w-4" />
+                      <UserIcon className={`${isRTL ? 'ml-2' : 'mr-2'} h-4 w-4`} />
                       {t('header', 'profile')}
                     </Link>
                   </DropdownMenuItem>
                   {profile?.roles.includes('patient') && (
                     <DropdownMenuItem asChild>
                       <Link to="/dashboard" className="cursor-pointer">
-                        <Calendar className="mr-2 h-4 w-4" />
-                        Tableau de bord
+                        <Calendar className={`${isRTL ? 'ml-2' : 'mr-2'} h-4 w-4`} />
+                        {isRTL ? 'لوحة التحكم' : 'Tableau de bord'}
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {isProvider && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/provider/dashboard" className="cursor-pointer">
+                        <Stethoscope className={`${isRTL ? 'ml-2' : 'mr-2'} h-4 w-4`} />
+                        {isRTL ? 'لوحة مقدم الخدمة' : 'Espace Praticien'}
                       </Link>
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem asChild>
                     <Link to="/settings" className="cursor-pointer">
-                      <Settings className="mr-2 h-4 w-4" />
+                      <Settings className={`${isRTL ? 'ml-2' : 'mr-2'} h-4 w-4`} />
                       {t('header', 'settings')}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={logout} className="cursor-pointer text-destructive">
-                    <LogOut className="mr-2 h-4 w-4" />
+                    <LogOut className={`${isRTL ? 'ml-2' : 'mr-2'} h-4 w-4`} />
                     {t('header', 'logout')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -201,7 +216,7 @@ export const Header = () => {
                 <Menu size={20} />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[280px] bg-background/95 backdrop-blur-lg">
+            <SheetContent side={isRTL ? 'left' : 'right'} className="w-[280px] bg-background/95 backdrop-blur-lg">
               <nav className="flex flex-col gap-4 mt-8" role="navigation" aria-label="Mobile navigation">
                 {navLinks.map((link) => (
                   <Link
@@ -213,12 +228,25 @@ export const Header = () => {
                     {link.label}
                   </Link>
                 ))}
+                
+                {/* Mobile Provider CTA */}
+                {!isProvider && (
+                  <Link
+                    to="/provider/register"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-lg font-medium text-primary hover:text-primary/80 transition-colors py-2 px-4 rounded-lg bg-primary/10 flex items-center gap-2"
+                  >
+                    <Stethoscope className="h-5 w-5" />
+                    {providerCTAText[language]}
+                  </Link>
+                )}
+                
                 <div className="border-t border-border/40 pt-4 mt-4 space-y-3">
                   {/* Mobile Language Toggle */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm" className="w-full">
-                        <span className="mr-2">{languageLabels[language].flag}</span>
+                        <span className={isRTL ? 'ml-2' : 'mr-2'}>{languageLabels[language].flag}</span>
                         {languageLabels[language].label}
                       </Button>
                     </DropdownMenuTrigger>
@@ -228,7 +256,7 @@ export const Header = () => {
                           key={lang}
                           onClick={() => setLanguage(lang as 'fr' | 'ar' | 'en')}
                         >
-                          <span className="mr-2">{flag}</span>
+                          <span className={isRTL ? 'ml-2' : 'mr-2'}>{flag}</span>
                           {label}
                         </DropdownMenuItem>
                       ))}
@@ -244,7 +272,7 @@ export const Header = () => {
                         </Link>
                       </Button>
                       <Button variant="destructive" className="w-full" onClick={() => { logout(); setMobileMenuOpen(false); }}>
-                        <LogOut className="mr-2 h-4 w-4" />
+                        <LogOut className={`${isRTL ? 'ml-2' : 'mr-2'} h-4 w-4`} />
                         {t('header', 'logout')}
                       </Button>
                     </>
