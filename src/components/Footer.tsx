@@ -10,59 +10,68 @@ import {
   Linkedin,
   Stethoscope,
   Globe,
-  ExternalLink
+  ExternalLink,
+  ShieldCheck,
+  HelpCircle,
+  Building2,
+  Droplets,
+  Baby,
+  Pill,
+  Wrench
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { AIHealthAssistant } from '@/components/AIHealthAssistant';
 
 const Footer = () => {
-  const { t, language, setLanguage } = useLanguage();
+  const { t, language, setLanguage, isRTL } = useLanguage();
 
   const footerSections = [
     {
-      title: "Services",
+      title: isRTL ? 'الخدمات' : 'Services',
       links: [
-        { label: "Recherche médecins", href: "/search" },
-        { label: "Carte interactive", href: "/map" },
-        { label: "Urgences 24/7", href: "/emergency" },
-        { label: "Assistant IA Santé", href: "/ai-health-chat" },
-        { label: "Mes favoris", href: "/favorites" }
+        { label: isRTL ? 'البحث عن الأطباء' : 'Recherche médecins', href: '/search' },
+        { label: isRTL ? 'الخريطة التفاعلية' : 'Carte interactive', href: '/map' },
+        { label: isRTL ? 'طوارئ 24/7' : 'Urgences 24/7', href: '/emergency' },
+        { label: isRTL ? 'مساعد الذكاء الاصطناعي' : 'Assistant IA Santé', href: '/ai-health-chat' },
+        { label: isRTL ? 'المفضلة' : 'Mes favoris', href: '/favorites' }
       ]
     },
     {
-      title: "Professionnels",
+      title: isRTL ? 'للمحترفين' : 'Pour les Professionnels',
       links: [
-        { label: "Devenir partenaire", href: "/providers" },
-        { label: "Espace praticien", href: "/provider/dashboard" },
-        { label: "Inscription praticien", href: "/provider/register" },
-        { label: "Tableau admin", href: "/admin/dashboard" }
+        { label: isRTL ? 'تسجيل مقدم الخدمة' : 'Inscription Prestataire', href: '/provider/register', icon: Stethoscope },
+        { label: isRTL ? 'ميثاق التحقق' : 'Charte de Vérification', href: '/how', icon: ShieldCheck },
+        { label: isRTL ? 'مساعدة المحترفين' : 'Aide aux Professionnels', href: '/contact', icon: HelpCircle },
+        { label: isRTL ? 'لوحة مقدم الخدمة' : 'Espace Praticien', href: '/provider/dashboard' }
       ]
     },
     {
-      title: "À propos",
+      title: isRTL ? 'أنواع الخدمات' : 'Types de Services',
       links: [
-        { label: "Pourquoi CityHealth", href: "/why" },
-        { label: "Comment ça marche", href: "/how" },
-        { label: "Contact", href: "/contact" }
+        { label: isRTL ? 'مستشفيات الولادة' : 'Hôpitaux de naissance', href: '/search?type=birth-hospital', icon: Baby },
+        { label: isRTL ? 'مراكز التبرع بالدم' : 'Cabines de sang', href: '/search?type=blood-cabin', icon: Droplets },
+        { label: isRTL ? 'الصيدليات' : 'Pharmacies', href: '/search?type=pharmacy', icon: Pill },
+        { label: isRTL ? 'معدات طبية' : 'Équipement médical', href: '/search?type=equipment', icon: Wrench },
+        { label: isRTL ? 'المختبرات' : 'Laboratoires', href: '/search?type=laboratory', icon: Building2 }
       ]
     },
     {
-      title: "Mon compte",
+      title: isRTL ? 'حسابي' : 'Mon compte',
       links: [
-        { label: "Connexion", href: "/auth" },
-        { label: "Mon profil", href: "/profile" },
-        { label: "Tableau de bord", href: "/dashboard" },
-        { label: "Paramètres", href: "/settings" }
+        { label: isRTL ? 'تسجيل الدخول' : 'Connexion', href: '/auth' },
+        { label: isRTL ? 'ملفي الشخصي' : 'Mon profil', href: '/profile' },
+        { label: isRTL ? 'لوحة التحكم' : 'Tableau de bord', href: '/dashboard' },
+        { label: isRTL ? 'الإعدادات' : 'Paramètres', href: '/settings' }
       ]
     }
   ];
 
   const socialLinks = [
-    { icon: Facebook, href: "https://facebook.com/cityhealth", label: "Facebook" },
-    { icon: Twitter, href: "https://twitter.com/cityhealth", label: "Twitter" },
-    { icon: Instagram, href: "https://instagram.com/cityhealth", label: "Instagram" },
-    { icon: Linkedin, href: "https://linkedin.com/company/cityhealth", label: "LinkedIn" }
+    { icon: Facebook, href: 'https://facebook.com/cityhealth', label: 'Facebook' },
+    { icon: Twitter, href: 'https://twitter.com/cityhealth', label: 'Twitter' },
+    { icon: Instagram, href: 'https://instagram.com/cityhealth', label: 'Instagram' },
+    { icon: Linkedin, href: 'https://linkedin.com/company/cityhealth', label: 'LinkedIn' }
   ];
 
   const languages = [
@@ -72,7 +81,7 @@ const Footer = () => {
   ];
 
   return (
-    <footer className="bg-muted/30 border-t border-border/50">
+    <footer className={`bg-muted/30 border-t border-border/50 ${isRTL ? 'rtl' : 'ltr'}`}>
       {/* Main footer content */}
       <div className="max-w-7xl mx-auto px-4 py-16">
         <div className="grid lg:grid-cols-6 gap-12">
@@ -89,8 +98,10 @@ const Footer = () => {
             </Link>
             
             <p className="text-muted-foreground mb-6 leading-relaxed">
-              La plateforme de référence pour connecter les citoyens avec les meilleurs 
-              prestataires de santé vérifiés de Sidi Bel Abbès et sa région.
+              {isRTL 
+                ? 'المنصة المرجعية لربط المواطنين بأفضل مقدمي الرعاية الصحية الموثوقين في سيدي بلعباس ومنطقتها.'
+                : 'La plateforme de référence pour connecter les citoyens avec les meilleurs prestataires de santé vérifiés de Sidi Bel Abbès et sa région.'
+              }
             </p>
 
             {/* Contact info */}
@@ -99,7 +110,7 @@ const Footer = () => {
                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                   <MapPin className="h-4 w-4 text-primary" />
                 </div>
-                <span>Sidi Bel Abbès, Algérie</span>
+                <span>{isRTL ? 'سيدي بلعباس، الجزائر' : 'Sidi Bel Abbès, Algérie'}</span>
               </div>
               <a 
                 href="tel:+21348000000"
@@ -108,7 +119,7 @@ const Footer = () => {
                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                   <Phone className="h-4 w-4 text-primary" />
                 </div>
-                <span>+213 48 XX XX XX</span>
+                <span dir="ltr">+213 48 XX XX XX</span>
               </a>
               <a 
                 href="mailto:contact@cityhealth.dz"
@@ -147,8 +158,9 @@ const Footer = () => {
                   <li key={link.href}>
                     <Link
                       to={link.href}
-                      className="text-muted-foreground hover:text-primary transition-colors duration-200 text-sm flex items-center gap-1 group"
+                      className="text-muted-foreground hover:text-primary transition-colors duration-200 text-sm flex items-center gap-2 group"
                     >
+                      {link.icon && <link.icon className="h-3.5 w-3.5 opacity-60" />}
                       {link.label}
                       <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </Link>
@@ -165,13 +177,13 @@ const Footer = () => {
             <div>
               <h4 className="flex items-center gap-2 font-medium text-foreground mb-3">
                 <Globe className="h-4 w-4" />
-                Choisir la langue
+                {isRTL ? 'اختر اللغة' : 'Choisir la langue'}
               </h4>
               <div className="flex gap-2">
                 {languages.map((lang) => (
                   <Button
                     key={lang.code}
-                    variant={language === lang.code ? "default" : "outline"}
+                    variant={language === lang.code ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setLanguage(lang.code as any)}
                     className={`flex items-center gap-2 ${
@@ -191,10 +203,10 @@ const Footer = () => {
             <div className="text-center sm:text-right p-4 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800">
               <div className="flex items-center gap-2 text-red-600 mb-1 justify-center sm:justify-end">
                 <Heart className="h-4 w-4" />
-                <span className="font-medium">Urgences médicales</span>
+                <span className="font-medium">{isRTL ? 'طوارئ طبية' : 'Urgences médicales'}</span>
               </div>
               <div className="text-3xl font-bold text-red-600">15</div>
-              <div className="text-xs text-red-600/70">Disponible 24h/24</div>
+              <div className="text-xs text-red-600/70">{isRTL ? 'متاح 24/24' : 'Disponible 24h/24'}</div>
             </div>
           </div>
         </div>
@@ -205,19 +217,19 @@ const Footer = () => {
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
             <div className="flex flex-wrap items-center justify-center gap-4">
-              <span>© 2024 CityHealth. Tous droits réservés.</span>
+              <span>© 2024 CityHealth. {isRTL ? 'جميع الحقوق محفوظة.' : 'Tous droits réservés.'}</span>
               <Link to="/privacy" className="hover:text-primary transition-colors">
-                Confidentialité
+                {isRTL ? 'الخصوصية' : 'Confidentialité'}
               </Link>
               <Link to="/terms" className="hover:text-primary transition-colors">
-                Conditions
+                {isRTL ? 'الشروط' : 'Conditions'}
               </Link>
             </div>
             
             <div className="flex items-center gap-2">
-              <span>Fait avec</span>
+              <span>{isRTL ? 'صنع بـ' : 'Fait avec'}</span>
               <Heart className="h-4 w-4 text-red-500 fill-red-500 animate-pulse" />
-              <span>en Algérie 🇩🇿</span>
+              <span>{isRTL ? 'في الجزائر 🇩🇿' : 'en Algérie 🇩🇿'}</span>
             </div>
           </div>
         </div>

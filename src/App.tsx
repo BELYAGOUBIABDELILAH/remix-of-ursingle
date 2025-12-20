@@ -2,11 +2,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { useEffect } from "react";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { RegistrationProvider } from "@/contexts/RegistrationContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import AntigravityIndex from "./pages/AntigravityIndex";
 import AuthPage from "./pages/AuthPage";
@@ -30,6 +31,8 @@ import AdminDashboard from "./pages/AdminDashboard";
 import UserProfilePage from "./pages/UserProfilePage";
 import PatientDashboard from "./pages/PatientDashboard";
 import AIHealthChat from "./pages/AIHealthChat";
+import RegistrationStatus from "./pages/RegistrationStatus";
+import RegistrationThankYou from "./pages/RegistrationThankYou";
 import { AIChatbot } from "./components/AIChatbot";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { seedProvidersIfNeeded } from "@/data/providers";
@@ -52,6 +55,28 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
 };
 
 const SeedInit = () => { useEffect(() => { seedProvidersIfNeeded(50); }, []); return null; };
+
+// Verification redirect wrapper for providers
+const VerificationGuard = ({ children }: { children: React.ReactNode }) => {
+  const { profile, isAuthenticated } = useAuth();
+  const location = useLocation();
+  
+  // Check if user is a provider with pending verification
+  // Note: verificationStatus would be added to profile when backend is connected
+  const isPendingProvider = isAuthenticated && 
+    profile?.roles?.includes('provider') && 
+    (profile as any)?.verificationStatus === 'pending';
+  
+  // Allowed paths for pending providers
+  const allowedPaths = ['/registration-status', '/provider/register', '/settings', '/auth', '/'];
+  const isAllowedPath = allowedPaths.some(path => location.pathname.startsWith(path));
+  
+  if (isPendingProvider && !isAllowedPath) {
+    return <Navigate to="/registration-status" replace />;
+  }
+  
+  return <>{children}</>;
+};
 
 const AppRoutes = () => {
   return (
@@ -107,9 +132,11 @@ const AppRoutes = () => {
       <Route 
         path="/search" 
         element={
-          <PageTransition>
-            <SearchPage />
-          </PageTransition>
+          <VerificationGuard>
+            <PageTransition>
+              <SearchPage />
+            </PageTransition>
+          </VerificationGuard>
         } 
       />
       <Route 
@@ -168,13 +195,30 @@ const AppRoutes = () => {
           </PageTransition>
         } 
       />
+      {/* New Registration Flow with RegistrationProvider */}
       <Route 
-        path="/provider/register" 
+        path="/provider/register/*" 
+        element={
+          <RegistrationProvider>
+            <PageTransition>
+              <ProviderRegister />
+            </PageTransition>
+          </RegistrationProvider>
+        } 
+      />
+      <Route 
+        path="/registration-status" 
         element={
           <PageTransition>
-            <ProtectedRoute requireRole="provider">
-              <ProviderRegister />
-            </ProtectedRoute>
+            <RegistrationStatus />
+          </PageTransition>
+        } 
+      />
+      <Route 
+        path="/registration-thank-you" 
+        element={
+          <PageTransition>
+            <RegistrationThankYou />
           </PageTransition>
         } 
       />
