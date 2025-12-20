@@ -7,7 +7,7 @@ import { Step1AccountCreation } from '@/components/provider/registration/Step1Ac
 import { Step2BasicInfo } from '@/components/provider/registration/Step2BasicInfo';
 import { Step3Location } from '@/components/provider/registration/Step3Location';
 import { Step4Services } from '@/components/provider/registration/Step4Services';
-import { Step5Profile } from '@/components/provider/registration/Step5Profile';
+import { Step5MediaUpload } from '@/components/provider/registration/Step5MediaUpload';
 import { Step6Review } from '@/components/provider/registration/Step6Review';
 import { ProviderFormData, getInitialFormData } from '@/components/provider/registration/types';
 import { useToast } from '@/hooks/use-toast';
@@ -140,7 +140,7 @@ export default function ProviderRegister() {
               />
             )}
             {currentStep === 5 && (
-              <Step5Profile 
+              <Step5MediaUpload 
                 formData={formData} 
                 updateFormData={updateFormData} 
                 onNext={nextStep} 

@@ -58,6 +58,7 @@ export interface ProviderFormData {
   insuranceAccepted: string[];
   consultationFee: string;
   socialLinks: SocialLinks;
+  verificationDocuments: { name: string; type: 'license' | 'certificate' | 'photo' }[];
 
   // Type-Specific Fields (Blood Cabin)
   bloodTypes?: string[];
@@ -291,6 +292,7 @@ export const getInitialFormData = (): ProviderFormData => ({
   insuranceAccepted: [],
   consultationFee: '',
   socialLinks: {},
+  verificationDocuments: [],
   // Type-specific fields
   bloodTypes: [],
   urgentNeed: false,
