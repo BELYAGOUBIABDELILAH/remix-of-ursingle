@@ -1,6 +1,19 @@
+// Expanded Provider Types for Algeria Healthcare System
+export type ProviderTypeKey = 
+  | 'hospital' 
+  | 'birth_hospital' 
+  | 'clinic' 
+  | 'doctor' 
+  | 'pharmacy' 
+  | 'lab' 
+  | 'blood_cabin' 
+  | 'radiology_center' 
+  | 'medical_equipment'
+  | '';
+
 export interface ProviderFormData {
   // Step 1: Account Creation
-  providerType: 'hospital' | 'clinic' | 'doctor' | 'pharmacy' | 'lab' | '';
+  providerType: ProviderTypeKey;
   email: string;
   password: string;
   confirmPassword: string;
@@ -46,10 +59,25 @@ export interface ProviderFormData {
   consultationFee: string;
   socialLinks: SocialLinks;
 
+  // Type-Specific Fields (Blood Cabin)
+  bloodTypes?: string[];
+  urgentNeed?: boolean;
+  stockStatus?: 'critical' | 'low' | 'normal' | 'high';
+
+  // Type-Specific Fields (Radiology Center)
+  imagingTypes?: string[];
+
+  // Type-Specific Fields (Medical Equipment)
+  productCategories?: string[];
+  rentalAvailable?: boolean;
+  deliveryAvailable?: boolean;
+
   // Metadata
   createdAt: string;
   updatedAt: string;
   status: 'draft' | 'pending' | 'approved' | 'rejected';
+  verificationStatus: 'pending' | 'verified' | 'rejected';
+  isPublic: boolean;
 }
 
 export interface WeeklySchedule {
@@ -85,13 +113,54 @@ export interface SocialLinks {
   website?: string;
 }
 
-export const PROVIDER_TYPE_LABELS: Record<string, { fr: string; ar: string; icon: string }> = {
-  hospital: { fr: 'Hôpital', ar: 'مستشفى', icon: '🏥' },
-  clinic: { fr: 'Clinique', ar: 'عيادة', icon: '🏨' },
-  doctor: { fr: 'Cabinet Médical', ar: 'عيادة طبية', icon: '👨‍⚕️' },
-  pharmacy: { fr: 'Pharmacie', ar: 'صيدلية', icon: '💊' },
-  lab: { fr: 'Laboratoire', ar: 'مختبر', icon: '🔬' },
+// Expanded Provider Type Labels
+export const PROVIDER_TYPE_LABELS: Record<string, { fr: string; ar: string; icon: string; category: string }> = {
+  hospital: { fr: 'Hôpital', ar: 'مستشفى', icon: '🏥', category: 'medical' },
+  birth_hospital: { fr: 'Maternité', ar: 'مستشفى الولادة', icon: '👶', category: 'medical' },
+  clinic: { fr: 'Clinique', ar: 'عيادة', icon: '🏨', category: 'medical' },
+  doctor: { fr: 'Cabinet Médical', ar: 'عيادة طبية', icon: '👨‍⚕️', category: 'medical' },
+  pharmacy: { fr: 'Pharmacie', ar: 'صيدلية', icon: '💊', category: 'pharmacy' },
+  lab: { fr: 'Laboratoire d\'Analyses', ar: 'مختبر التحاليل', icon: '🔬', category: 'diagnostic' },
+  blood_cabin: { fr: 'Centre de Don de Sang', ar: 'مركز التبرع بالدم', icon: '🩸', category: 'diagnostic' },
+  radiology_center: { fr: 'Centre de Radiologie', ar: 'مركز الأشعة', icon: '📷', category: 'diagnostic' },
+  medical_equipment: { fr: 'Équipement Médical', ar: 'معدات طبية', icon: '🦽', category: 'equipment' },
 };
+
+// Blood Types for Blood Cabin
+export const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+// Stock Status Labels
+export const STOCK_STATUS_LABELS: Record<string, { fr: string; ar: string; color: string }> = {
+  critical: { fr: 'Critique', ar: 'حرج', color: 'destructive' },
+  low: { fr: 'Faible', ar: 'منخفض', color: 'warning' },
+  normal: { fr: 'Normal', ar: 'عادي', color: 'default' },
+  high: { fr: 'Élevé', ar: 'مرتفع', color: 'success' },
+};
+
+// Imaging Types for Radiology
+export const IMAGING_TYPES = [
+  'Radiographie standard',
+  'Scanner (CT)',
+  'IRM',
+  'Échographie',
+  'Mammographie',
+  'Panoramique dentaire',
+  'Densitométrie osseuse',
+  'Angiographie',
+];
+
+// Medical Equipment Categories
+export const EQUIPMENT_CATEGORIES = [
+  'Fauteuils roulants',
+  'Lits médicalisés',
+  'Oxygène médical',
+  'Matériel de perfusion',
+  'Prothèses',
+  'Orthèses',
+  'Matériel de rééducation',
+  'Moniteurs de santé',
+  'Aide à la mobilité',
+];
 
 export const SERVICE_CATEGORIES = [
   'Médecine générale',
@@ -222,7 +291,42 @@ export const getInitialFormData = (): ProviderFormData => ({
   insuranceAccepted: [],
   consultationFee: '',
   socialLinks: {},
+  // Type-specific fields
+  bloodTypes: [],
+  urgentNeed: false,
+  stockStatus: 'normal',
+  imagingTypes: [],
+  productCategories: [],
+  rentalAvailable: false,
+  deliveryAvailable: false,
+  // Metadata
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   status: 'draft',
+  verificationStatus: 'pending',
+  isPublic: false,
 });
+
+// Helper to get type-specific fields config
+export const getTypeSpecificFields = (providerType: ProviderTypeKey) => {
+  switch (providerType) {
+    case 'blood_cabin':
+      return {
+        showBloodTypes: true,
+        showStockStatus: true,
+        showUrgentNeed: true,
+      };
+    case 'radiology_center':
+      return {
+        showImagingTypes: true,
+      };
+    case 'medical_equipment':
+      return {
+        showProductCategories: true,
+        showRentalOption: true,
+        showDeliveryOption: true,
+      };
+    default:
+      return {};
+  }
+};

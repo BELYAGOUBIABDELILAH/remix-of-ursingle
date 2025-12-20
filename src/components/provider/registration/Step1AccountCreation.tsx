@@ -7,10 +7,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { 
   Building2, Stethoscope, Pill, FlaskConical, Hospital,
-  Mail, Lock, Eye, EyeOff, Chrome
+  Mail, Lock, Eye, EyeOff, Chrome, Baby, Droplet, Camera, Package
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ProviderFormData, PROVIDER_TYPE_LABELS } from './types';
+import { ProviderFormData, PROVIDER_TYPE_LABELS, ProviderTypeKey } from './types';
 
 interface Step1Props {
   formData: ProviderFormData;
@@ -18,12 +18,17 @@ interface Step1Props {
   onNext: () => void;
 }
 
+// Icons for all provider types
 const providerTypeIcons: Record<string, React.ReactNode> = {
-  hospital: <Hospital className="h-8 w-8" />,
-  clinic: <Building2 className="h-8 w-8" />,
-  doctor: <Stethoscope className="h-8 w-8" />,
-  pharmacy: <Pill className="h-8 w-8" />,
-  lab: <FlaskConical className="h-8 w-8" />,
+  hospital: <Hospital className="h-6 w-6" />,
+  birth_hospital: <Baby className="h-6 w-6" />,
+  clinic: <Building2 className="h-6 w-6" />,
+  doctor: <Stethoscope className="h-6 w-6" />,
+  pharmacy: <Pill className="h-6 w-6" />,
+  lab: <FlaskConical className="h-6 w-6" />,
+  blood_cabin: <Droplet className="h-6 w-6" />,
+  radiology_center: <Camera className="h-6 w-6" />,
+  medical_equipment: <Package className="h-6 w-6" />,
 };
 
 export function Step1AccountCreation({ formData, updateFormData, onNext }: Step1Props) {
@@ -81,7 +86,7 @@ export function Step1AccountCreation({ formData, updateFormData, onNext }: Step1
         <Label className="text-base font-semibold">
           Type d'établissement <span className="text-destructive">*</span>
         </Label>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
           {Object.entries(PROVIDER_TYPE_LABELS).map(([type, labels]) => (
             <Card 
               key={type}
@@ -91,17 +96,17 @@ export function Step1AccountCreation({ formData, updateFormData, onNext }: Step1
                   ? "border-primary bg-primary/5 ring-2 ring-primary/20" 
                   : "border-border"
               )}
-              onClick={() => updateFormData({ providerType: type as ProviderFormData['providerType'] })}
+              onClick={() => updateFormData({ providerType: type as ProviderTypeKey })}
             >
-              <CardContent className="p-4 text-center">
+              <CardContent className="p-3 text-center">
                 <div className={cn(
-                  "mx-auto mb-2 transition-colors",
+                  "mx-auto mb-1.5 transition-colors",
                   formData.providerType === type ? "text-primary" : "text-muted-foreground"
                 )}>
                   {providerTypeIcons[type]}
                 </div>
-                <p className="text-sm font-medium">{labels.fr}</p>
-                <p className="text-xs text-muted-foreground mt-0.5" dir="rtl">{labels.ar}</p>
+                <p className="text-xs font-medium leading-tight">{labels.fr}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5" dir="rtl">{labels.ar}</p>
               </CardContent>
             </Card>
           ))}
