@@ -35,6 +35,7 @@ import RegistrationThankYou from "./pages/RegistrationThankYou";
 import ProvidersMapPage from "./pages/ProvidersMapPage";
 import MedicalAssistantPage from "./pages/MedicalAssistantPage";
 import CitizenProfilePage from "./pages/CitizenProfilePage";
+import BloodDonationPage from "./pages/BloodDonationPage";
 import { AIChatbot } from "./components/AIChatbot";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { seedProvidersIfNeeded } from "@/data/providers";
@@ -285,6 +286,14 @@ const AppRoutes = () => {
         element={
           <PageTransition>
             <MedicalAssistantPage />
+          </PageTransition>
+        } 
+      />
+      <Route 
+        path="/blood-donation" 
+        element={
+          <PageTransition>
+            <BloodDonationPage />
           </PageTransition>
         } 
       />
