@@ -37,9 +37,10 @@ export const Header = () => {
   const navLinks = [
     { to: '/', label: t('nav', 'home') },
     { to: '/search', label: t('header', 'providers') },
-    { to: '/ai-health-chat', label: isRTL ? 'مساعد الذكاء الاصطناعي' : 'Assistant IA', icon: Bot },
+    { to: '/providers-map', label: isRTL ? 'الخريطة' : 'Carte', icon: undefined },
+    { to: '/blood-donation', label: isRTL ? 'التبرع بالدم' : 'Don de Sang', icon: undefined },
+    { to: '/medical-assistant', label: isRTL ? 'المساعد الطبي' : 'Assistant Médical', icon: Bot },
     { to: '/emergency', label: t('nav', 'emergency') },
-    { to: '/contact', label: t('header', 'contact') },
   ];
 
   const isProvider = profile?.roles?.includes('provider');
