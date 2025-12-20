@@ -36,11 +36,10 @@ export const Header = () => {
 
   const navLinks = [
     { to: '/', label: t('nav', 'home') },
-    { to: '/search', label: t('header', 'providers') },
-    { to: '/providers-map', label: isRTL ? 'الخريطة' : 'Carte', icon: undefined },
+    { to: '/carte', label: isRTL ? 'الخريطة' : 'Carte', icon: undefined },
+    { to: '/medical-assistant', label: isRTL ? 'المساعد الطبي' : 'Assistant IA', icon: Bot },
     { to: '/blood-donation', label: isRTL ? 'التبرع بالدم' : 'Don de Sang', icon: undefined },
-    { to: '/medical-assistant', label: isRTL ? 'المساعد الطبي' : 'Assistant Médical', icon: Bot },
-    { to: '/emergency', label: t('nav', 'emergency') },
+    { to: '/carte?mode=emergency', label: t('nav', 'emergency') },
   ];
 
   const isProvider = profile?.roles?.includes('provider');

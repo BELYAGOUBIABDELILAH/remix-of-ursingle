@@ -14,7 +14,7 @@ interface UseGeolocationOptions {
   maximumAge?: number;
 }
 
-const SIDI_BEL_ABBES_CENTER = {
+export const SIDI_BEL_ABBES_CENTER = {
   lat: 35.1975,
   lng: -0.6300
 };
