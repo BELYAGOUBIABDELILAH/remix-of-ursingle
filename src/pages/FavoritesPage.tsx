@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Heart, MapPin, Phone, Star, Clock, Calendar, Trash2, Search, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,19 +8,30 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
-import { useToastNotifications } from '@/hooks/useToastNotifications';
-import ToastContainer from '@/components/ToastContainer';
 import SkeletonCard from '@/components/SkeletonCard';
+import { useFavorites, useRemoveFavorite } from '@/hooks/useFavorites';
+import { useVerifiedProviders } from '@/hooks/useProviders';
+import { toast } from 'sonner';
 
 const FavoritesPage = () => {
-  const [favorites, setFavorites] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   
   const { isAuthenticated } = useAuth();
   const headerRef = useScrollReveal();
-  const { toasts, addToast } = useToastNotifications();
+
+  // Use TanStack Query for favorites and providers
+  const { data: favoriteIds = [], isLoading: loadingFavorites } = useFavorites();
+  const { data: allProviders = [], isLoading: loadingProviders } = useVerifiedProviders();
+  const removeFavorite = useRemoveFavorite();
+
+  const isLoading = loadingFavorites || loadingProviders;
+
+  // Get favorite providers by matching IDs
+  const favoriteProviders = useMemo(() => {
+    return allProviders.filter(provider => favoriteIds.includes(provider.id));
+  }, [allProviders, favoriteIds]);
 
   const categories = [
     'Tous',
@@ -31,113 +43,33 @@ const FavoritesPage = () => {
     'Laboratoires'
   ];
 
-  // Simulated favorites data
-  const mockFavorites = [
-    {
-      id: 1,
-      name: "Dr. Benali (Cardiologue)",
-      type: "Spécialiste",
-      specialty: "Cardiologie",
-      location: "Hay El Badr",
-      rating: 4.9,
-      isVerified: true,
-      isOpen: true,
-      phone: "+213 48 55 XX XX",
-      nextAvailable: "Aujourd'hui 14h",
-      addedDate: "2024-01-15",
-      image: "/placeholder.svg"
-    },
-    {
-      id: 2,
-      name: "Pharmacie Centrale",
-      type: "Pharmacie",
-      specialty: "Pharmacie",
-      location: "Centre Ville",
-      rating: 4.7,
-      isVerified: true,
-      isOpen: true,
-      phone: "+213 48 56 XX XX",
-      nextAvailable: "Ouvert 24h/24",
-      addedDate: "2024-01-10",
-      image: "/placeholder.svg"
-    },
-    {
-      id: 3,
-      name: "Clinique Ibn Sina",
-      type: "Clinique",
-      specialty: "Médecine Générale",
-      location: "Sidi Bel Abbès Est",
-      rating: 4.6,
-      isVerified: true,
-      isOpen: false,
-      phone: "+213 48 57 XX XX",
-      nextAvailable: "Demain 08h",
-      addedDate: "2024-01-05",
-      image: "/placeholder.svg"
-    },
-    {
-      id: 4,
-      name: "Laboratoire Atlas",
-      type: "Laboratoire",
-      specialty: "Analyses Médicales",
-      location: "Centre Ville",
-      rating: 4.8,
-      isVerified: true,
-      isOpen: true,
-      phone: "+213 48 58 XX XX",
-      nextAvailable: "Aujourd'hui 16h",
-      addedDate: "2024-01-03",
-      image: "/placeholder.svg"
-    }
-  ];
+  const handleRemoveFavorite = (id: string) => {
+    removeFavorite.mutate(id);
+    toast.success('Favori supprimé', {
+      description: 'Le prestataire a été retiré de vos favoris'
+    });
+  };
 
-  useEffect(() => {
-    // Simulate loading favorites
-    const loadFavorites = async () => {
-      setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1500));
+  const handleBookAppointment = (providerId: string) => {
+    navigate(`/provider/${providerId}`);
+  };
+
+  const handleCall = (phone: string) => {
+    window.open(`tel:${phone}`, '_self');
+  };
+
+  const filteredFavorites = useMemo(() => {
+    return favoriteProviders.filter(favorite => {
+      const matchesSearch = !searchQuery || 
+        favorite.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (favorite.specialty || '').toLowerCase().includes(searchQuery.toLowerCase());
       
-      if (isAuthenticated) {
-        setFavorites(mockFavorites);
-      }
-      setIsLoading(false);
-    };
-
-    loadFavorites();
-  }, [isAuthenticated]);
-
-  const handleRemoveFavorite = (id: number) => {
-    setFavorites(prev => prev.filter(fav => fav.id !== id));
-    addToast({
-      type: 'success',
-      title: 'Favori supprimé',
-      message: 'Le prestataire a été retiré de vos favoris'
+      const matchesCategory = !selectedCategory || selectedCategory === 'Tous' || 
+        favorite.type.toLowerCase().includes(selectedCategory.toLowerCase());
+      
+      return matchesSearch && matchesCategory;
     });
-  };
-
-  const handleBookAppointment = (provider: any) => {
-    addToast({
-      type: 'info',
-      title: 'Rendez-vous',
-      message: `Redirection vers la prise de rendez-vous avec ${provider.name}`
-    });
-  };
-
-  const handleCall = (provider: any) => {
-    addToast({
-      type: 'info',
-      title: 'Appel',
-      message: `Appel vers ${provider.name} - ${provider.phone}`
-    });
-  };
-
-  const filteredFavorites = favorites.filter(favorite => {
-    const matchesSearch = !searchQuery || 
-      favorite.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      favorite.specialty.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = !selectedCategory || selectedCategory === 'Tous' || favorite.type === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  }, [favoriteProviders, searchQuery, selectedCategory]);
 
   if (!isAuthenticated) {
     return (
@@ -149,7 +81,7 @@ const FavoritesPage = () => {
             <p className="text-muted-foreground mb-6">
               Vous devez être connecté pour voir vos prestataires favoris.
             </p>
-            <Button className="w-full">
+            <Button className="w-full" onClick={() => navigate('/auth')}>
               Se connecter
             </Button>
           </CardContent>
@@ -160,8 +92,6 @@ const FavoritesPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <ToastContainer toasts={toasts} />
-      
       {/* Header */}
       <section ref={headerRef} className="py-20 px-6">
         <div className="max-w-6xl mx-auto">
@@ -244,9 +174,11 @@ const FavoritesPage = () => {
                 }
               </p>
               {!searchQuery && !selectedCategory && (
-                <Button>
-                  <Search className="mr-2" size={18} />
-                  Découvrir des prestataires
+                <Button asChild>
+                  <Link to="/search">
+                    <Search className="mr-2" size={18} />
+                    Découvrir des prestataires
+                  </Link>
                 </Button>
               )}
             </CardContent>
@@ -263,17 +195,20 @@ const FavoritesPage = () => {
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-semibold text-lg line-clamp-1">{favorite.name}</h3>
-                        {favorite.isVerified && (
+                        <Link to={`/provider/${favorite.id}`} className="hover:text-primary">
+                          <h3 className="font-semibold text-lg line-clamp-1">{favorite.name}</h3>
+                        </Link>
+                        {favorite.verified && (
                           <Badge variant="secondary" className="text-xs">✓ Vérifié</Badge>
                         )}
                       </div>
-                      <p className="text-muted-foreground text-sm">{favorite.specialty}</p>
+                      <p className="text-muted-foreground text-sm">{favorite.specialty || favorite.type}</p>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => handleRemoveFavorite(favorite.id)}
+                      disabled={removeFavorite.isPending}
                       className="text-destructive hover:text-destructive hover:bg-destructive/10"
                     >
                       <Trash2 size={18} />
@@ -283,7 +218,7 @@ const FavoritesPage = () => {
                   <div className="space-y-3 mb-4">
                     <div className="flex items-center gap-2">
                       <MapPin size={16} className="text-muted-foreground flex-shrink-0" />
-                      <span className="text-sm">{favorite.location}</span>
+                      <span className="text-sm">{favorite.address}</span>
                     </div>
                     
                     <div className="flex items-center gap-2">
@@ -304,7 +239,7 @@ const FavoritesPage = () => {
                     
                     <div className="flex items-center gap-2">
                       <Clock size={16} className="text-muted-foreground flex-shrink-0" />
-                      <span className="text-sm">{favorite.nextAvailable}</span>
+                      <span className="text-sm">{favorite.area}</span>
                     </div>
                   </div>
                   
@@ -312,7 +247,7 @@ const FavoritesPage = () => {
                     <Button 
                       size="sm" 
                       className="flex-1"
-                      onClick={() => handleBookAppointment(favorite)}
+                      onClick={() => handleBookAppointment(favorite.id)}
                     >
                       <Calendar className="mr-1" size={14} />
                       RDV
@@ -321,17 +256,11 @@ const FavoritesPage = () => {
                       size="sm" 
                       variant="outline" 
                       className="flex-1"
-                      onClick={() => handleCall(favorite)}
+                      onClick={() => handleCall(favorite.phone)}
                     >
                       <Phone className="mr-1" size={14} />
                       Appeler
                     </Button>
-                  </div>
-                  
-                  <div className="mt-3 pt-3 border-t border-border/50">
-                    <p className="text-xs text-muted-foreground">
-                      Ajouté le {new Date(favorite.addedDate).toLocaleDateString('fr-FR')}
-                    </p>
                   </div>
                 </CardContent>
               </Card>

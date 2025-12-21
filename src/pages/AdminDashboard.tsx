@@ -12,13 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { 
   CheckCircle, XCircle, Eye, Users, Building2, TrendingUp,
   AlertCircle, Activity, Search, Settings, Shield, Megaphone, Mail, Loader2
@@ -27,11 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { VerificationQueue } from '@/components/admin/VerificationQueue';
 import { MedicalAdsModeration } from '@/components/admin/MedicalAdsModeration';
 import { notificationService } from '@/services/notificationService';
-import { 
-  getPendingProviders, 
-  updateProviderVerification, 
-  getAllProviders 
-} from '@/services/firestoreProviderService';
+import { usePendingProviders, useAllProviders, useUpdateVerification } from '@/hooks/useProviders';
 import { CityHealthProvider } from '@/data/providers';
 
 interface PendingProvider extends CityHealthProvider {
@@ -42,22 +31,33 @@ interface PendingProvider extends CityHealthProvider {
 export default function AdminDashboard() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [loading, setLoading] = useState(true);
+  const [sentNotifications, setSentNotifications] = useState<any[]>([]);
 
-  const [stats, setStats] = useState({
+  // Use TanStack Query for provider data
+  const { data: pendingProvidersRaw = [], isLoading: loadingPending } = usePendingProviders();
+  const { data: allProviders = [], isLoading: loadingAll } = useAllProviders();
+  const updateVerification = useUpdateVerification();
+  
+  const loading = loadingPending || loadingAll;
+
+  // Transform pending providers
+  const pendingProviders: PendingProvider[] = pendingProvidersRaw.map(p => ({
+    ...p,
+    status: 'pending' as const,
+    submittedAt: new Date().toISOString()
+  }));
+
+  // Calculate stats from real data
+  const stats = {
     totalUsers: 15847,
-    totalProviders: 0,
-    pendingApprovals: 0,
+    totalProviders: allProviders.length,
+    pendingApprovals: pendingProviders.length,
     pendingVerifications: 0,
     pendingAds: 0,
     monthlyGrowth: 12,
     activeUsers: 8934,
-    verifiedProviders: 0,
-  });
-
-  const [pendingProviders, setPendingProviders] = useState<PendingProvider[]>([]);
-  const [allProviders, setAllProviders] = useState<CityHealthProvider[]>([]);
+    verifiedProviders: allProviders.filter(p => p.verificationStatus === 'verified').length,
+  };
 
   const [recentActivity] = useState([
     { type: 'registration', user: 'Dr. Ahmed B.', action: 'Nouvelle inscription', time: 'Il y a 2h' },
@@ -66,39 +66,7 @@ export default function AdminDashboard() {
     { type: 'update', user: 'Dr. Sara M.', action: 'Mise à jour du profil', time: 'Il y a 6h' },
   ]);
 
-  const [sentNotifications, setSentNotifications] = useState<any[]>([]);
-
-  // Load providers from Firestore
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        const [pending, all] = await Promise.all([
-          getPendingProviders(),
-          getAllProviders()
-        ]);
-        
-        setPendingProviders(pending.map(p => ({
-          ...p,
-          status: 'pending' as const,
-          submittedAt: new Date().toISOString()
-        })));
-        setAllProviders(all);
-        
-        setStats(prev => ({
-          ...prev,
-          totalProviders: all.length,
-          pendingApprovals: pending.length,
-          verifiedProviders: all.filter(p => p.verificationStatus === 'verified').length,
-        }));
-      } catch (error) {
-        console.error('Error loading providers:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
     setSentNotifications(notificationService.getSentNotifications());
   }, []);
 
@@ -106,22 +74,14 @@ export default function AdminDashboard() {
     const provider = pendingProviders.find(p => p.id === id);
     
     try {
-      // Update Firestore
-      await updateProviderVerification(id, 'verified', true);
-      
-      // Update local state
-      setPendingProviders(prev => prev.filter(p => p.id !== id));
-      setStats(prev => ({
-        ...prev,
-        pendingApprovals: prev.pendingApprovals - 1,
-        verifiedProviders: prev.verifiedProviders + 1,
-      }));
+      // Update Firestore via mutation
+      await updateVerification.mutateAsync({ providerId: id, status: 'verified', isPublic: true });
       
       // Send notification
       if (provider) {
         notificationService.sendVerificationNotification({
           type: 'verification_approved',
-          providerEmail: provider.phone, // Using phone as email placeholder
+          providerEmail: provider.phone,
           providerName: provider.name
         });
       }
@@ -144,15 +104,8 @@ export default function AdminDashboard() {
     const provider = pendingProviders.find(p => p.id === id);
     
     try {
-      // Update Firestore - rejected providers stay hidden
-      await updateProviderVerification(id, 'rejected', false);
-      
-      // Update local state
-      setPendingProviders(prev => prev.filter(p => p.id !== id));
-      setStats(prev => ({
-        ...prev,
-        pendingApprovals: prev.pendingApprovals - 1,
-      }));
+      // Update Firestore via mutation - rejected providers stay hidden
+      await updateVerification.mutateAsync({ providerId: id, status: 'rejected', isPublic: false });
       
       // Send notification
       if (provider) {

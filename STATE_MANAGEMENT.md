@@ -170,6 +170,15 @@ Need state?
 - `src/stores/useUIStore.ts` - Migrated to local state
 - `RegistrationContext` as global - Now a local hook
 
+### Pages Using TanStack Query:
+| Page | Hooks Used |
+|------|------------|
+| `SearchPage` | `useVerifiedProviders()` |
+| `ProviderProfilePage` | `useProvider(id)`, `useFavorites()`, `useToggleFavorite()` |
+| `ProviderDashboard` | `useProviderByUserId()` |
+| `AdminDashboard` | `usePendingProviders()`, `useAllProviders()`, `useUpdateVerification()` |
+| `FavoritesPage` | `useFavorites()`, `useRemoveFavorite()`, `useVerifiedProviders()` |
+
 ### Files to Reference:
 - `src/contexts/AuthContext.tsx` - Auth pattern
 - `src/contexts/LanguageContext.tsx` - i18n pattern
