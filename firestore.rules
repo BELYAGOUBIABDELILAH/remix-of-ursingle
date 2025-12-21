@@ -2,45 +2,128 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Profiles - users can read all, but only write their own
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if user owns the resource
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Check if user is admin (checks user_roles collection)
+    function isAdmin() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // ============================================
+    // PROFILES - Users can only read/write their own
+    // ============================================
     match /profiles/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId);
     }
     
-    // User roles - read only for authenticated users, write only for admins
-    match /user_roles/{roleId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && 
-        exists(/databases/$(database)/documents/user_roles/$(request.auth.uid + '_admin'));
+    // ============================================
+    // USER ROLES - Only admins can write, users can read their own
+    // ============================================
+    match /user_roles/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isAdmin();
     }
     
-    // Analytics - authenticated users can write, admins can read
+    // ============================================
+    // ANALYTICS - Authenticated write, admin read
+    // ============================================
     match /analytics_events/{eventId} {
-      allow read: if request.auth != null && 
-        exists(/databases/$(database)/documents/user_roles/$(request.auth.uid + '_admin'));
-      allow write: if request.auth != null;
+      allow read: if isAdmin();
+      allow write: if isAuthenticated();
     }
     
-    // Favorites - users can only read/write their own
+    // ============================================
+    // FAVORITES - Users can only access their own
+    // ============================================
     match /favorites/{favoriteId} {
-      allow read, write: if request.auth != null && 
+      allow read: if isAuthenticated() && 
         resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && 
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+    }
+    
+    // ============================================
+    // PROVIDERS - Public read only if verified & public
+    // ============================================
+    match /providers/{providerId} {
+      // Public can only read verified and public providers
+      allow read: if resource.data.verificationStatus == 'verified' && 
+                     resource.data.isPublic == true;
+      // Authenticated users can read their own provider profile (even if not verified)
+      allow read: if isAuthenticated() && 
+                     resource.data.userId == request.auth.uid;
+      // Admins can read all providers
+      allow read: if isAdmin();
+      // Only owner can create/update their provider profile
+      allow create: if isAuthenticated() && 
+                       request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && 
+                       resource.data.userId == request.auth.uid;
+      // Only admins can delete providers
+      allow delete: if isAdmin();
+    }
+    
+    // ============================================
+    // PROVIDER DRAFTS - For registration flow
+    // ============================================
+    match /providerDrafts/{draftId} {
+      allow read, write: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && 
         request.resource.data.userId == request.auth.uid;
     }
     
-    // Providers - public read, authenticated write
-    match /providers/{providerId} {
-      allow read: if true;
-      allow write: if request.auth != null;
+    // ============================================
+    // APPOINTMENTS - Users can access their own
+    // ============================================
+    match /appointments/{appointmentId} {
+      allow read: if isAuthenticated() && 
+        (resource.data.patientId == request.auth.uid || 
+         resource.data.providerId == request.auth.uid);
+      allow create: if isAuthenticated() && 
+        request.resource.data.patientId == request.auth.uid;
+      allow update: if isAuthenticated() && 
+        (resource.data.patientId == request.auth.uid || 
+         resource.data.providerId == request.auth.uid);
+      allow delete: if isAuthenticated() && 
+        resource.data.patientId == request.auth.uid;
     }
     
-    // Chat messages - users can only access their own
-    match /chat_sessions/{sessionId} {
-      allow read, write: if request.auth != null && 
+    // ============================================
+    // REVIEWS - Public read, authenticated write own
+    // ============================================
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && 
         resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && 
+    }
+    
+    // ============================================
+    // CHAT SESSIONS - Users can only access their own
+    // ============================================
+    match /chat_sessions/{sessionId} {
+      allow read, write: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && 
         request.resource.data.userId == request.auth.uid;
     }
   }

@@ -1,66 +1,243 @@
 # 🔥 Configuration Firebase - CityHealth
 
 ## 📋 Prérequis
-- Node.js 18+, Firebase CLI: `npm install -g firebase-tools`
+
+```bash
+# Install Firebase CLI
+npm install -g firebase-tools
+
+# Login to Firebase
+firebase login
+
+# Initialize project (if not already done)
+firebase init
+```
 
 ---
 
-## 🚀 Setup
+## 🚀 Deployment
 
-### 1. Services à activer
-- **Authentication**: Email/Password + Google
-- **Firestore**: Mode production, région `europe-west1`
-- **Storage**: Pour uploads prestataires
+### Deploy All Rules & Indexes
 
-### 2. Déployer les règles
 ```bash
 firebase deploy --only firestore:rules,storage,firestore:indexes
 ```
 
----
+### Deploy Only Firestore Rules
 
-## 🔐 Règles Firestore (résumé)
+```bash
+firebase deploy --only firestore:rules
+```
 
-```javascript
-// profiles: lecture auth, écriture owner
-// user_roles: lecture auth, écriture admin
-// providers: lecture publique, écriture auth
-// favorites: owner only
+### Deploy Only Storage Rules
+
+```bash
+firebase deploy --only storage
 ```
 
 ---
 
-## 📑 Index Requis
+## 🔐 Firestore Security Rules Summary
 
-- `favorites`: userId + createdAt
-- `providers`: specialty + city, type + verificationStatus + isPublic
+| Collection | Read | Write |
+|------------|------|-------|
+| `profiles` | Owner only | Owner only |
+| `user_roles` | Owner or Admin | Admin only |
+| `providers` | Public (if verified + isPublic) / Owner / Admin | Owner (create/update) / Admin (delete) |
+| `providerDrafts` | Owner only | Owner only |
+| `favorites` | Owner only | Owner only |
+| `appointments` | Patient or Provider | Patient (create) / Both (update) |
+| `reviews` | Public | Owner only |
+| `chat_sessions` | Owner only | Owner only |
+| `analytics_events` | Admin only | Authenticated users |
+
+### Helper Functions
+
+```javascript
+// Check if user is authenticated
+function isAuthenticated() { return request.auth != null; }
+
+// Check if user owns the resource
+function isOwner(userId) { return request.auth.uid == userId; }
+
+// Check if user is admin
+function isAdmin() {
+  return exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
+         get(...).data.role == 'admin';
+}
+```
 
 ---
 
-## ☁️ Cloud Function AI Chat
+## 🧪 Verification Steps
+
+### 1. Test Rules in Firebase Console
+
+1. Go to **Firebase Console** → **Firestore Database**
+2. Click **Rules** tab → **Rules Playground**
+3. Test the following scenarios:
+
+**Test: Profile Read (Should PASS)**
+```
+Path: /profiles/{userId}
+Method: get
+Auth: Simulate as user with matching UID
+```
+
+**Test: Provider Public Read (Should PASS)**
+```
+Path: /providers/{providerId}
+Method: get
+Auth: None
+Document: { verificationStatus: "verified", isPublic: true }
+```
+
+**Test: Provider Unverified Read (Should FAIL)**
+```
+Path: /providers/{providerId}
+Method: get
+Auth: None
+Document: { verificationStatus: "pending", isPublic: false }
+```
+
+**Test: Admin Write to user_roles (Should PASS)**
+```
+Path: /user_roles/{userId}
+Method: set
+Auth: Simulate as admin user
+```
+
+### 2. Verify via CLI
+
+```bash
+# Dry run to check rules syntax
+firebase emulators:start --only firestore
+
+# Run in another terminal
+npm run test:firestore-rules
+```
+
+---
+
+## 📑 Required Indexes
+
+Defined in `firestore.indexes.json`:
+
+```json
+{
+  "indexes": [
+    {
+      "collectionGroup": "favorites",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "providers",
+      "fields": [
+        { "fieldPath": "specialty", "order": "ASCENDING" },
+        { "fieldPath": "city", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "providers",
+      "fields": [
+        { "fieldPath": "verificationStatus", "order": "ASCENDING" },
+        { "fieldPath": "isPublic", "order": "ASCENDING" },
+        { "fieldPath": "providerCategory", "order": "ASCENDING" }
+      ]
+    }
+  ]
+}
+```
+
+Deploy indexes:
+
+```bash
+firebase deploy --only firestore:indexes
+```
+
+---
+
+## 📦 Storage Rules
+
+```javascript
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Provider uploads (photos, licenses)
+    match /providers/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Profile avatars
+    match /avatars/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+```
+
+---
+
+## ☁️ Cloud Function: AI Chat
 
 ```bash
 cd firebase-functions/ai-chat
 npm install
+
+# Set OpenAI API key
 firebase functions:config:set openai.key="sk-..."
+
+# Deploy function
 firebase deploy --only functions:aiChat
 ```
 
 ---
 
-## 👤 Créer un Admin
+## 👤 Create Admin User
 
-Dans Firestore, ajouter document:
+In Firestore Console, create document:
+
 ```
 Collection: user_roles
-Doc ID: {uid}_admin
-Fields: { user_id, role: "admin", created_at }
+Document ID: {user_uid}
+Fields:
+  - user_id: {user_uid}
+  - role: "admin"
+  - created_at: Timestamp
+```
+
+Or via Firebase Admin SDK:
+
+```javascript
+const admin = require('firebase-admin');
+admin.firestore().collection('user_roles').doc(userId).set({
+  user_id: userId,
+  role: 'admin',
+  created_at: admin.firestore.FieldValue.serverTimestamp()
+});
 ```
 
 ---
 
-## 🧪 Vérification
+## 🔄 Common Commands
 
-1. Créer compte → vérifier Authentication
-2. Uploader image → vérifier Storage
-3. Tester règles via Console → Firestore → Simulateur
+```bash
+# Deploy everything
+firebase deploy
+
+# Deploy specific services
+firebase deploy --only firestore
+firebase deploy --only functions
+firebase deploy --only hosting
+
+# View logs
+firebase functions:log
+
+# Start local emulators
+firebase emulators:start
+```
