@@ -7,7 +7,8 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import { 
   Hospital, Building2, User, Pill, FlaskConical, 
   Droplet, Maximize2, Minimize2, LocateFixed, Filter,
-  Phone, MapPin, Clock, Star, Navigation, X, ChevronDown
+  Phone, MapPin, Clock, Star, Navigation, X, ChevronDown,
+  AlertCircle, RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,11 +17,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGeolocation, SIDI_BEL_ABBES_CENTER } from '@/hooks/useGeolocation';
 import { CityHealthProvider, ProviderType } from '@/data/providers';
-import { getVerifiedProviders } from '@/services/firestoreProviderService';
+import { useVerifiedProviders, useEmergencyProviders, useBloodCenters } from '@/hooks/useProviders';
 import { cn } from '@/lib/utils';
 
 export type MapMode = 'all' | 'emergency' | 'blood';
@@ -116,8 +118,44 @@ export function CityHealthMap({
   const { isRTL, language } = useLanguage();
   const geolocation = useGeolocation();
   
-  const [providers, setProviders] = useState<CityHealthProvider[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Use TanStack Query hooks based on mode for optimal caching
+  const { 
+    data: verifiedProviders = [], 
+    isLoading: loadingAll, 
+    error: errorAll,
+    refetch: refetchAll 
+  } = useVerifiedProviders();
+  
+  const { 
+    data: emergencyProviders = [], 
+    isLoading: loadingEmergency, 
+    error: errorEmergency,
+    refetch: refetchEmergency 
+  } = useEmergencyProviders();
+  
+  const { 
+    data: bloodProviders = [], 
+    isLoading: loadingBlood, 
+    error: errorBlood,
+    refetch: refetchBlood 
+  } = useBloodCenters();
+  
+  // Select providers based on mode
+  const providers = useMemo(() => {
+    switch (mode) {
+      case 'emergency':
+        return emergencyProviders;
+      case 'blood':
+        return bloodProviders;
+      default:
+        return verifiedProviders;
+    }
+  }, [mode, verifiedProviders, emergencyProviders, bloodProviders]);
+  
+  const loading = mode === 'emergency' ? loadingEmergency : mode === 'blood' ? loadingBlood : loadingAll;
+  const error = mode === 'emergency' ? errorEmergency : mode === 'blood' ? errorBlood : errorAll;
+  const refetch = mode === 'emergency' ? refetchEmergency : mode === 'blood' ? refetchBlood : refetchAll;
+  
   const [selectedProvider, setSelectedProvider] = useState<ProviderWithDistance | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -145,6 +183,11 @@ export function CityHealthMap({
       call: 'Appeler',
       directions: 'Itinéraire',
       close: 'Fermer',
+      retry: 'Réessayer',
+      errorLoading: 'Erreur de chargement',
+      errorDescription: 'Impossible de charger les prestataires. Veuillez réessayer.',
+      emptyTitle: 'Aucun prestataire',
+      emptyDescription: 'Aucun prestataire n\'a encore été enregistré dans cette catégorie.',
       types: {
         hospital: 'Hôpital',
         birth_hospital: 'Maternité',
@@ -169,6 +212,11 @@ export function CityHealthMap({
       call: 'اتصل',
       directions: 'الاتجاهات',
       close: 'إغلاق',
+      retry: 'إعادة المحاولة',
+      errorLoading: 'خطأ في التحميل',
+      errorDescription: 'تعذر تحميل مقدمي الخدمات. يرجى المحاولة مرة أخرى.',
+      emptyTitle: 'لا يوجد مقدمو خدمات',
+      emptyDescription: 'لم يتم تسجيل أي مقدمي خدمات في هذه الفئة بعد.',
       types: {
         hospital: 'مستشفى',
         birth_hospital: 'الولادة',
@@ -193,6 +241,11 @@ export function CityHealthMap({
       call: 'Call',
       directions: 'Directions',
       close: 'Close',
+      retry: 'Retry',
+      errorLoading: 'Loading Error',
+      errorDescription: 'Unable to load providers. Please try again.',
+      emptyTitle: 'No Providers',
+      emptyDescription: 'No providers have been registered in this category yet.',
       types: {
         hospital: 'Hospital',
         birth_hospital: 'Maternity',
@@ -215,32 +268,9 @@ export function CityHealthMap({
     blood: tx.blood
   };
   
-  // Load providers from Firestore
-  useEffect(() => {
-    const loadProviders = async () => {
-      setLoading(true);
-      try {
-        const allProviders = await getVerifiedProviders();
-        setProviders(allProviders);
-      } catch (error) {
-        console.error('Error loading providers:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadProviders();
-  }, []);
-  
-  // Filter providers by mode and user filters
+  // Filter providers by user filters (mode filtering is already done by the hooks)
   const filteredProviders = useMemo((): ProviderWithDistance[] => {
-    let result = providers;
-    
-    // Mode-based filtering
-    if (mode === 'emergency') {
-      result = result.filter(p => p.emergency || p.type === 'hospital');
-    } else if (mode === 'blood') {
-      result = result.filter(p => p.type === 'blood_cabin' || p.type === 'hospital');
-    }
+    let result = [...providers];
     
     // Type filter
     if (typeFilters.length > 0) {
@@ -252,12 +282,12 @@ export function CityHealthMap({
       result = result.filter(p => p.isOpen);
     }
     
-    // Add distance
+    // Add distance and sort
     return result.map(p => ({
       ...p,
       distanceFromUser: geolocation.getDistanceFromUser(p.lat, p.lng)
     })).sort((a, b) => (a.distanceFromUser || Infinity) - (b.distanceFromUser || Infinity));
-  }, [providers, mode, typeFilters, openNowOnly, geolocation]);
+  }, [providers, typeFilters, openNowOnly, geolocation]);
   
   // Initialize map
   useEffect(() => {
@@ -435,8 +465,33 @@ export function CityHealthMap({
         </Button>
         
         {/* Map */}
-        {loading ? (
-          <Skeleton className="w-full h-full rounded-xl" />
+        {error ? (
+          <div className="w-full h-full rounded-xl border flex items-center justify-center bg-muted/20">
+            <Alert variant="destructive" className="max-w-md">
+              <AlertCircle className="h-5 w-5" />
+              <AlertTitle>{tx.errorLoading}</AlertTitle>
+              <AlertDescription className="mt-2">
+                {tx.errorDescription}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-3 w-full"
+                  onClick={() => refetch()}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  {tx.retry}
+                </Button>
+              </AlertDescription>
+            </Alert>
+          </div>
+        ) : loading ? (
+          <div className="w-full h-full rounded-xl border flex flex-col items-center justify-center gap-4 bg-muted/20">
+            <Skeleton className="w-full h-full rounded-xl absolute inset-0" />
+            <div className="relative z-10 flex flex-col items-center gap-3">
+              <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+              <p className="text-muted-foreground text-sm">{tx.allProviders}...</p>
+            </div>
+          </div>
         ) : (
           <div ref={mapContainerRef} className="w-full h-full rounded-xl overflow-hidden border" />
         )}
