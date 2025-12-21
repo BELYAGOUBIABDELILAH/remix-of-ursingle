@@ -1,21 +1,31 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { 
-  CheckCircle2, Edit, Building2, MapPin, Stethoscope, Image,
+  CheckCircle2, Edit, Building2, MapPin, Stethoscope,
   Phone, Mail, Clock, Home, Loader2, PartyPopper, Eye, Star,
   Globe, Shield, AlertCircle
 } from 'lucide-react';
 import { ProviderFormData, PROVIDER_TYPE_LABELS, WeeklySchedule } from './types';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
-import { useRegistration } from '@/contexts/RegistrationContext';
 import { cn } from '@/lib/utils';
+
+interface ProfileScore {
+  total: number;
+  identity: number;
+  institution: number;
+  visibility: number;
+  enhancement: number;
+  isSearchable: boolean;
+}
 
 interface Step6Props {
   formData: ProviderFormData;
+  profileScore: ProfileScore;
+  resetForm: () => void;
   onPrev: () => void;
   onEditStep: (step: number) => void;
 }
@@ -30,10 +40,9 @@ const DAYS_FR: Record<keyof WeeklySchedule, string> = {
   sunday: 'Dim',
 };
 
-export function Step6MirrorPreview({ formData, onPrev, onEditStep }: Step6Props) {
+export function Step6MirrorPreview({ formData, profileScore, resetForm, onPrev, onEditStep }: Step6Props) {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { profileScore, resetForm } = useRegistration();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 

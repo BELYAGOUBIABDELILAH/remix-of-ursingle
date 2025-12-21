@@ -1,22 +1,29 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useRef } from 'react';
+/**
+ * Local state hook for registration wizard
+ * 
+ * This replaces the global RegistrationContext.
+ * Use this hook only within the ProviderRegister page.
+ * State is persisted to localStorage for draft recovery.
+ */
+
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ProviderFormData, getInitialFormData } from '@/components/provider/registration/types';
 
 interface ProfileScore {
   total: number;
-  identity: number; // 20% - providerType, email, password
-  institution: number; // 20% - facilityName, legalRegistration, contact
-  visibility: number; // 30% - location + operating hours
-  enhancement: number; // 30% - gallery, description, social
-  isSearchable: boolean; // True when visibility >= 70%
+  identity: number;
+  institution: number;
+  visibility: number;
+  enhancement: number;
+  isSearchable: boolean;
 }
 
-interface RegistrationContextType {
+interface UseRegistrationWizardReturn {
   formData: ProviderFormData;
   updateFormData: (data: Partial<ProviderFormData>) => void;
   currentStep: number;
   setCurrentStep: (step: number) => void;
   completedSteps: number[];
-  setCompletedSteps: React.Dispatch<React.SetStateAction<number[]>>;
   goToStep: (step: number) => void;
   nextStep: () => void;
   prevStep: () => void;
@@ -26,13 +33,11 @@ interface RegistrationContextType {
   isSaving: boolean;
 }
 
-const RegistrationContext = createContext<RegistrationContextType | undefined>(undefined);
-
 const STORAGE_KEY = 'ch_provider_registration_draft';
-const AUTO_SAVE_INTERVAL = 30000; // 30 seconds
+const AUTO_SAVE_INTERVAL = 30000;
 
 // Calculate profile completion score
-const calculateProfileScore = (formData: ProviderFormData): ProfileScore => {
+function calculateProfileScore(formData: ProviderFormData): ProfileScore {
   let identity = 0;
   let institution = 0;
   let visibility = 0;
@@ -50,14 +55,13 @@ const calculateProfileScore = (formData: ProviderFormData): ProfileScore => {
   if (formData.contactPersonName) institution += 3;
   if (formData.phone) institution += 2;
 
-  // Visibility (30%) - Step 3 (Location + Hours)
+  // Visibility (30%) - Step 3
   if (formData.address) visibility += 8;
   if (formData.area) visibility += 4;
   if (formData.lat && formData.lng) visibility += 6;
   if (formData.is24_7) {
     visibility += 12;
   } else {
-    // Check if at least 3 days have opening hours
     const openDays = Object.values(formData.schedule).filter(day => day.isOpen).length;
     if (openDays >= 3) visibility += 12;
     else if (openDays >= 1) visibility += 6;
@@ -75,21 +79,12 @@ const calculateProfileScore = (formData: ProviderFormData): ProfileScore => {
   if (formData.languages.length >= 1) enhancement += 2;
 
   const total = identity + institution + visibility + enhancement;
-  
-  // isSearchable is true when total >= 70% (identity + institution + visibility complete)
   const isSearchable = (identity + institution + visibility) >= 50;
 
-  return {
-    total,
-    identity,
-    institution,
-    visibility,
-    enhancement,
-    isSearchable,
-  };
-};
+  return { total, identity, institution, visibility, enhancement, isSearchable };
+}
 
-export const RegistrationProvider = ({ children }: { children: ReactNode }) => {
+export function useRegistrationWizard(): UseRegistrationWizardReturn {
   const [formData, setFormData] = useState<ProviderFormData>(getInitialFormData);
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
@@ -138,11 +133,10 @@ export const RegistrationProvider = ({ children }: { children: ReactNode }) => {
     const interval = setInterval(() => {
       saveToStorage();
     }, AUTO_SAVE_INTERVAL);
-
     return () => clearInterval(interval);
   }, [saveToStorage]);
 
-  // Save on changes (debounced)
+  // Debounced save on changes
   useEffect(() => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -150,7 +144,6 @@ export const RegistrationProvider = ({ children }: { children: ReactNode }) => {
     saveTimeoutRef.current = setTimeout(() => {
       saveToStorage();
     }, 2000);
-
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
@@ -190,33 +183,18 @@ export const RegistrationProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem(STORAGE_KEY);
   };
 
-  return (
-    <RegistrationContext.Provider
-      value={{
-        formData,
-        updateFormData,
-        currentStep,
-        setCurrentStep,
-        completedSteps,
-        setCompletedSteps,
-        goToStep,
-        nextStep,
-        prevStep,
-        resetForm,
-        profileScore,
-        lastSaved,
-        isSaving,
-      }}
-    >
-      {children}
-    </RegistrationContext.Provider>
-  );
-};
-
-export const useRegistration = () => {
-  const context = useContext(RegistrationContext);
-  if (!context) {
-    throw new Error('useRegistration must be used within RegistrationProvider');
-  }
-  return context;
-};
+  return {
+    formData,
+    updateFormData,
+    currentStep,
+    setCurrentStep,
+    completedSteps,
+    goToStep,
+    nextStep,
+    prevStep,
+    resetForm,
+    profileScore,
+    lastSaved,
+    isSaving,
+  };
+}

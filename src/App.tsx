@@ -7,7 +7,6 @@ import { useEffect } from "react";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { RegistrationProvider } from "@/contexts/RegistrationContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import AntigravityIndex from "./pages/AntigravityIndex";
 import AuthPage from "./pages/AuthPage";
@@ -210,15 +209,13 @@ const AppRoutes = () => {
           </PageTransition>
         } 
       />
-      {/* New Registration Flow with RegistrationProvider */}
+      {/* New Registration Flow - uses local hook instead of context */}
       <Route 
         path="/provider/register/*" 
         element={
-          <RegistrationProvider>
-            <PageTransition>
-              <ProviderRegister />
-            </PageTransition>
-          </RegistrationProvider>
+          <PageTransition>
+            <ProviderRegister />
+          </PageTransition>
         } 
       />
       <Route 
