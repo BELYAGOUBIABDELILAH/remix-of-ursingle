@@ -41,7 +41,8 @@ export function useVerifiedProviders() {
   return useQuery({
     queryKey: providerKeys.verified(),
     queryFn: getVerifiedProviders,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 3 * 60 * 1000, // 3 minutes
+    refetchInterval: 3 * 60 * 1000, // Auto-refetch every 3 minutes for near real-time updates
   });
 }
 
@@ -109,25 +110,27 @@ export function useProviderByUserId(userId: string | undefined) {
 
 /**
  * Fetch emergency providers
- * Use for: emergency services page
+ * Use for: emergency services page, map emergency mode
  */
 export function useEmergencyProviders() {
   return useQuery({
     queryKey: providerKeys.emergency(),
     queryFn: getEmergencyProviders,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 2 * 60 * 1000, // 2 minutes - more frequent for emergency
+    refetchInterval: 2 * 60 * 1000, // Auto-refetch every 2 minutes for real-time updates
   });
 }
 
 /**
  * Fetch blood donation centers
- * Use for: blood donation page
+ * Use for: blood donation page, map blood mode
  */
 export function useBloodCenters() {
   return useQuery({
     queryKey: providerKeys.bloodCenters(),
     queryFn: getBloodCenters,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    refetchInterval: 2 * 60 * 1000, // Auto-refetch every 2 minutes for real-time updates
   });
 }
 

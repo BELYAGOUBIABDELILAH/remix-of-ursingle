@@ -178,6 +178,13 @@ Need state?
 | `ProviderDashboard` | `useProviderByUserId()` |
 | `AdminDashboard` | `usePendingProviders()`, `useAllProviders()`, `useUpdateVerification()` |
 | `FavoritesPage` | `useFavorites()`, `useRemoveFavorite()`, `useVerifiedProviders()` |
+| `CartePage/CityHealthMap` | `useVerifiedProviders()`, `useEmergencyProviders()`, `useBloodCenters()` |
+
+### Real-Time Updates:
+Provider hooks include `refetchInterval` for automatic background updates:
+- `useVerifiedProviders()` - Every 3 minutes
+- `useEmergencyProviders()` - Every 2 minutes (more critical)
+- `useBloodCenters()` - Every 2 minutes
 
 ### Files to Reference:
 - `src/contexts/AuthContext.tsx` - Auth pattern
