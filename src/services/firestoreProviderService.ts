@@ -6,7 +6,8 @@ import {
   doc, 
   getDocs, 
   getDoc, 
-  setDoc, 
+  setDoc,
+  updateDoc, 
   query, 
   where,
   orderBy,
@@ -235,4 +236,52 @@ export async function searchProviders(searchQuery: string): Promise<CityHealthPr
     p.address.toLowerCase().includes(query) ||
     p.area.toLowerCase().includes(query)
   );
+}
+
+/**
+ * Update provider verification status (admin only)
+ */
+export async function updateProviderVerification(
+  providerId: string,
+  verificationStatus: 'pending' | 'verified' | 'rejected',
+  isPublic: boolean
+): Promise<void> {
+  const docRef = doc(db, PROVIDERS_COLLECTION, providerId);
+  await updateDoc(docRef, {
+    verificationStatus,
+    isPublic,
+    verified: verificationStatus === 'verified',
+    updatedAt: Timestamp.now(),
+  });
+}
+
+/**
+ * Get all pending provider registrations (admin only)
+ */
+export async function getPendingProviders(): Promise<CityHealthProvider[]> {
+  const providersRef = collection(db, PROVIDERS_COLLECTION);
+  const q = query(
+    providersRef,
+    where('verificationStatus', '==', 'pending')
+  );
+  
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => docToProvider(doc.data(), doc.id));
+}
+
+/**
+ * Get provider verification status by user ID
+ */
+export async function getProviderByUserId(userId: string): Promise<CityHealthProvider | null> {
+  const providersRef = collection(db, PROVIDERS_COLLECTION);
+  const q = query(
+    providersRef,
+    where('userId', '==', userId),
+    limit(1)
+  );
+  
+  const snapshot = await getDocs(q);
+  if (snapshot.empty) return null;
+  
+  return docToProvider(snapshot.docs[0].data(), snapshot.docs[0].id);
 }

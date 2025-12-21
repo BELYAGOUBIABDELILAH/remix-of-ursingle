@@ -21,53 +21,43 @@ import {
 } from '@/components/ui/select';
 import { 
   CheckCircle, XCircle, Eye, Users, Building2, TrendingUp,
-  AlertCircle, Activity, Search, Settings, Shield, Megaphone, Mail
+  AlertCircle, Activity, Search, Settings, Shield, Megaphone, Mail, Loader2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { VerificationQueue } from '@/components/admin/VerificationQueue';
 import { MedicalAdsModeration } from '@/components/admin/MedicalAdsModeration';
 import { notificationService } from '@/services/notificationService';
+import { 
+  getPendingProviders, 
+  updateProviderVerification, 
+  getAllProviders 
+} from '@/services/firestoreProviderService';
+import { CityHealthProvider } from '@/data/providers';
+
+interface PendingProvider extends CityHealthProvider {
+  submittedAt?: string;
+  status?: 'pending' | 'approved' | 'rejected';
+}
 
 export default function AdminDashboard() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [loading, setLoading] = useState(true);
 
   const [stats, setStats] = useState({
     totalUsers: 15847,
-    totalProviders: 342,
-    pendingApprovals: 23,
+    totalProviders: 0,
+    pendingApprovals: 0,
     pendingVerifications: 0,
     pendingAds: 0,
     monthlyGrowth: 12,
     activeUsers: 8934,
-    verifiedProviders: 298,
+    verifiedProviders: 0,
   });
 
-  const [pendingProviders, setPendingProviders] = useState(() => {
-    const stored = localStorage.getItem('ch_pending_registrations');
-    return stored ? JSON.parse(stored) : [
-      {
-        id: '1',
-        providerName: 'Cabinet Dr. Merabet',
-        type: 'doctor',
-        specialty: 'Cardiologie',
-        email: 'merabet@example.com',
-        phone: '+213 48 50 10 20',
-        submittedAt: '2025-01-10T10:30:00',
-        status: 'pending'
-      },
-      {
-        id: '2',
-        providerName: 'Clinique El Amal',
-        type: 'clinic',
-        email: 'elamal@example.com',
-        phone: '+213 48 50 11 21',
-        submittedAt: '2025-01-09T14:20:00',
-        status: 'pending'
-      }
-    ];
-  });
+  const [pendingProviders, setPendingProviders] = useState<PendingProvider[]>([]);
+  const [allProviders, setAllProviders] = useState<CityHealthProvider[]>([]);
 
   const [recentActivity] = useState([
     { type: 'registration', user: 'Dr. Ahmed B.', action: 'Nouvelle inscription', time: 'Il y a 2h' },
@@ -78,76 +68,129 @@ export default function AdminDashboard() {
 
   const [sentNotifications, setSentNotifications] = useState<any[]>([]);
 
+  // Load providers from Firestore
   useEffect(() => {
-    // Calculate pending counts
-    const verificationRequests = JSON.parse(localStorage.getItem('ch_verification_requests') || '[]');
-    const medicalAds = JSON.parse(localStorage.getItem('ch_medical_ads') || '[]');
-    
-    setStats(prev => ({
-      ...prev,
-      pendingVerifications: verificationRequests.filter((r: any) => r.status === 'pending').length,
-      pendingAds: medicalAds.filter((a: any) => a.status === 'pending').length,
-      pendingApprovals: pendingProviders.filter(p => p.status === 'pending').length,
-    }));
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        const [pending, all] = await Promise.all([
+          getPendingProviders(),
+          getAllProviders()
+        ]);
+        
+        setPendingProviders(pending.map(p => ({
+          ...p,
+          status: 'pending' as const,
+          submittedAt: new Date().toISOString()
+        })));
+        setAllProviders(all);
+        
+        setStats(prev => ({
+          ...prev,
+          totalProviders: all.length,
+          pendingApprovals: pending.length,
+          verifiedProviders: all.filter(p => p.verificationStatus === 'verified').length,
+        }));
+      } catch (error) {
+        console.error('Error loading providers:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    // Load sent notifications
+    loadData();
     setSentNotifications(notificationService.getSentNotifications());
-  }, [pendingProviders]);
+  }, []);
 
-  const handleApprove = (id: string) => {
+  const handleApprove = async (id: string) => {
     const provider = pendingProviders.find(p => p.id === id);
-    const updated = pendingProviders.map(p => 
-      p.id === id ? { ...p, status: 'approved' } : p
-    );
-    setPendingProviders(updated);
-    localStorage.setItem('ch_pending_registrations', JSON.stringify(updated));
     
-    // Send notification
-    if (provider) {
-      notificationService.sendVerificationNotification({
-        type: 'verification_approved',
-        providerEmail: provider.email,
-        providerName: provider.providerName
+    try {
+      // Update Firestore
+      await updateProviderVerification(id, 'verified', true);
+      
+      // Update local state
+      setPendingProviders(prev => prev.filter(p => p.id !== id));
+      setStats(prev => ({
+        ...prev,
+        pendingApprovals: prev.pendingApprovals - 1,
+        verifiedProviders: prev.verifiedProviders + 1,
+      }));
+      
+      // Send notification
+      if (provider) {
+        notificationService.sendVerificationNotification({
+          type: 'verification_approved',
+          providerEmail: provider.phone, // Using phone as email placeholder
+          providerName: provider.name
+        });
+      }
+
+      toast({
+        title: "Profil approuvé",
+        description: "Le professionnel est maintenant visible dans les recherches.",
+      });
+    } catch (error) {
+      console.error('Error approving provider:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'approuver ce profil.",
+        variant: "destructive",
       });
     }
-
-    toast({
-      title: "Profil approuvé",
-      description: "Le professionnel a été notifié par email.",
-    });
   };
 
-  const handleReject = (id: string) => {
+  const handleReject = async (id: string) => {
     const provider = pendingProviders.find(p => p.id === id);
-    const updated = pendingProviders.map(p => 
-      p.id === id ? { ...p, status: 'rejected' } : p
-    );
-    setPendingProviders(updated);
-    localStorage.setItem('ch_pending_registrations', JSON.stringify(updated));
     
-    // Send notification
-    if (provider) {
-      notificationService.sendVerificationNotification({
-        type: 'verification_rejected',
-        providerEmail: provider.email,
-        providerName: provider.providerName,
-        reason: 'Documents non conformes ou informations incomplètes'
+    try {
+      // Update Firestore - rejected providers stay hidden
+      await updateProviderVerification(id, 'rejected', false);
+      
+      // Update local state
+      setPendingProviders(prev => prev.filter(p => p.id !== id));
+      setStats(prev => ({
+        ...prev,
+        pendingApprovals: prev.pendingApprovals - 1,
+      }));
+      
+      // Send notification
+      if (provider) {
+        notificationService.sendVerificationNotification({
+          type: 'verification_rejected',
+          providerEmail: provider.phone,
+          providerName: provider.name,
+          reason: 'Documents non conformes ou informations incomplètes'
+        });
+      }
+
+      toast({
+        title: "Profil rejeté",
+        description: "Le professionnel ne sera pas visible dans les recherches.",
+        variant: "destructive",
+      });
+    } catch (error) {
+      console.error('Error rejecting provider:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de rejeter ce profil.",
+        variant: "destructive",
       });
     }
-
-    toast({
-      title: "Profil rejeté",
-      description: "Le professionnel a été notifié par email.",
-      variant: "destructive",
-    });
   };
 
   const filteredProviders = pendingProviders.filter(p => {
-    const matchesSearch = p.providerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          p.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
   });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20 py-8 px-4">
@@ -202,7 +245,7 @@ export default function AdminDashboard() {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardDescription>Inscriptions en attente</CardDescription>
+              <CardDescription>En attente</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
@@ -254,11 +297,11 @@ export default function AdminDashboard() {
             </TabsTrigger>
             <TabsTrigger value="verifications">
               <Shield className="h-4 w-4 mr-1" />
-              Vérifications ({stats.pendingVerifications})
+              Vérifications
             </TabsTrigger>
             <TabsTrigger value="ads">
               <Megaphone className="h-4 w-4 mr-1" />
-              Annonces ({stats.pendingAds})
+              Annonces
             </TabsTrigger>
             <TabsTrigger value="notifications">
               <Mail className="h-4 w-4 mr-1" />
@@ -275,7 +318,7 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>Demandes d'inscription</CardTitle>
-                    <CardDescription>Vérifier et approuver les nouveaux professionnels</CardDescription>
+                    <CardDescription>Vérifier et approuver les nouveaux professionnels depuis Firestore</CardDescription>
                   </div>
                   <div className="flex gap-2">
                     <div className="relative">
@@ -287,102 +330,79 @@ export default function AdminDashboard() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                       />
                     </div>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-40">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Tous</SelectItem>
-                        <SelectItem value="pending">En attente</SelectItem>
-                        <SelectItem value="approved">Approuvés</SelectItem>
-                        <SelectItem value="rejected">Rejetés</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Professionnel</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Contact</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Statut</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredProviders.map((provider) => (
-                      <TableRow key={provider.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{provider.providerName}</p>
-                            {provider.specialty && (
-                              <p className="text-sm text-muted-foreground">{provider.specialty}</p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {provider.type === 'doctor' ? 'Médecin' :
-                             provider.type === 'clinic' ? 'Clinique' :
-                             provider.type === 'pharmacy' ? 'Pharmacie' :
-                             provider.type === 'lab' ? 'Laboratoire' : 'Hôpital'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <p>{provider.email}</p>
-                            <p className="text-muted-foreground">{provider.phone}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm text-muted-foreground">
-                            {new Date(provider.submittedAt).toLocaleDateString('fr-FR')}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant={
-                              provider.status === 'pending' ? 'secondary' :
-                              provider.status === 'approved' ? 'default' : 'destructive'
-                            }
-                          >
-                            {provider.status === 'pending' ? 'En attente' :
-                             provider.status === 'approved' ? 'Approuvé' : 'Rejeté'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button size="sm" variant="outline">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            {provider.status === 'pending' && (
-                              <>
-                                <Button 
-                                  size="sm" 
-                                  variant="default"
-                                  onClick={() => handleApprove(provider.id)}
-                                >
-                                  <CheckCircle className="h-4 w-4" />
-                                </Button>
-                                <Button 
-                                  size="sm" 
-                                  variant="destructive"
-                                  onClick={() => handleReject(provider.id)}
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </TableCell>
+                {filteredProviders.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
+                    <p className="text-lg font-medium">Aucune inscription en attente</p>
+                    <p className="text-sm">Tous les profils ont été traités.</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Professionnel</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Contact</TableHead>
+                        <TableHead>Adresse</TableHead>
+                        <TableHead>Statut</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredProviders.map((provider) => (
+                        <TableRow key={provider.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{provider.name}</p>
+                              {provider.specialty && (
+                                <p className="text-sm text-muted-foreground">{provider.specialty}</p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{provider.type}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              <p>{provider.phone}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground">{provider.address}</span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">En attente</Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button size="sm" variant="outline">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="default"
+                                onClick={() => handleApprove(provider.id)}
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="destructive"
+                                onClick={() => handleReject(provider.id)}
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
 
@@ -437,19 +457,17 @@ export default function AdminDashboard() {
                     <p>Aucune notification envoyée</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {sentNotifications.slice(-10).reverse().map((notif: any) => (
-                      <div key={notif.id} className="flex items-start gap-4 p-4 border rounded-lg">
-                        <Mail className="h-5 w-5 text-primary mt-0.5" />
+                  <div className="space-y-4">
+                    {sentNotifications.map((notif, idx) => (
+                      <div key={idx} className="flex items-start gap-4 p-4 border rounded-lg">
+                        <Mail className="h-5 w-5 text-primary mt-1" />
                         <div className="flex-1">
-                          <p className="font-medium text-sm">{notif.subject}</p>
-                          <p className="text-xs text-muted-foreground">
-                            À: {notif.recipient}
-                          </p>
+                          <p className="font-medium">{notif.providerName}</p>
+                          <p className="text-sm text-muted-foreground">{notif.type}</p>
                         </div>
-                        <Badge variant="outline" className="text-green-500">
-                          {notif.status}
-                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(notif.sentAt).toLocaleDateString('fr-FR')}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -460,93 +478,45 @@ export default function AdminDashboard() {
 
           {/* Analytics Tab */}
           <TabsContent value="analytics">
-            <div className="grid gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Statistiques d'utilisation</CardTitle>
-                  <CardDescription>Métriques clés de la plateforme</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <span className="text-sm font-medium">Recherches par jour</span>
-                        <span className="text-sm text-muted-foreground">~2,400</span>
-                      </div>
-                      <div className="h-2 bg-muted rounded-full">
-                        <div className="h-2 bg-primary rounded-full" style={{width: '85%'}} />
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <span className="text-sm font-medium">Taux de conversion</span>
-                        <span className="text-sm text-muted-foreground">23%</span>
-                      </div>
-                      <div className="h-2 bg-muted rounded-full">
-                        <div className="h-2 bg-primary rounded-full" style={{width: '23%'}} />
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <span className="text-sm font-medium">Satisfaction utilisateur</span>
-                        <span className="text-sm text-muted-foreground">92%</span>
-                      </div>
-                      <div className="h-2 bg-muted rounded-full">
-                        <div className="h-2 bg-primary rounded-full" style={{width: '92%'}} />
-                      </div>
-                    </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Statistiques globales</CardTitle>
+                <CardDescription>Vue d'ensemble de la plateforme</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="p-4 border rounded-lg text-center">
+                    <p className="text-3xl font-bold">{stats.totalProviders}</p>
+                    <p className="text-sm text-muted-foreground">Total prestataires</p>
                   </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Top Spécialités</CardTitle>
-                  <CardDescription>Les plus recherchées</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {['Médecine générale', 'Dentisterie', 'Cardiologie', 'Pédiatrie', 'Gynécologie'].map((spec, idx) => (
-                      <div key={spec} className="flex items-center justify-between">
-                        <span className="text-sm">{spec}</span>
-                        <Badge variant="secondary">{345 - idx * 50}</Badge>
-                      </div>
-                    ))}
+                  <div className="p-4 border rounded-lg text-center">
+                    <p className="text-3xl font-bold text-green-500">{stats.verifiedProviders}</p>
+                    <p className="text-sm text-muted-foreground">Vérifiés</p>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                  <div className="p-4 border rounded-lg text-center">
+                    <p className="text-3xl font-bold text-orange-500">{stats.pendingApprovals}</p>
+                    <p className="text-sm text-muted-foreground">En attente</p>
+                  </div>
+                  <div className="p-4 border rounded-lg text-center">
+                    <p className="text-3xl font-bold text-red-500">
+                      {allProviders.filter(p => p.verificationStatus === 'rejected').length}
+                    </p>
+                    <p className="text-sm text-muted-foreground">Rejetés</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Settings Tab */}
           <TabsContent value="settings">
             <Card>
               <CardHeader>
-                <CardTitle>Configuration de la plateforme</CardTitle>
-                <CardDescription>Paramètres système et maintenance</CardDescription>
+                <CardTitle>Configuration</CardTitle>
+                <CardDescription>Paramètres de la plateforme</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Mode maintenance</p>
-                    <p className="text-sm text-muted-foreground">Désactiver l'accès public temporairement</p>
-                  </div>
-                  <Badge variant="outline">Désactivé</Badge>
-                </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Notifications email</p>
-                    <p className="text-sm text-muted-foreground">Envoi automatique des notifications</p>
-                  </div>
-                  <Badge className="bg-green-500">Activé</Badge>
-                </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Modération automatique</p>
-                    <p className="text-sm text-muted-foreground">Filtrage IA du contenu</p>
-                  </div>
-                  <Badge variant="outline">Désactivé</Badge>
-                </div>
+              <CardContent>
+                <p className="text-muted-foreground">Paramètres à venir...</p>
               </CardContent>
             </Card>
           </TabsContent>
