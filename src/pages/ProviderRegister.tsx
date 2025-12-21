@@ -8,7 +8,7 @@ import { Step3Location } from '@/components/provider/registration/Step3Location'
 import { Step4Services } from '@/components/provider/registration/Step4Services';
 import { Step5MediaUpload } from '@/components/provider/registration/Step5MediaUpload';
 import { Step6MirrorPreview } from '@/components/provider/registration/Step6MirrorPreview';
-import { useRegistration, RegistrationProvider } from '@/contexts/RegistrationContext';
+import { useRegistrationWizard } from '@/hooks/useRegistrationWizard';
 import { useToast } from '@/hooks/use-toast';
 
 const STEPS = [
@@ -20,17 +20,21 @@ const STEPS = [
   { number: 6, title: 'Aperçu', description: 'Publier' },
 ];
 
-function ProviderRegisterContent() {
+export default function ProviderRegister() {
   const { toast } = useToast();
   const { 
     formData, 
     updateFormData, 
-    currentStep, 
+    currentStep,
+    completedSteps,
     goToStep, 
     nextStep, 
     prevStep,
+    resetForm,
     profileScore,
-  } = useRegistration();
+    lastSaved,
+    isSaving,
+  } = useRegistrationWizard();
 
   const handleSaveAndExit = () => {
     toast({
@@ -56,6 +60,11 @@ function ProviderRegisterContent() {
         <div className="mb-8">
           <DynamicProgressBar 
             steps={STEPS} 
+            currentStep={currentStep}
+            completedSteps={completedSteps}
+            profileScore={profileScore}
+            lastSaved={lastSaved}
+            isSaving={isSaving}
             onStepClick={goToStep}
           />
         </div>
@@ -113,6 +122,8 @@ function ProviderRegisterContent() {
             {currentStep === 6 && (
               <Step6MirrorPreview 
                 formData={formData} 
+                profileScore={profileScore}
+                resetForm={resetForm}
                 onPrev={prevStep} 
                 onEditStep={goToStep} 
               />
@@ -126,13 +137,5 @@ function ProviderRegisterContent() {
         </p>
       </div>
     </div>
-  );
-}
-
-export default function ProviderRegister() {
-  return (
-    <RegistrationProvider>
-      <ProviderRegisterContent />
-    </RegistrationProvider>
   );
 }

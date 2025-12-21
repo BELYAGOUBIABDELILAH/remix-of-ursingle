@@ -1,10 +1,18 @@
-import { useRegistration } from '@/contexts/RegistrationContext';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { 
-  Check, Camera, FileText, Clock, Sparkles, Eye, Shield
+  Check, Camera, FileText, Clock, Eye, Shield
 } from 'lucide-react';
+
+interface ProfileScore {
+  total: number;
+  identity: number;
+  institution: number;
+  visibility: number;
+  enhancement: number;
+  isSearchable: boolean;
+}
 
 interface Step {
   number: number;
@@ -14,11 +22,23 @@ interface Step {
 
 interface DynamicProgressBarProps {
   steps: Step[];
+  currentStep: number;
+  completedSteps: number[];
+  profileScore: ProfileScore;
+  lastSaved: Date | null;
+  isSaving: boolean;
   onStepClick?: (step: number) => void;
 }
 
-export function DynamicProgressBar({ steps, onStepClick }: DynamicProgressBarProps) {
-  const { currentStep, completedSteps, profileScore, lastSaved, isSaving } = useRegistration();
+export function DynamicProgressBar({ 
+  steps, 
+  currentStep,
+  completedSteps,
+  profileScore,
+  lastSaved,
+  isSaving,
+  onStepClick 
+}: DynamicProgressBarProps) {
 
   const getNextMilestone = () => {
     if (profileScore.total < 40) {
