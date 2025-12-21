@@ -12,10 +12,42 @@ CityHealth est une application web qui connecte les citoyens de Sidi Bel Abbès 
 |-----------|--------------|
 | **Frontend** | React 18, TypeScript, Vite |
 | **Styling** | Tailwind CSS, shadcn/ui |
-| **State** | React Context, Zustand, TanStack Query |
+| **State** | React Context, TanStack Query |
 | **Maps** | Leaflet (carte unifiée) |
 | **Backend** | Firebase (Auth, Firestore, Storage, Functions) |
 | **AI Chat** | Firebase Cloud Functions (SSE streaming) |
+| **Testing** | Vitest, React Testing Library, Playwright |
+
+---
+
+## 🧪 Testing
+
+### Run Unit Tests
+```bash
+npm run test          # Run all unit tests
+npm run test:watch    # Watch mode
+npm run test:coverage # Coverage report
+```
+
+### Run E2E Tests
+```bash
+npx playwright install  # First time setup
+npm run test:e2e        # Run Playwright tests
+```
+
+### Test Structure
+```
+src/
+├── contexts/AuthContext.test.tsx    # Auth tests
+├── components/ProtectedRoute.test.tsx # Route guard tests
+├── test/
+│   ├── setup.ts                     # Test setup
+│   ├── utils.tsx                    # Test utilities
+│   ├── mocks/firebase.ts            # Firebase mocks
+│   └── providerFiltering.test.ts    # Search logic tests
+e2e/
+└── provider-search.spec.ts          # E2E flow tests
+```
 
 ---
 
