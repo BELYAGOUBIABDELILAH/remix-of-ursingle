@@ -48,7 +48,7 @@ const services = [
     icon: Ambulance,
     title: 'Urgences',
     description: 'Services d\'urgence disponibles',
-    href: '/emergency',
+    href: '/carte?mode=emergency',
     color: 'from-red-500 to-red-600',
     count: '24/7'
   },

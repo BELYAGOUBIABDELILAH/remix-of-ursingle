@@ -29,9 +29,10 @@ export const AntigravityHeader = () => {
 
   const servicesLinks = [
     { label: 'Recherche médecins', href: '/search' },
-    { label: 'Carte interactive', href: '/map' },
-    { label: 'Urgences 24/7', href: '/emergency' },
-    { label: 'Assistant IA Santé', href: '/ai-health-chat' },
+    { label: 'Carte interactive', href: '/carte' },
+    { label: 'Urgences 24/7', href: '/carte?mode=emergency' },
+    { label: 'Assistant IA Santé', href: '/medical-assistant' },
+    { label: 'Don de sang', href: '/blood-donation' },
   ];
 
   const resourcesLinks = [

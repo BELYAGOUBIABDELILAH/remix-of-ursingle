@@ -176,7 +176,7 @@ export const AntigravityHero = () => {
           <div className="flex flex-wrap justify-center gap-3 mb-16">
             <Button
               variant="outline"
-              onClick={() => navigate('/map')}
+              onClick={() => navigate('/carte')}
               className="rounded-full border-border/50 hover:border-primary/50 hover:bg-primary/5"
             >
               <MapPin className="mr-2 h-4 w-4" />
@@ -184,14 +184,14 @@ export const AntigravityHero = () => {
             </Button>
             <Button
               variant="outline"
-              onClick={() => navigate('/emergency')}
+              onClick={() => navigate('/carte?mode=emergency')}
               className="rounded-full border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950/30"
             >
               🚨 Urgences 24/7
             </Button>
             <Button
               variant="outline"
-              onClick={() => navigate('/ai-health-chat')}
+              onClick={() => navigate('/medical-assistant')}
               className="rounded-full border-border/50 hover:border-primary/50 hover:bg-primary/5"
             >
               <Sparkles className="mr-2 h-4 w-4" />

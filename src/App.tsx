@@ -297,6 +297,9 @@ const AppRoutes = () => {
           </PageTransition>
         } 
       />
+      {/* Redirect routes for backwards compatibility */}
+      <Route path="/map" element={<Navigate to="/carte" replace />} />
+      <Route path="/urgences" element={<Navigate to="/carte?mode=emergency" replace />} />
       <Route 
         path="*" 
         element={
