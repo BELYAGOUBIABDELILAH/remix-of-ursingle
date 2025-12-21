@@ -3,11 +3,8 @@ import { SearchInterface } from '@/components/search/SearchInterface';
 import { AdvancedFilters } from '@/components/search/AdvancedFilters';
 import { SearchResults } from '@/components/search/SearchResults';
 import { SearchMap } from '@/components/search/SearchMap';
-import { getProviders, CityHealthProvider } from '@/data/providers';
-
-console.log('SearchPage import successful');
-console.log('getProviders function:', getProviders);
-console.log('CityHealthProvider type imported');
+import { CityHealthProvider } from '@/data/providers';
+import { getVerifiedProviders } from '@/services/firestoreProviderService';
 
 export type ViewMode = 'list' | 'grid' | 'map';
 export type SortOption = 'relevance' | 'distance' | 'rating' | 'price' | 'newest';
@@ -34,6 +31,7 @@ const SearchPage = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [filteredProviders, setFilteredProviders] = useState<Provider[]>([]);
   const [allProviders, setAllProviders] = useState<Provider[]>([]);
+  const [loading, setLoading] = useState(true);
   
   const [filters, setFilters] = useState<FilterState>({
     categories: [],
@@ -48,11 +46,22 @@ const SearchPage = () => {
     priceRange: [0, 500]
   });
 
-  // Initialize providers
+  // Load providers from Firestore
   useEffect(() => {
-    const providers = getProviders();
-    setAllProviders(providers);
-    setFilteredProviders(providers);
+    const loadProviders = async () => {
+      setLoading(true);
+      try {
+        const providers = await getVerifiedProviders();
+        setAllProviders(providers);
+        setFilteredProviders(providers);
+      } catch (error) {
+        console.error('Error loading providers:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadProviders();
   }, []);
 
   // Filter and search logic
@@ -93,9 +102,6 @@ const SearchPage = () => {
       results = results.filter(provider => provider.emergency);
     }
 
-    // Price range filter (simplified for now)
-    // Note: CityHealthProvider doesn't have pricing field yet
-
     // Sort results
     switch (sortBy) {
       case 'rating':
@@ -104,14 +110,7 @@ const SearchPage = () => {
       case 'distance':
         results.sort((a, b) => (a.distance || 0) - (b.distance || 0));
         break;
-      case 'price':
-        // Note: Price sorting not implemented yet for CityHealthProvider
-        break;
-      case 'newest':
-        // Note: Join date sorting not implemented yet for CityHealthProvider
-        break;
       default:
-        // Keep relevance order
         break;
     }
 
@@ -143,7 +142,11 @@ const SearchPage = () => {
 
         {/* Main Content */}
         <div className="flex-1">
-          {viewMode === 'map' ? (
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : viewMode === 'map' ? (
             <SearchMap providers={filteredProviders} />
           ) : (
             <SearchResults 

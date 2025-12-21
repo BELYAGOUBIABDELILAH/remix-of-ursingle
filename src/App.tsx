@@ -38,7 +38,7 @@ import CitizenProfilePage from "./pages/CitizenProfilePage";
 import BloodDonationPage from "./pages/BloodDonationPage";
 import { AIChatbot } from "./components/AIChatbot";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import { seedProvidersIfNeeded } from "@/data/providers";
+import { migrateProvidersToFirestore } from "@/scripts/migrateProvidersToFirestore";
 
 const queryClient = new QueryClient();
 
@@ -57,7 +57,19 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-const SeedInit = () => { useEffect(() => { seedProvidersIfNeeded(50); }, []); return null; };
+// Initialize Firestore with mock data if empty
+const FirestoreInit = () => {
+  useEffect(() => {
+    migrateProvidersToFirestore(50).then(result => {
+      if (result.count > 0) {
+        console.log('Firestore initialized:', result.message);
+      }
+    }).catch(err => {
+      console.error('Firestore init error:', err);
+    });
+  }, []);
+  return null;
+};
 
 // Verification redirect wrapper for providers
 const VerificationGuard = ({ children }: { children: React.ReactNode }) => {
@@ -322,7 +334,7 @@ const App = () => (
               <Toaster />
               <Sonner />
               <BrowserRouter>
-                <SeedInit />
+                <FirestoreInit />
                 <div className="min-h-screen bg-background text-foreground">
                   <FloatingSidebar />
                   <AIChatbot />
