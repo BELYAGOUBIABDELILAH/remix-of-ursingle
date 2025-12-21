@@ -22,6 +22,7 @@ import CounterAnimation from "@/components/CounterAnimation";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useToastNotifications } from "@/hooks/useToastNotifications";
 import ToastContainer from "@/components/ToastContainer";
+import { Header } from "@/components/layout/Header";
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -121,6 +122,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
+      <Header />
       <ParticleBackground />
       <ToastContainer toasts={toasts} />
       {/* Hero Section */}
