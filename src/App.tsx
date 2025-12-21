@@ -35,6 +35,7 @@ import ProvidersMapPage from "./pages/ProvidersMapPage";
 import MedicalAssistantPage from "./pages/MedicalAssistantPage";
 import CitizenProfilePage from "./pages/CitizenProfilePage";
 import BloodDonationPage from "./pages/BloodDonationPage";
+import AdminMigratePage from "./pages/AdminMigratePage";
 import { AIChatbot } from "./components/AIChatbot";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { migrateProvidersToFirestore } from "@/scripts/migrateProvidersToFirestore";
@@ -303,6 +304,14 @@ const AppRoutes = () => {
         element={
           <PageTransition>
             <BloodDonationPage />
+          </PageTransition>
+        } 
+      />
+      <Route 
+        path="/admin/migrate" 
+        element={
+          <PageTransition>
+            <AdminMigratePage />
           </PageTransition>
         } 
       />

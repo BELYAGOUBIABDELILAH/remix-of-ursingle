@@ -60,23 +60,33 @@ service cloud.firestore {
     }
     
     // ============================================
-    // PROVIDERS - Public read only if verified & public
+    // PROVIDERS - Public read for verified providers
     // ============================================
     match /providers/{providerId} {
-      // Public can only read verified and public providers
+      // PUBLIC ACCESS: Allow read for verified and public providers
+      // For queries: the query must include where('verificationStatus', '==', 'verified') 
+      // AND where('isPublic', '==', true) for this rule to apply
       allow read: if resource.data.verificationStatus == 'verified' && 
                      resource.data.isPublic == true;
-      // Authenticated users can read their own provider profile (even if not verified)
+      
+      // OWNER ACCESS: Users can read their own provider profile (even if not verified)
       allow read: if isAuthenticated() && 
                      resource.data.userId == request.auth.uid;
-      // Admins can read all providers
+      
+      // ADMIN ACCESS: Admins can read all providers
       allow read: if isAdmin();
-      // Only owner can create/update their provider profile
-      allow create: if isAuthenticated() && 
-                       request.resource.data.userId == request.auth.uid;
+      
+      // CREATE: Authenticated users can create providers (for registration)
+      allow create: if isAuthenticated();
+      
+      // UPDATE: Owner can update their own profile
       allow update: if isAuthenticated() && 
                        resource.data.userId == request.auth.uid;
-      // Only admins can delete providers
+      
+      // UPDATE: Admins can update any provider (for verification)
+      allow update: if isAdmin();
+      
+      // DELETE: Only admins can delete providers
       allow delete: if isAdmin();
     }
     
