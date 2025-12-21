@@ -1,185 +1,277 @@
-# 🗺️ CityHealth - Documentation des Routes
+# 🗺️ Routes CityHealth
 
-## Routes Publiques (Non Authentifiées)
-
-| Route | Composant | Description | Priorité |
-|-------|-----------|-------------|----------|
-| `/` | NewIndex | Page d'accueil principale avec hero, recherche rapide, providers featured | P0 |
-| `/search` | SearchPage | Recherche avancée de professionnels avec filtres | P0 |
-| `/providers` | ProvidersPage | Liste complète des professionnels de santé | P1 |
-| `/provider/:id` | ProviderProfilePage | Profil détaillé d'un professionnel avec reviews, booking | P0 |
-| `/map` | MapPage | Carte interactive des professionnels | P1 |
-| `/emergency` | EmergencyPage | Services d'urgence 24/7 | P1 |
-| `/contact` | ContactPage | Formulaire de contact | P2 |
-| `/why` | WhyPage | Pourquoi utiliser CityHealth | P2 |
-| `/how` | HowPage | Comment utiliser la plateforme | P2 |
-| `/ai-health-chat` | AIHealthChat | Assistant santé IA (chat complet) | P1 |
-
-## Routes Protégées (Authentification Requise)
-
-### Patients (role: 'patient')
-
-| Route | Composant | Description | Auth |
-|-------|-----------|-------------|------|
-| `/dashboard` | PatientDashboard | Dashboard patient avec RDV, avis, favoris | ✅ Patient |
-| `/profile` | UserProfilePage | Profil utilisateur avec tabs (info, notifications, sécurité) | ✅ Any Auth |
-| `/favorites` | FavoritesPage | Liste des professionnels favoris | ✅ Any Auth |
-| `/settings` | Settings | Paramètres du compte | ✅ Any Auth |
-
-### Professionnels de Santé (role: 'provider')
-
-| Route | Composant | Description | Auth |
-|-------|-----------|-------------|------|
-| `/provider/register` | ProviderRegister | Inscription professionnel (multi-step) | ✅ Provider |
-| `/provider/dashboard` | ProviderDashboard | Dashboard professionnel avec RDV, avis, stats | ✅ Provider |
-
-### Administrateurs (role: 'admin')
-
-| Route | Composant | Description | Auth |
-|-------|-----------|-------------|------|
-| `/admin/dashboard` | AdminDashboard | Gestion plateforme : approbations, analytics, modération | ✅ Admin |
-
-## Routes Utilitaires
-
-| Route | Composant | Description |
-|-------|-----------|-------------|
-| `/import` | Import | Import de données (usage interne) |
-| `/manage` | ManagePage | Gestion de contenus |
-| `*` (404) | NotFound | Page non trouvée |
+> Carte complète de la navigation et des routes de l'application
 
 ---
 
-## Composants Globaux (Présents sur toutes pages)
+## 📊 Vue d'Ensemble
 
-- `<Header />` - Navigation principale avec auth modal
-- `<FloatingSidebar />` - Sidebar flottante
-- `<AIChatbot />` - Widget de chat IA (fixed bottom-right)
-- `<PageTransition />` - Wrapper d'animation pour transitions
-
----
-
-## Flux Utilisateurs
-
-### 1. Patient - Prendre un RDV
-
-```
-/ (Home) 
-  → /search (Recherche) 
-  → /provider/:id (Profil) 
-  → BookingModal (RDV) 
-  → /dashboard (Confirmation)
-```
-
-### 2. Patient - Laisser un avis
-
-```
-/dashboard (Mes RDV passés)
-  → ReviewSystem modal
-  → Avis soumis (status: pending)
-```
-
-### 3. Provider - S'inscrire
-
-```
-/provider/register (Multi-step)
-  → Step 1: Infos de base
-  → Step 2: Spécialité & localisation
-  → Step 3: Documents (licence, photos)
-  → Step 4: Vérification
-  → Status: pending → Admin approuve → /provider/dashboard
-```
-
-### 4. Admin - Modérer
-
-```
-/admin/dashboard
-  → Tab "Approbations"
-  → Approuver/Rejeter provider
-  → Notification email envoyée
-```
+<presentation-mermaid>
+graph TD
+    A["/"] --> B[Routes Publiques]
+    A --> C[Routes Protégées]
+    A --> D[Routes Admin]
+    
+    B --> B1["/search"]
+    B --> B2["/carte"]
+    B --> B3["/providers"]
+    B --> B4["/provider/:id"]
+    B --> B5["/blood-donation"]
+    B --> B6["/medical-assistant"]
+    B --> B7["/contact"]
+    
+    C --> C1["/profile"]
+    C --> C2["/favorites"]
+    C --> C3["/dashboard"]
+    C --> C4["/provider/register/*"]
+    C --> C5["/provider/dashboard"]
+    
+    D --> D1["/admin/dashboard"]
+</presentation-mermaid>
 
 ---
 
-## Routes à Supprimer (Legacy / Doublons)
+## 🌐 Routes Publiques
 
-Les routes suivantes ont été nettoyées :
-
-- ❌ `/profile` (ancienne) → Remplacée par UserProfilePage protégée
-- ❌ `/admin` (ancienne) → Remplacée par `/admin/dashboard`
-- ❌ Tous les composants `src/components/landing/*` → Non utilisés, supprimés
+| Route | Page | Description |
+|-------|------|-------------|
+| `/` | `AntigravityIndex` | Homepage avec hero, recherche rapide, services |
+| `/search` | `SearchPage` | Recherche avancée avec filtres |
+| `/providers` | `ProvidersPage` | Liste complète des prestataires |
+| `/provider/:id` | `ProviderProfilePage` | Profil détaillé d'un prestataire |
+| `/carte` | `CartePage` | Carte interactive Leaflet (mode=all) |
+| `/carte?mode=emergency` | `CartePage` | Carte des urgences 24/7 |
+| `/carte?mode=blood` | `CartePage` | Carte des centres de don de sang |
+| `/blood-donation` | `BloodDonationPage` | Information don de sang |
+| `/medical-assistant` | `MedicalAssistantPage` | Assistant IA santé |
+| `/ai-health-chat` | `AIHealthChat` | Chat IA complet |
+| `/contact` | `ContactPage` | Formulaire de contact |
+| `/why` | `WhyPage` | Pourquoi CityHealth |
+| `/how` | `HowPage` | Comment utiliser la plateforme |
+| `/auth` | `AuthPage` | Connexion / Inscription |
 
 ---
 
-## Conventions
+## 🔐 Routes Protégées
 
-### Protection des Routes
+### Tout Utilisateur Authentifié
 
-**ProtectedRoute** wrapper avec options :
+| Route | Page | Rôle Requis | Description |
+|-------|------|-------------|-------------|
+| `/profile` | `CitizenProfilePage` | Tout auth | Profil utilisateur |
+| `/favorites` | `FavoritesPage` | Tout auth | Prestataires favoris |
+| `/settings` | `Settings` | Tout auth | Paramètres du compte |
+
+### Patients
+
+| Route | Page | Rôle Requis | Description |
+|-------|------|-------------|-------------|
+| `/dashboard` | `PatientDashboard` | `patient` | Tableau de bord patient |
+
+### Prestataires
+
+| Route | Page | Rôle Requis | Description |
+|-------|------|-------------|-------------|
+| `/provider/register/*` | `ProviderRegister` | Tout auth | Inscription 6 étapes |
+| `/provider/dashboard` | `ProviderDashboard` | `provider` | Tableau de bord prestataire |
+| `/registration-status` | `RegistrationStatus` | En attente | Statut de vérification |
+| `/registration-thank-you` | `RegistrationThankYou` | Tout auth | Confirmation inscription |
+
+### Administrateurs
+
+| Route | Page | Rôle Requis | Description |
+|-------|------|-------------|-------------|
+| `/admin/dashboard` | `AdminDashboard` | `admin` | Gestion plateforme |
+
+---
+
+## ↩️ Redirections
+
+| Route Source | Destination | Raison |
+|--------------|-------------|--------|
+| `/map` | `/carte` | Unification carte Leaflet |
+| `/urgences` | `/carte?mode=emergency` | Route legacy |
+| `/emergency` | `/carte?mode=emergency` | Redirection vers carte |
+| `/providers-map` | `/carte` | Consolidation |
+
+---
+
+## 🛡️ Protection des Routes
+
+### ProtectedRoute Component
+
 ```tsx
-// Auth requise (any role)
+// Usage basique - auth requise
 <ProtectedRoute>
-  <Component />
+  <FavoritesPage />
 </ProtectedRoute>
 
-// Role spécifique requis
+// Avec rôle spécifique
 <ProtectedRoute requireRole="admin">
   <AdminDashboard />
 </ProtectedRoute>
+
+// Rôles disponibles: 'patient' | 'provider' | 'admin'
 ```
 
-### Nommage des Routes
+### VerificationGuard
 
-- **Kebab-case** : `/ai-health-chat` ✅
-- **Pas de trailing slash** : `/search` ✅ (pas `/search/`)
-- **Paramètres** : `/provider/:id` (id dynamique)
-
-### PageTransition
-
-Toutes les pages sont wrappées dans `<PageTransition>` pour animations :
-```tsx
-<Route path="/" element={
-  <PageTransition>
-    <NewIndex />
-  </PageTransition>
-} />
-```
-
----
-
-## Ordre de Priorité des Routes (React Router)
-
-⚠️ **Important**: Routes plus spécifiques AVANT routes génériques !
+Redirige les prestataires en attente de vérification vers `/registration-status`.
 
 ```tsx
-// ✅ CORRECT
-<Route path="/provider/register" element={...} />
-<Route path="/provider/:id" element={...} />
-
-// ❌ INCORRECT (/:id capte tout)
-<Route path="/provider/:id" element={...} />
-<Route path="/provider/register" element={...} />
+// Chemins autorisés pour prestataires pending:
+const allowedPaths = [
+  '/registration-status',
+  '/provider/register',
+  '/settings',
+  '/auth',
+  '/'
+];
 ```
 
 ---
 
-## Migration TODO
+## 🔀 Flux Utilisateurs
 
-### Phase 1 : Sécurité Auth (Urgent)
-- [ ] Migrer AuthContext vers Supabase Auth
-- [ ] Ajouter RLS policies sur routes protégées
-- [ ] Créer table `user_roles`
+### Patient - Trouver un Médecin
 
-### Phase 2 : Backend Routes
-- [ ] Connecter `/provider/register` à DB Supabase
-- [ ] Connecter `/dashboard` aux vraies données (appointments, reviews)
-- [ ] Ajouter edge function pour notifications
+```
+/ (Homepage)
+  └─> /search (Recherche)
+      └─> /provider/:id (Profil)
+          └─> BookingModal (RDV)
+              └─> /dashboard (Confirmation)
+```
 
-### Phase 3 : Nouvelles Features
-- [ ] Route `/telehealth` (vidéo consultation)
-- [ ] Route `/insurance` (partenaires assurance)
-- [ ] Route `/blog` (articles santé)
+### Prestataire - S'inscrire
+
+```
+/auth (Connexion)
+  └─> /provider/register
+      ├─> Step 1: Identité
+      ├─> Step 2: Informations
+      ├─> Step 3: Localisation
+      ├─> Step 4: Services
+      ├─> Step 5: Médias
+      └─> Step 6: Prévisualisation
+          └─> /registration-thank-you
+              └─> (Attente validation admin)
+                  └─> /provider/dashboard
+```
+
+### Admin - Valider un Prestataire
+
+```
+/admin/dashboard
+  └─> Tab "Approbations"
+      └─> Approuver/Rejeter
+          └─> Notification email
+```
 
 ---
 
-**Dernière mise à jour:** 2025-01-XX  
-**Maintenu par:** CityHealth Dev Team
+## 📍 Paramètres d'URL
+
+### Carte (`/carte`)
+
+| Paramètre | Valeurs | Description |
+|-----------|---------|-------------|
+| `mode` | `all`, `emergency`, `blood` | Filtre les marqueurs |
+
+### Recherche (`/search`)
+
+| Paramètre | Exemple | Description |
+|-----------|---------|-------------|
+| `type` | `doctor`, `pharmacy` | Type de prestataire |
+| `specialty` | `cardiologie` | Spécialité médicale |
+| `area` | `centre-ville` | Zone géographique |
+| `q` | `dentiste` | Recherche textuelle |
+
+---
+
+## 🧭 Navigation Globale
+
+### Header (Toutes les pages)
+
+```typescript
+const navigationSections = {
+  decouvrir: ['/why', '/how', '/contact'],
+  services: ['/search', '/carte', '/medical-assistant', '/blood-donation'],
+  urgences: ['/carte?mode=emergency'],
+  pro: ['/provider/register', '/provider/dashboard']
+};
+```
+
+### FloatingSidebar
+
+Sidebar flottante avec accès rapide aux routes principales.
+
+### Footer
+
+Liens vers toutes les sections principales + mentions légales.
+
+---
+
+## 🚫 Routes Supprimées (Legacy)
+
+| Route | Raison | Alternative |
+|-------|--------|-------------|
+| `/index` | Doublon | `/` |
+| `/new-index` | Doublon | `/` |
+| `/antigravity` | Doublon | `/` |
+| `/map` | Consolidation | `/carte` |
+| `/emergency` | Consolidation | `/carte?mode=emergency` |
+| `/providers-map` | Consolidation | `/carte` |
+| `/admin` | Renommage | `/admin/dashboard` |
+
+---
+
+## ⚙️ Configuration des Routes
+
+### App.tsx Structure
+
+```tsx
+<Routes>
+  {/* Public Routes */}
+  <Route path="/" element={<AntigravityIndex />} />
+  <Route path="/search" element={<SearchPage />} />
+  <Route path="/carte" element={<CartePage />} />
+  
+  {/* Protected Routes */}
+  <Route path="/profile" element={
+    <ProtectedRoute>
+      <CitizenProfilePage />
+    </ProtectedRoute>
+  } />
+  
+  {/* Role-specific Routes */}
+  <Route path="/admin/dashboard" element={
+    <ProtectedRoute requireRole="admin">
+      <AdminDashboard />
+    </ProtectedRoute>
+  } />
+  
+  {/* Registration Flow with Context */}
+  <Route path="/provider/register/*" element={
+    <RegistrationProvider>
+      <ProviderRegister />
+    </RegistrationProvider>
+  } />
+  
+  {/* Redirects */}
+  <Route path="/map" element={<Navigate to="/carte" replace />} />
+  
+  {/* 404 */}
+  <Route path="*" element={<NotFound />} />
+</Routes>
+```
+
+---
+
+## 📱 Responsive Breakpoints
+
+| Breakpoint | Navigation |
+|------------|------------|
+| Mobile (<768px) | Hamburger menu |
+| Tablet (768-1024px) | Menu condensé |
+| Desktop (>1024px) | Navigation complète |
