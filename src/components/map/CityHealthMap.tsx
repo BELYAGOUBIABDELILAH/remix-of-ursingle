@@ -19,7 +19,8 @@ import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGeolocation, SIDI_BEL_ABBES_CENTER } from '@/hooks/useGeolocation';
-import { getProviders, CityHealthProvider, ProviderType } from '@/data/providers';
+import { CityHealthProvider, ProviderType } from '@/data/providers';
+import { getVerifiedProviders } from '@/services/firestoreProviderService';
 import { cn } from '@/lib/utils';
 
 export type MapMode = 'all' | 'emergency' | 'blood';
@@ -214,14 +215,20 @@ export function CityHealthMap({
     blood: tx.blood
   };
   
-  // Load providers
+  // Load providers from Firestore
   useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      const allProviders = getProviders();
-      setProviders(allProviders.filter(p => p.verificationStatus === 'verified' && p.isPublic));
-      setLoading(false);
-    }, 300);
+    const loadProviders = async () => {
+      setLoading(true);
+      try {
+        const allProviders = await getVerifiedProviders();
+        setProviders(allProviders);
+      } catch (error) {
+        console.error('Error loading providers:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadProviders();
   }, []);
   
   // Filter providers by mode and user filters

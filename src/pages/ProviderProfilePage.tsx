@@ -1,53 +1,55 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, Star, Phone, Share2, Flag, Calendar, Languages, Award, Image as ImageIcon, Heart, Navigation } from "lucide-react";
-import { getProviderById } from "@/data/providers";
+import { CityHealthProvider } from "@/data/providers";
+import { getProviderById } from "@/services/firestoreProviderService";
 import { BookingModal } from "@/components/BookingModal";
 import { ReviewSystem } from "@/components/ReviewSystem";
 import { useAuth } from "@/contexts/AuthContext";
 import { favoritesService } from "@/services/favoritesService";
 import { toast } from "sonner";
 import ProviderMap from "@/components/ProviderMap";
-
-const mockProvider = {
-  id: "1",
-  name: "Dr. Sara Bendaoud",
-  title: "Cardiologist",
-  rating: 4.9,
-  reviews: 128,
-  verified: true,
-  address: "Av. Emir Abdelkader, Sidi Bel Abbès",
-  phones: ["041 22 33 44", "0550 00 11 22"],
-  email: "contact@drsara.dz",
-  website: "https://drsara.dz",
-  languages: ["ar", "fr", "en"],
-  specializations: ["Cardiology", "Echocardiography"],
-  experience: "15 years",
-  diplomas: ["MD, University of Oran", "Cardiology Specialization"],
-  description: "Specialist in cardiology providing comprehensive heart care and diagnostics.",
-  lat: 35.1833,
-  lng: -0.6333,
-};
+import { Skeleton } from "@/components/ui/skeleton";
 
 const ProviderProfilePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const provider = useMemo(() => mockProvider, [id]);
+  const [provider, setProvider] = useState<CityHealthProvider | null>(null);
+  const [loading, setLoading] = useState(true);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
 
+  // Load provider from Firestore
   useEffect(() => {
-    document.title = `${provider.name} – CityHealth Profile`;
-  }, [provider.name]);
+    const loadProvider = async () => {
+      if (!id) return;
+      
+      setLoading(true);
+      try {
+        const providerData = await getProviderById(id);
+        setProvider(providerData);
+        if (providerData) {
+          document.title = `${providerData.name} – CityHealth Profile`;
+        }
+      } catch (error) {
+        console.error("Error loading provider:", error);
+        toast.error("Erreur lors du chargement du profil");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadProvider();
+  }, [id]);
 
   useEffect(() => {
     const checkFavorite = async () => {
-      if (user?.uid && provider.id) {
+      if (user?.uid && provider?.id) {
         try {
           const favorites = await favoritesService.getUserFavorites(user.uid);
           setIsFavorite(favorites.includes(provider.id));
@@ -57,7 +59,7 @@ const ProviderProfilePage = () => {
       }
     };
     checkFavorite();
-  }, [user?.uid, provider.id]);
+  }, [user?.uid, provider?.id]);
 
   const handleFavoriteClick = async () => {
     if (!isAuthenticated) {
@@ -71,7 +73,7 @@ const ProviderProfilePage = () => {
       return;
     }
 
-    if (!user?.uid) return;
+    if (!user?.uid || !provider) return;
 
     setFavoriteLoading(true);
     try {
@@ -93,9 +95,55 @@ const ProviderProfilePage = () => {
   };
 
   const handleGetDirections = () => {
+    if (!provider) return;
     const url = `https://www.google.com/maps/dir/?api=1&destination=${provider.lat},${provider.lng}`;
     window.open(url, '_blank');
   };
+
+  if (loading) {
+    return (
+      <main className="pt-24 pb-16 px-4 max-w-6xl mx-auto">
+        <div className="glass-card rounded-2xl p-6 mb-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+            <Skeleton className="w-28 h-28 rounded-xl" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-8 w-64" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+          </div>
+        </div>
+        <div className="grid lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <Skeleton className="h-48 w-full rounded-xl" />
+            <Skeleton className="h-32 w-full rounded-xl" />
+          </div>
+          <div className="space-y-6">
+            <Skeleton className="h-48 w-full rounded-xl" />
+            <Skeleton className="h-64 w-full rounded-xl" />
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (!provider) {
+    return (
+      <main className="pt-24 pb-16 px-4 max-w-6xl mx-auto">
+        <Card className="glass-card">
+          <CardContent className="py-16 text-center">
+            <h2 className="text-xl font-semibold mb-2">Prestataire non trouvé</h2>
+            <p className="text-muted-foreground mb-4">
+              Le profil demandé n'existe pas ou a été supprimé.
+            </p>
+            <Button onClick={() => navigate('/search')}>
+              Retour à la recherche
+            </Button>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
 
   return (
     <main className="pt-24 pb-16 px-4 max-w-6xl mx-auto">
@@ -111,18 +159,22 @@ const ProviderProfilePage = () => {
               {provider.verified && (
                 <Badge className="verified-badge">Verified</Badge>
               )}
-              <Badge variant="secondary">Most Active This Week</Badge>
+              {provider.emergency && (
+                <Badge variant="destructive">Urgences</Badge>
+              )}
             </div>
-            <p className="text-muted-foreground">{provider.title}</p>
+            <p className="text-muted-foreground">{provider.specialty || provider.type}</p>
             <div className="flex items-center gap-4 mt-2 text-sm">
-              <span className="inline-flex items-center gap-1 rating-stars"><Star className="h-4 w-4" /> {provider.rating}</span>
-              <span className="text-muted-foreground">{provider.reviews} reviews</span>
+              <span className="inline-flex items-center gap-1 rating-stars">
+                <Star className="h-4 w-4" /> {provider.rating.toFixed(1)}
+              </span>
+              <span className="text-muted-foreground">{provider.reviewsCount} avis</span>
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
             <Button onClick={() => setBookingOpen(true)}>
               <Calendar className="h-4 w-4 mr-2" />
-              Book Appointment
+              Prendre RDV
             </Button>
             <Button 
               variant={isFavorite ? "default" : "outline"} 
@@ -143,24 +195,28 @@ const ProviderProfilePage = () => {
         <div className="space-y-6 lg:col-span-2">
           {/* About */}
           <Card className="glass-card">
-            <CardHeader className="py-4"><CardTitle>About</CardTitle></CardHeader>
+            <CardHeader className="py-4"><CardTitle>À propos</CardTitle></CardHeader>
             <CardContent className="space-y-3 text-sm">
               <p>{provider.description}</p>
-              <div className="flex flex-wrap gap-2">
-                {provider.specializations.map((s) => (
-                  <Badge key={s} variant="outline">{s}</Badge>
-                ))}
-              </div>
+              {provider.specialty && (
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline">{provider.specialty}</Badge>
+                </div>
+              )}
               <div className="grid sm:grid-cols-2 gap-3">
-                <div className="flex items-center gap-2 text-muted-foreground"><Award className="h-4 w-4" /> {provider.experience} experience</div>
-                <div className="flex items-center gap-2 text-muted-foreground"><Languages className="h-4 w-4" /> Languages: {provider.languages.join(", ")}</div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Award className="h-4 w-4" /> {provider.area}
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Languages className="h-4 w-4" /> Langues: {provider.languages.join(", ")}
+                </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Gallery */}
           <Card className="glass-card">
-            <CardHeader className="py-4"><CardTitle>Gallery</CardTitle></CardHeader>
+            <CardHeader className="py-4"><CardTitle>Galerie</CardTitle></CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {Array.from({ length: 8 }).map((_, i) => (
@@ -186,19 +242,21 @@ const ProviderProfilePage = () => {
             <CardHeader className="py-4"><CardTitle>Contact</CardTitle></CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center gap-2"><MapPin className="h-4 w-4" /> {provider.address}</div>
-              <div className="space-y-1">
-                {provider.phones.map((p) => (
-                  <a key={p} href={`tel:${p}`} className="inline-flex items-center gap-2 underline"><Phone className="h-4 w-4" /> {p}</a>
-                ))}
+              <a href={`tel:${provider.phone}`} className="inline-flex items-center gap-2 underline">
+                <Phone className="h-4 w-4" /> {provider.phone}
+              </a>
+              <div className="text-xs text-muted-foreground">
+                {provider.isOpen ? "Ouvert maintenant" : "Fermé"}
               </div>
-              <div className="text-xs text-muted-foreground">Opening hours: Today 09:00–17:00</div>
-              <Button variant="outline" className="w-full mt-2"><Calendar className="h-4 w-4 mr-2" /> Check availability</Button>
+              <Button variant="outline" className="w-full mt-2">
+                <Calendar className="h-4 w-4 mr-2" /> Voir disponibilités
+              </Button>
             </CardContent>
           </Card>
 
           {/* Map */}
           <Card className="glass-card">
-            <CardHeader className="py-4"><CardTitle>Location</CardTitle></CardHeader>
+            <CardHeader className="py-4"><CardTitle>Localisation</CardTitle></CardHeader>
             <CardContent>
               <ProviderMap 
                 lat={provider.lat} 
@@ -217,12 +275,12 @@ const ProviderProfilePage = () => {
             </CardContent>
           </Card>
 
-          {/* Offers */}
+          {/* Announcements */}
           <Card className="glass-card">
-            <CardHeader className="py-4"><CardTitle>Announcements</CardTitle></CardHeader>
+            <CardHeader className="py-4"><CardTitle>Annonces</CardTitle></CardHeader>
             <CardContent className="space-y-3 text-sm">
-              <div className="p-3 rounded-lg bg-primary/10">New echocardiography service this month.</div>
-              <div className="p-3 rounded-lg bg-secondary/10">Extended hours on Saturday.</div>
+              <div className="p-3 rounded-lg bg-primary/10">Nouveau service disponible ce mois.</div>
+              <div className="p-3 rounded-lg bg-secondary/10">Horaires étendus le samedi.</div>
             </CardContent>
           </Card>
         </div>

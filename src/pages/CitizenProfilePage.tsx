@@ -19,7 +19,9 @@ import {
   Trash2, Star, Navigation, ExternalLink
 } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
-import { getAppointments, AppointmentRecord, getFavoriteProviders, CityHealthProvider, toggleFavorite, getProviderById, PROVIDER_TYPE_LABELS } from '@/data/providers';
+import { getAppointments, AppointmentRecord, CityHealthProvider, toggleFavorite, PROVIDER_TYPE_LABELS } from '@/data/providers';
+import { getProviderById, getVerifiedProviders } from '@/services/firestoreProviderService';
+import { favoritesService } from '@/services/favoritesService';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -48,6 +50,7 @@ export default function CitizenProfilePage() {
   });
   const [appointments, setAppointments] = useState<AppointmentRecord[]>([]);
   const [favorites, setFavorites] = useState<CityHealthProvider[]>([]);
+  const [providerCache, setProviderCache] = useState<Record<string, CityHealthProvider | null>>({});
 
   // Redirect if not authenticated or is a provider
   useEffect(() => {
@@ -72,8 +75,44 @@ export default function CitizenProfilePage() {
       });
     }
     setAppointments(getAppointments());
-    setFavorites(getFavoriteProviders());
+    
+    // Load favorites from Firestore via favoritesService
+    const loadFavorites = async () => {
+      if (profile?.id) {
+        try {
+          const favoriteIds = await favoritesService.getUserFavorites(profile.id);
+          const providers: CityHealthProvider[] = [];
+          for (const id of favoriteIds) {
+            const provider = await getProviderById(id);
+            if (provider) providers.push(provider);
+          }
+          setFavorites(providers);
+        } catch (error) {
+          console.error('Error loading favorites:', error);
+        }
+      }
+    };
+    loadFavorites();
   }, [profile]);
+
+  // Load provider details for appointments
+  useEffect(() => {
+    const loadProviders = async () => {
+      const providerIds = [...new Set(appointments.map(a => a.providerId))];
+      const cache: Record<string, CityHealthProvider | null> = {};
+      for (const id of providerIds) {
+        if (!providerCache[id]) {
+          cache[id] = await getProviderById(id);
+        }
+      }
+      if (Object.keys(cache).length > 0) {
+        setProviderCache(prev => ({ ...prev, ...cache }));
+      }
+    };
+    if (appointments.length > 0) {
+      loadProviders();
+    }
+  }, [appointments]);
 
   if (!profile) return null;
 
@@ -92,10 +131,16 @@ export default function CitizenProfilePage() {
     setIsEditing(false);
   };
 
-  const handleRemoveFavorite = (providerId: string) => {
-    toggleFavorite(providerId);
-    setFavorites(getFavoriteProviders());
-    toast.success('Retiré des favoris');
+  const handleRemoveFavorite = async (providerId: string) => {
+    if (profile?.id) {
+      try {
+        await favoritesService.removeFavorite(profile.id, providerId);
+        setFavorites(prev => prev.filter(f => f.id !== providerId));
+        toast.success('Retiré des favoris');
+      } catch (error) {
+        toast.error('Erreur lors de la suppression');
+      }
+    }
   };
 
   const handleCancelAppointment = (appointmentId: string) => {
@@ -302,7 +347,7 @@ export default function CitizenProfilePage() {
                   <ScrollArea className="max-h-[400px]">
                     <div className="space-y-3">
                       {upcomingAppointments.map((apt) => {
-                        const provider = getProviderById(apt.providerId);
+                        const provider = providerCache[apt.providerId];
                         return (
                           <Card key={apt.id} className="border-primary/20">
                             <CardContent className="p-4">
@@ -354,7 +399,7 @@ export default function CitizenProfilePage() {
                   <ScrollArea className="max-h-[300px]">
                     <div className="space-y-2">
                       {pastAppointments.map((apt) => {
-                        const provider = getProviderById(apt.providerId);
+                        const provider = providerCache[apt.providerId];
                         return (
                           <div key={apt.id} className="flex items-center justify-between py-2 border-b last:border-0">
                             <div>
