@@ -8,17 +8,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
   Eye, Phone, MapPin, TrendingUp, Calendar, Star, 
-  Upload, Settings, BarChart3, Clock, Megaphone, Shield
+  Upload, Settings, BarChart3, Clock, Megaphone, Shield,
+  AlertTriangle, XCircle, CheckCircle2, Loader2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ProfileProgressBar, calculateProfileCompletion } from '@/components/provider/ProfileProgressBar';
 import { VerificationRequest, type VerificationStatus } from '@/components/provider/VerificationRequest';
 import { MedicalAdsManager } from '@/components/provider/MedicalAdsManager';
+import { useAuth } from '@/contexts/AuthContext';
+import { getProviderByUserId } from '@/services/firestoreProviderService';
+import { CityHealthProvider } from '@/data/providers';
 
 export default function ProviderDashboard() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [providerData, setProviderData] = useState<CityHealthProvider | null>(null);
+  const [loadingStatus, setLoadingStatus] = useState(true);
+  
   const [stats] = useState({
     profileViews: 1247,
     phoneClicks: 89,
@@ -46,17 +55,40 @@ export default function ProviderDashboard() {
 
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('none');
 
+  // Load verification status from Firestore
   useEffect(() => {
-    // Load verification status from localStorage
-    const registrations = JSON.parse(localStorage.getItem('ch_pending_registrations') || '[]');
-    const currentProvider = registrations.find((r: any) => r.id === profile.id);
-    if (currentProvider?.verificationStatus) {
-      setVerificationStatus(currentProvider.verificationStatus);
-    }
-    if (currentProvider?.verified) {
-      setVerificationStatus('approved');
-    }
-  }, [profile.id]);
+    const loadProviderStatus = async () => {
+      if (!user?.uid) return;
+      
+      setLoadingStatus(true);
+      try {
+        const provider = await getProviderByUserId(user.uid);
+        if (provider) {
+          setProviderData(provider);
+          setVerificationStatus(
+            provider.verificationStatus === 'verified' ? 'approved' :
+            provider.verificationStatus === 'rejected' ? 'rejected' :
+            provider.verificationStatus === 'pending' ? 'pending' : 'none'
+          );
+          setProfile(prev => ({
+            ...prev,
+            id: provider.id,
+            name: provider.name,
+            specialty: provider.specialty || prev.specialty,
+            phone: provider.phone,
+            address: provider.address,
+            description: provider.description,
+          }));
+        }
+      } catch (error) {
+        console.error('Error loading provider status:', error);
+      } finally {
+        setLoadingStatus(false);
+      }
+    };
+
+    loadProviderStatus();
+  }, [user?.uid]);
 
   const [recentActivity] = useState([
     { type: 'view', date: '2025-01-10', count: 47 },
@@ -76,9 +108,41 @@ export default function ProviderDashboard() {
     });
   };
 
+  if (loadingStatus) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20 py-8 px-4">
       <div className="max-w-7xl mx-auto">
+        {/* Pending Verification Banner */}
+        {verificationStatus === 'pending' && (
+          <Alert className="mb-6 border-amber-500/50 bg-amber-500/10">
+            <AlertTriangle className="h-5 w-5 text-amber-500" />
+            <AlertTitle className="text-amber-600">Vérification en cours</AlertTitle>
+            <AlertDescription className="text-amber-700">
+              Votre profil est en cours de vérification par notre équipe. Cela peut prendre 24 à 48 heures.
+              Votre profil ne sera pas visible dans les recherches publiques tant qu'il n'aura pas été approuvé.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Rejected Verification Banner */}
+        {verificationStatus === 'rejected' && (
+          <Alert variant="destructive" className="mb-6">
+            <XCircle className="h-5 w-5" />
+            <AlertTitle>Vérification refusée</AlertTitle>
+            <AlertDescription>
+              Votre demande de vérification a été refusée. Veuillez vérifier vos documents et soumettre une nouvelle demande.
+              Votre profil n'est pas visible dans les recherches publiques.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
