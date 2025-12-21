@@ -571,4 +571,5 @@ export function CityHealthMap({
   );
 }
 
+// Export as both named and default for flexibility
 export default CityHealthMap;
