@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { SearchInterface } from '@/components/search/SearchInterface';
 import { AdvancedFilters } from '@/components/search/AdvancedFilters';
 import { SearchResults } from '@/components/search/SearchResults';
 import { SearchMap } from '@/components/search/SearchMap';
-import { CityHealthProvider } from '@/data/providers';
-import { getVerifiedProviders } from '@/services/firestoreProviderService';
+import { SearchResultsSkeleton } from '@/components/search/SearchResultsSkeleton';
+import { SearchError } from '@/components/search/SearchError';
+import { useVerifiedProviders } from '@/hooks/useProviders';
+import type { CityHealthProvider } from '@/data/providers';
 
 export type ViewMode = 'list' | 'grid' | 'map';
 export type SortOption = 'relevance' | 'distance' | 'rating' | 'price' | 'newest';
@@ -29,9 +31,6 @@ const SearchPage = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [sortBy, setSortBy] = useState<SortOption>('relevance');
   const [showFilters, setShowFilters] = useState(false);
-  const [filteredProviders, setFilteredProviders] = useState<Provider[]>([]);
-  const [allProviders, setAllProviders] = useState<Provider[]>([]);
-  const [loading, setLoading] = useState(true);
   
   const [filters, setFilters] = useState<FilterState>({
     categories: [],
@@ -46,44 +45,48 @@ const SearchPage = () => {
     priceRange: [0, 500]
   });
 
-  // Load providers from Firestore
-  useEffect(() => {
-    const loadProviders = async () => {
-      setLoading(true);
-      try {
-        const providers = await getVerifiedProviders();
-        setAllProviders(providers);
-        setFilteredProviders(providers);
-      } catch (error) {
-        console.error('Error loading providers:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadProviders();
-  }, []);
+  // Use TanStack Query for Firestore data - only fetches verified & public providers
+  const { data: allProviders = [], isLoading, isError, error, refetch } = useVerifiedProviders();
 
-  // Filter and search logic
-  useEffect(() => {
-    let results = allProviders;
+  // Filter and search logic using useMemo for performance
+  const filteredProviders = useMemo(() => {
+    let results = [...allProviders];
 
     // Text search
     if (searchQuery) {
+      const query = searchQuery.toLowerCase();
       results = results.filter(provider =>
-        provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (provider.specialty || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        provider.address.toLowerCase().includes(searchQuery.toLowerCase())
+        provider.name.toLowerCase().includes(query) ||
+        (provider.specialty || '').toLowerCase().includes(query) ||
+        provider.address.toLowerCase().includes(query) ||
+        provider.type.toLowerCase().includes(query)
       );
     }
 
-    // Category filter
+    // Category filter - match against type and specialty
     if (filters.categories.length > 0) {
       results = results.filter(provider =>
-        filters.categories.some(category => 
-          (provider.specialty || '').toLowerCase().includes(category.toLowerCase()) ||
-          provider.type.toLowerCase().includes(category.toLowerCase())
-        )
+        filters.categories.some(category => {
+          const categoryLower = category.toLowerCase();
+          const typeLower = provider.type.toLowerCase();
+          const specialtyLower = (provider.specialty || '').toLowerCase();
+          
+          // Map filter categories to provider types
+          if (categoryLower === 'doctors' || categoryLower === 'specialists') {
+            return typeLower.includes('doctor') || typeLower.includes('clinic') || typeLower.includes('specialist');
+          }
+          if (categoryLower === 'pharmacies') {
+            return typeLower.includes('pharmacy');
+          }
+          if (categoryLower === 'laboratories') {
+            return typeLower.includes('laboratory') || typeLower.includes('lab');
+          }
+          if (categoryLower === 'clinics') {
+            return typeLower.includes('clinic') || typeLower.includes('hospital');
+          }
+          
+          return specialtyLower.includes(categoryLower) || typeLower.includes(categoryLower);
+        })
       );
     }
 
@@ -92,30 +95,60 @@ const SearchPage = () => {
       results = results.filter(provider => provider.rating >= filters.minRating);
     }
 
-    // Verified only
+    // Verified only filter (note: useVerifiedProviders already returns only verified providers)
     if (filters.verifiedOnly) {
       results = results.filter(provider => provider.verified);
     }
 
-    // Emergency services
+    // Emergency services filter
     if (filters.emergencyServices) {
       results = results.filter(provider => provider.emergency);
     }
 
-    // Sort results
+    // Sort results (create new array to avoid mutating)
+    const sortedResults = [...results];
     switch (sortBy) {
       case 'rating':
-        results.sort((a, b) => b.rating - a.rating);
+        sortedResults.sort((a, b) => b.rating - a.rating);
         break;
       case 'distance':
-        results.sort((a, b) => (a.distance || 0) - (b.distance || 0));
+        sortedResults.sort((a, b) => (a.distance || 999) - (b.distance || 999));
+        break;
+      case 'newest':
+        // Sort by id (assuming newer providers have higher/later ids)
+        // Note: Could add createdAt to CityHealthProvider if needed
+        sortedResults.sort((a, b) => b.id.localeCompare(a.id));
         break;
       default:
+        // Relevance - keep original order (or could implement scoring)
         break;
     }
 
-    setFilteredProviders(results);
-  }, [searchQuery, filters, sortBy, allProviders]);
+    return sortedResults;
+  }, [allProviders, searchQuery, filters, sortBy]);
+
+  // Render content based on state
+  const renderContent = () => {
+    if (isLoading) {
+      return <SearchResultsSkeleton viewMode={viewMode} count={8} />;
+    }
+
+    if (isError && error) {
+      return <SearchError error={error} onRetry={() => refetch()} />;
+    }
+
+    if (viewMode === 'map') {
+      return <SearchMap providers={filteredProviders} />;
+    }
+
+    return (
+      <SearchResults 
+        providers={filteredProviders}
+        viewMode={viewMode}
+        searchQuery={searchQuery}
+      />
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -142,19 +175,7 @@ const SearchPage = () => {
 
         {/* Main Content */}
         <div className="flex-1">
-          {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : viewMode === 'map' ? (
-            <SearchMap providers={filteredProviders} />
-          ) : (
-            <SearchResults 
-              providers={filteredProviders}
-              viewMode={viewMode}
-              searchQuery={searchQuery}
-            />
-          )}
+          {renderContent()}
         </div>
       </div>
     </div>
