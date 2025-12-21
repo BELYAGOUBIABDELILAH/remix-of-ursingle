@@ -4,12 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, Star, Phone, Share2, Flag, Calendar, Languages, Award, Image as ImageIcon, Heart, Navigation } from "lucide-react";
-import { CityHealthProvider } from "@/data/providers";
-import { getProviderById } from "@/services/firestoreProviderService";
+import { useProvider } from "@/hooks/useProviders";
+import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { BookingModal } from "@/components/BookingModal";
 import { ReviewSystem } from "@/components/ReviewSystem";
 import { useAuth } from "@/contexts/AuthContext";
-import { favoritesService } from "@/services/favoritesService";
 import { toast } from "sonner";
 import ProviderMap from "@/components/ProviderMap";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,50 +17,25 @@ const ProviderProfilePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const [provider, setProvider] = useState<CityHealthProvider | null>(null);
-  const [loading, setLoading] = useState(true);
   const [bookingOpen, setBookingOpen] = useState(false);
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [favoriteLoading, setFavoriteLoading] = useState(false);
 
-  // Load provider from Firestore
+  // Use TanStack Query for provider data
+  const { data: provider, isLoading: loading, isError } = useProvider(id);
+  
+  // Use TanStack Query for favorites
+  const { data: favorites = [] } = useFavorites();
+  const { toggle: toggleFavorite, isLoading: favoriteLoading } = useToggleFavorite();
+  
+  const isFavorite = provider ? favorites.includes(provider.id) : false;
+
+  // Update document title when provider loads
   useEffect(() => {
-    const loadProvider = async () => {
-      if (!id) return;
-      
-      setLoading(true);
-      try {
-        const providerData = await getProviderById(id);
-        setProvider(providerData);
-        if (providerData) {
-          document.title = `${providerData.name} – CityHealth Profile`;
-        }
-      } catch (error) {
-        console.error("Error loading provider:", error);
-        toast.error("Erreur lors du chargement du profil");
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadProvider();
-  }, [id]);
+    if (provider) {
+      document.title = `${provider.name} – CityHealth Profile`;
+    }
+  }, [provider]);
 
-  useEffect(() => {
-    const checkFavorite = async () => {
-      if (user?.uid && provider?.id) {
-        try {
-          const favorites = await favoritesService.getUserFavorites(user.uid);
-          setIsFavorite(favorites.includes(provider.id));
-        } catch (error) {
-          console.error("Error checking favorite:", error);
-        }
-      }
-    };
-    checkFavorite();
-  }, [user?.uid, provider?.id]);
-
-  const handleFavoriteClick = async () => {
+  const handleFavoriteClick = () => {
     if (!isAuthenticated) {
       toast.error("Connexion requise", {
         description: "Veuillez vous connecter pour ajouter aux favoris",
@@ -73,25 +47,9 @@ const ProviderProfilePage = () => {
       return;
     }
 
-    if (!user?.uid || !provider) return;
-
-    setFavoriteLoading(true);
-    try {
-      if (isFavorite) {
-        await favoritesService.removeFavorite(user.uid, provider.id);
-        setIsFavorite(false);
-        toast.success("Retiré des favoris");
-      } else {
-        await favoritesService.addFavorite(user.uid, provider.id);
-        setIsFavorite(true);
-        toast.success("Ajouté aux favoris");
-      }
-    } catch (error) {
-      console.error("Error updating favorite:", error);
-      toast.error("Erreur lors de la mise à jour");
-    } finally {
-      setFavoriteLoading(false);
-    }
+    if (!provider) return;
+    toggleFavorite(provider.id);
+    toast.success(isFavorite ? "Retiré des favoris" : "Ajouté aux favoris");
   };
 
   const handleGetDirections = () => {
@@ -99,6 +57,7 @@ const ProviderProfilePage = () => {
     const url = `https://www.google.com/maps/dir/?api=1&destination=${provider.lat},${provider.lng}`;
     window.open(url, '_blank');
   };
+
 
   if (loading) {
     return (

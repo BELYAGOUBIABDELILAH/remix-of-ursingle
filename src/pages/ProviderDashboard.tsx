@@ -19,14 +19,14 @@ import { ProfileProgressBar, calculateProfileCompletion } from '@/components/pro
 import { VerificationRequest, type VerificationStatus } from '@/components/provider/VerificationRequest';
 import { MedicalAdsManager } from '@/components/provider/MedicalAdsManager';
 import { useAuth } from '@/contexts/AuthContext';
-import { getProviderByUserId } from '@/services/firestoreProviderService';
-import { CityHealthProvider } from '@/data/providers';
+import { useProviderByUserId } from '@/hooks/useProviders';
 
 export default function ProviderDashboard() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [providerData, setProviderData] = useState<CityHealthProvider | null>(null);
-  const [loadingStatus, setLoadingStatus] = useState(true);
+  
+  // Use TanStack Query for provider data
+  const { data: providerData, isLoading: loadingStatus } = useProviderByUserId(user?.uid);
   
   const [stats] = useState({
     profileViews: 1247,
@@ -55,40 +55,25 @@ export default function ProviderDashboard() {
 
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('none');
 
-  // Load verification status from Firestore
+  // Update local state when provider data loads
   useEffect(() => {
-    const loadProviderStatus = async () => {
-      if (!user?.uid) return;
-      
-      setLoadingStatus(true);
-      try {
-        const provider = await getProviderByUserId(user.uid);
-        if (provider) {
-          setProviderData(provider);
-          setVerificationStatus(
-            provider.verificationStatus === 'verified' ? 'approved' :
-            provider.verificationStatus === 'rejected' ? 'rejected' :
-            provider.verificationStatus === 'pending' ? 'pending' : 'none'
-          );
-          setProfile(prev => ({
-            ...prev,
-            id: provider.id,
-            name: provider.name,
-            specialty: provider.specialty || prev.specialty,
-            phone: provider.phone,
-            address: provider.address,
-            description: provider.description,
-          }));
-        }
-      } catch (error) {
-        console.error('Error loading provider status:', error);
-      } finally {
-        setLoadingStatus(false);
-      }
-    };
-
-    loadProviderStatus();
-  }, [user?.uid]);
+    if (providerData) {
+      setVerificationStatus(
+        providerData.verificationStatus === 'verified' ? 'approved' :
+        providerData.verificationStatus === 'rejected' ? 'rejected' :
+        providerData.verificationStatus === 'pending' ? 'pending' : 'none'
+      );
+      setProfile(prev => ({
+        ...prev,
+        id: providerData.id,
+        name: providerData.name,
+        specialty: providerData.specialty || prev.specialty,
+        phone: providerData.phone,
+        address: providerData.address,
+        description: providerData.description,
+      }));
+    }
+  }, [providerData]);
 
   const [recentActivity] = useState([
     { type: 'view', date: '2025-01-10', count: 47 },
