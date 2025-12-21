@@ -10,7 +10,8 @@ import {
   Heart,
   Menu,
   X,
-  Globe
+  Globe,
+  Bot
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -30,9 +31,9 @@ const FloatingSidebar = () => {
   const menuItems: MenuItem[] = [
     { icon: Home, label: t('nav.home'), href: '/' },
     { icon: Search, label: t('nav.search'), href: '/search' },
-    { icon: MapPin, label: 'Carte', href: '/providers-map' },
+    { icon: MapPin, label: 'Carte', href: '/carte' },
     { icon: Heart, label: 'Don de Sang', href: '/blood-donation' },
-    { icon: Users, label: 'Assistant Médical', href: '/medical-assistant' },
+    { icon: Bot, label: 'Assistant Médical', href: '/medical-assistant' },
     { icon: Heart, label: 'Favoris', href: '/favorites' },
     { icon: Phone, label: t('nav.contact'), href: '/contact' },
   ];
