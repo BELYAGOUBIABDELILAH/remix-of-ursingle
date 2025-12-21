@@ -18,6 +18,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { CityHealthProvider, ProviderType, VerificationStatus, Lang } from '@/data/providers';
+import { logError, handleError } from '@/utils/errorHandling';
 
 const PROVIDERS_COLLECTION = 'providers';
 
@@ -92,38 +93,53 @@ function providerToDoc(provider: CityHealthProvider): DocumentData {
  * Get all verified and public providers (for public search/map)
  */
 export async function getVerifiedProviders(): Promise<CityHealthProvider[]> {
-  const providersRef = collection(db, PROVIDERS_COLLECTION);
-  const q = query(
-    providersRef,
-    where('verificationStatus', '==', 'verified'),
-    where('isPublic', '==', true)
-  );
-  
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => docToProvider(doc.data(), doc.id));
+  try {
+    const providersRef = collection(db, PROVIDERS_COLLECTION);
+    const q = query(
+      providersRef,
+      where('verificationStatus', '==', 'verified'),
+      where('isPublic', '==', true)
+    );
+    
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => docToProvider(doc.data(), doc.id));
+  } catch (error) {
+    logError(error, 'getVerifiedProviders');
+    throw error;
+  }
 }
 
 /**
  * Get all providers (admin only)
  */
 export async function getAllProviders(): Promise<CityHealthProvider[]> {
-  const providersRef = collection(db, PROVIDERS_COLLECTION);
-  const snapshot = await getDocs(providersRef);
-  return snapshot.docs.map(doc => docToProvider(doc.data(), doc.id));
+  try {
+    const providersRef = collection(db, PROVIDERS_COLLECTION);
+    const snapshot = await getDocs(providersRef);
+    return snapshot.docs.map(doc => docToProvider(doc.data(), doc.id));
+  } catch (error) {
+    logError(error, 'getAllProviders');
+    throw error;
+  }
 }
 
 /**
  * Get a single provider by ID
  */
 export async function getProviderById(id: string): Promise<CityHealthProvider | null> {
-  const docRef = doc(db, PROVIDERS_COLLECTION, id);
-  const docSnap = await getDoc(docRef);
-  
-  if (!docSnap.exists()) {
-    return null;
+  try {
+    const docRef = doc(db, PROVIDERS_COLLECTION, id);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      return null;
+    }
+    
+    return docToProvider(docSnap.data(), docSnap.id);
+  } catch (error) {
+    logError(error, `getProviderById: ${id}`);
+    throw error;
   }
-  
-  return docToProvider(docSnap.data(), docSnap.id);
 }
 
 /**

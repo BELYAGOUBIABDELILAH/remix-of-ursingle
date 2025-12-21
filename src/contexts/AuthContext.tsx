@@ -21,6 +21,7 @@ import {
 } from 'firebase/firestore';
 import { auth, db, googleProvider } from '@/lib/firebase';
 import { toast } from 'sonner';
+import { getErrorMessage, logError } from '@/utils/errorHandling';
 
 export type UserRole = 'patient' | 'provider' | 'admin';
 
@@ -130,9 +131,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await signInWithEmailAndPassword(auth, email, password);
       toast.success('Connexion réussie!');
     } catch (error: any) {
-      const message = error.code === 'auth/invalid-credential'
-        ? 'Email ou mot de passe incorrect'
-        : error.message;
+      logError(error, 'login');
+      const message = getErrorMessage(error, 'fr');
       toast.error(message);
       throw error;
     } finally {
@@ -169,9 +169,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       toast.success('Compte créé avec succès!');
     } catch (error: any) {
-      const message = error.code === 'auth/email-already-in-use'
-        ? 'Un compte existe déjà avec cet email'
-        : error.message;
+      logError(error, 'signup');
+      const message = getErrorMessage(error, 'fr');
       toast.error(message);
       throw error;
     } finally {
@@ -208,7 +207,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       toast.success('Connexion réussie!');
     } catch (error: any) {
-      toast.error(error.message || 'Échec de la connexion Google');
+      logError(error, 'loginWithGoogle');
+      const message = getErrorMessage(error, 'fr');
+      toast.error(message);
       throw error;
     } finally {
       setIsLoading(false);
@@ -222,7 +223,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setProfile(null);
       toast.success('Déconnexion réussie');
     } catch (error: any) {
-      toast.error(error.message || 'Échec de la déconnexion');
+      logError(error, 'logout');
+      const message = getErrorMessage(error, 'fr');
+      toast.error(message);
       throw error;
     }
   };
@@ -251,8 +254,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       toast.success('Profil mis à jour');
     } catch (error) {
-      console.error('Profile update error:', error);
-      toast.error('Échec de la mise à jour du profil');
+      logError(error, 'updateProfile');
+      const message = getErrorMessage(error, 'fr');
+      toast.error(message);
       throw error;
     }
   };
