@@ -49,7 +49,7 @@ export const EmergencyBanner = () => {
           </div>
 
           {/* Right - CTA */}
-          <Link to="/emergency">
+          <Link to="/carte?mode=emergency">
             <Button 
               size="lg"
               className="bg-white text-red-600 hover:bg-white/90 font-semibold shadow-lg"

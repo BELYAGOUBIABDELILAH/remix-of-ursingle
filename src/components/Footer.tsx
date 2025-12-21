@@ -31,9 +31,10 @@ const Footer = () => {
       title: isRTL ? 'الخدمات' : 'Services',
       links: [
         { label: isRTL ? 'البحث عن الأطباء' : 'Recherche médecins', href: '/search' },
-        { label: isRTL ? 'الخريطة التفاعلية' : 'Carte interactive', href: '/map' },
-        { label: isRTL ? 'طوارئ 24/7' : 'Urgences 24/7', href: '/emergency' },
-        { label: isRTL ? 'مساعد الذكاء الاصطناعي' : 'Assistant IA Santé', href: '/ai-health-chat' },
+        { label: isRTL ? 'الخريطة التفاعلية' : 'Carte interactive', href: '/carte' },
+        { label: isRTL ? 'طوارئ 24/7' : 'Urgences 24/7', href: '/carte?mode=emergency' },
+        { label: isRTL ? 'مساعد الذكاء الاصطناعي' : 'Assistant IA Santé', href: '/medical-assistant' },
+        { label: isRTL ? 'التبرع بالدم' : 'Don de sang', href: '/blood-donation' },
         { label: isRTL ? 'المفضلة' : 'Mes favoris', href: '/favorites' }
       ]
     },
@@ -50,7 +51,7 @@ const Footer = () => {
       title: isRTL ? 'أنواع الخدمات' : 'Types de Services',
       links: [
         { label: isRTL ? 'مستشفيات الولادة' : 'Hôpitaux de naissance', href: '/search?type=birth-hospital', icon: Baby },
-        { label: isRTL ? 'مراكز التبرع بالدم' : 'Cabines de sang', href: '/search?type=blood-cabin', icon: Droplets },
+        { label: isRTL ? 'مراكز التبرع بالدم' : 'Cabines de sang', href: '/carte?mode=blood', icon: Droplets },
         { label: isRTL ? 'الصيدليات' : 'Pharmacies', href: '/search?type=pharmacy', icon: Pill },
         { label: isRTL ? 'معدات طبية' : 'Équipement médical', href: '/search?type=equipment', icon: Wrench },
         { label: isRTL ? 'المختبرات' : 'Laboratoires', href: '/search?type=laboratory', icon: Building2 }
