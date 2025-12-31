@@ -7,7 +7,9 @@ import { useEffect } from "react";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ProviderProvider } from "@/contexts/ProviderContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ProviderRouteGuard } from "@/components/ProviderRouteGuard";
 import AntigravityIndex from "./pages/AntigravityIndex";
 import AuthPage from "./pages/AuthPage";
 import WhyPage from "./pages/WhyPage";
@@ -235,14 +237,14 @@ const AppRoutes = () => {
           </PageTransition>
         } 
       />
-      {/* Provider Dashboard - accessible to providers */}
+      {/* Provider Dashboard - uses ProviderRouteGuard for enhanced security */}
       <Route 
         path="/provider/dashboard" 
         element={
           <PageTransition>
-            <ProtectedRoute requireRole="provider">
+            <ProviderRouteGuard>
               <ProviderDashboard />
-            </ProtectedRoute>
+            </ProviderRouteGuard>
           </PageTransition>
         } 
       />
@@ -342,18 +344,20 @@ const App = () => (
       <ThemeProvider>
         <LanguageProvider>
           <AuthProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <FirestoreInit />
-                <div className="min-h-screen bg-background text-foreground">
-                  <FloatingSidebar />
-                  <AIChatbot />
-                  <AppRoutes />
-                </div>
-              </BrowserRouter>
-            </TooltipProvider>
+            <ProviderProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                  <FirestoreInit />
+                  <div className="min-h-screen bg-background text-foreground">
+                    <FloatingSidebar />
+                    <AIChatbot />
+                    <AppRoutes />
+                  </div>
+                </BrowserRouter>
+              </TooltipProvider>
+            </ProviderProvider>
           </AuthProvider>
         </LanguageProvider>
       </ThemeProvider>
