@@ -14,22 +14,30 @@ import {
   Eye, Phone, MapPin, TrendingUp, Calendar, Star, 
   Upload, Settings, BarChart3, Clock, Megaphone, Shield,
   AlertTriangle, XCircle, CheckCircle2, Loader2, Lock,
-  Globe, Users, Search, Bell
+  Globe, Users, Search, Bell, RefreshCw
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from 'sonner';
 import { ProfileProgressBar, calculateProfileCompletion } from '@/components/provider/ProfileProgressBar';
 import { VerificationRequest, type VerificationStatus } from '@/components/provider/VerificationRequest';
 import { MedicalAdsManager } from '@/components/provider/MedicalAdsManager';
-import { useAuth } from '@/contexts/AuthContext';
-import { useProviderByUserId } from '@/hooks/useProviders';
+import { useProvider } from '@/contexts/ProviderContext';
 import { CityHealthMap } from '@/components/map/CityHealthMap';
+import { cn } from '@/lib/utils';
 
 export default function ProviderDashboard() {
   const { toast } = useToast();
-  const { user } = useAuth();
   
-  // Use TanStack Query for provider data
-  const { data: providerData, isLoading: loadingStatus } = useProviderByUserId(user?.uid);
+  // Use centralized ProviderContext - single source of truth
+  const { 
+    provider: providerData, 
+    isLoading, 
+    isVerified, 
+    isPending, 
+    isRejected,
+    verificationStatus: contextVerificationStatus,
+    refetch 
+  } = useProvider();
   
   const [stats] = useState({
     profileViews: 0,
@@ -44,7 +52,7 @@ export default function ProviderDashboard() {
     name: '',
     type: 'doctor',
     specialty: '',
-    email: user?.email || '',
+    email: '',
     phone: '',
     address: '',
     description: '',
@@ -59,18 +67,34 @@ export default function ProviderDashboard() {
   });
 
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('pending');
-  const isPending = verificationStatus === 'pending';
-  const isRejected = verificationStatus === 'rejected';
-  const isVerified = verificationStatus === 'approved';
+  const [previousStatus, setPreviousStatus] = useState<VerificationStatus | null>(null);
 
-  // Update local state when provider data loads
+  // Update local state when provider data loads and detect status changes
   useEffect(() => {
     if (providerData) {
-      setVerificationStatus(
+      const newStatus = 
         providerData.verificationStatus === 'verified' ? 'approved' :
         providerData.verificationStatus === 'rejected' ? 'rejected' :
-        'pending'
-      );
+        'pending';
+      
+      // Detect status change and notify user
+      if (previousStatus !== null && previousStatus !== newStatus) {
+        if (newStatus === 'approved') {
+          sonnerToast.success('🎉 Félicitations ! Votre compte a été vérifié !', {
+            description: 'Votre profil est maintenant visible dans les recherches publiques.',
+            duration: 10000,
+          });
+        } else if (newStatus === 'rejected') {
+          sonnerToast.error('Vérification refusée', {
+            description: 'Veuillez vérifier vos documents et soumettre une nouvelle demande.',
+            duration: 10000,
+          });
+        }
+      }
+      
+      setPreviousStatus(verificationStatus);
+      setVerificationStatus(newStatus);
+      
       setProfile(prev => ({
         ...prev,
         id: providerData.id,
@@ -102,7 +126,15 @@ export default function ProviderDashboard() {
     });
   };
 
-  if (loadingStatus) {
+  const handleRefresh = () => {
+    refetch();
+    toast({
+      title: "Actualisation",
+      description: "Données actualisées.",
+    });
+  };
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -207,10 +239,15 @@ export default function ProviderDashboard() {
                 )}
               </div>
             </div>
-            <Button>
-              <Settings className="mr-2 h-4 w-4" />
-              Paramètres
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="icon" onClick={handleRefresh}>
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+              <Button>
+                <Settings className="mr-2 h-4 w-4" />
+                Paramètres
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -608,9 +645,4 @@ export default function ProviderDashboard() {
       </div>
     </div>
   );
-}
-
-// Helper function
-function cn(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(' ');
 }

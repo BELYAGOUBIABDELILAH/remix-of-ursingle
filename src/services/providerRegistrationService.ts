@@ -33,6 +33,8 @@ export interface RegistrationResult {
  * 2. Create Firestore profile
  * 3. Assign 'provider' role
  * 4. Create provider document
+ * 
+ * IMPORTANT: Prevents duplicate provider accounts using providerId = provider_{userId}
  */
 export async function createProviderFromRegistration(
   formData: ProviderFormData
@@ -43,19 +45,40 @@ export async function createProviderFromRegistration(
     // Check if user is already authenticated (e.g., Google OAuth in Step 1)
     if (auth.currentUser) {
       userId = auth.currentUser.uid;
+      
+      // Check if provider already exists for this user
+      const existingProvider = await getExistingProvider(userId);
+      if (existingProvider) {
+        return {
+          success: false,
+          error: 'Un compte professionnel existe déjà pour cet utilisateur. Veuillez vous connecter à votre espace professionnel.',
+          providerId: existingProvider
+        };
+      }
     } else {
       // Create new Firebase Auth account
-      const userCredential = await createUserWithEmailAndPassword(
-        auth, 
-        formData.email, 
-        formData.password
-      );
-      userId = userCredential.user.uid;
-      
-      // Update Firebase Auth display name
-      await firebaseUpdateProfile(userCredential.user, {
-        displayName: formData.facilityNameFr || formData.contactPersonName
-      });
+      try {
+        const userCredential = await createUserWithEmailAndPassword(
+          auth, 
+          formData.email, 
+          formData.password
+        );
+        userId = userCredential.user.uid;
+        
+        // Update Firebase Auth display name
+        await firebaseUpdateProfile(userCredential.user, {
+          displayName: formData.facilityNameFr || formData.contactPersonName
+        });
+      } catch (authError: any) {
+        // Handle email-already-in-use specifically
+        if (authError.code === 'auth/email-already-in-use') {
+          return {
+            success: false,
+            error: 'Cette adresse email est déjà utilisée. Si vous avez déjà un compte, veuillez vous connecter.'
+          };
+        }
+        throw authError;
+      }
     }
 
     // Create Firestore profile
@@ -90,11 +113,25 @@ export async function createProviderFromRegistration(
   } catch (error: any) {
     logError(error, 'createProviderFromRegistration');
     
-    // Handle specific errors
+    // Handle specific Firebase Auth errors
     if (error.code === 'auth/email-already-in-use') {
       return {
         success: false,
-        error: 'Cette adresse email est déjà utilisée. Veuillez vous connecter.'
+        error: 'Cette adresse email est déjà utilisée. Si vous avez déjà un compte, veuillez vous connecter.'
+      };
+    }
+    
+    if (error.code === 'auth/weak-password') {
+      return {
+        success: false,
+        error: 'Le mot de passe doit contenir au moins 6 caractères.'
+      };
+    }
+    
+    if (error.code === 'auth/invalid-email') {
+      return {
+        success: false,
+        error: 'L\'adresse email n\'est pas valide.'
       };
     }
     
