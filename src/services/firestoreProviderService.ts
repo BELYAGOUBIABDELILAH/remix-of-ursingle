@@ -56,7 +56,7 @@ function docToProvider(docData: DocumentData, id: string): CityHealthProvider {
 }
 
 // Convert CityHealthProvider to Firestore document
-function providerToDoc(provider: CityHealthProvider): DocumentData {
+function providerToDoc(provider: CityHealthProvider & { userId?: string }): DocumentData {
   return {
     name: provider.name,
     type: provider.type,
@@ -79,6 +79,8 @@ function providerToDoc(provider: CityHealthProvider): DocumentData {
     description: provider.description,
     verificationStatus: provider.verificationStatus,
     isPublic: provider.isPublic,
+    // User ID linking to Firebase Auth
+    ...(provider.userId && { userId: provider.userId }),
     // Optional type-specific fields
     ...(provider.bloodTypes && { bloodTypes: provider.bloodTypes }),
     ...(provider.urgentNeed !== undefined && { urgentNeed: provider.urgentNeed }),

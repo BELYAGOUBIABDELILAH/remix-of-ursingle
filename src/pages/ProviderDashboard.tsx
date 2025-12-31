@@ -9,10 +9,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
 import { 
   Eye, Phone, MapPin, TrendingUp, Calendar, Star, 
   Upload, Settings, BarChart3, Clock, Megaphone, Shield,
-  AlertTriangle, XCircle, CheckCircle2, Loader2
+  AlertTriangle, XCircle, CheckCircle2, Loader2, Lock,
+  Globe, Users, Search, Bell
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ProfileProgressBar, calculateProfileCompletion } from '@/components/provider/ProfileProgressBar';
@@ -20,6 +22,7 @@ import { VerificationRequest, type VerificationStatus } from '@/components/provi
 import { MedicalAdsManager } from '@/components/provider/MedicalAdsManager';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProviderByUserId } from '@/hooks/useProviders';
+import { CityHealthMap } from '@/components/map/CityHealthMap';
 
 export default function ProviderDashboard() {
   const { toast } = useToast();
@@ -29,31 +32,36 @@ export default function ProviderDashboard() {
   const { data: providerData, isLoading: loadingStatus } = useProviderByUserId(user?.uid);
   
   const [stats] = useState({
-    profileViews: 1247,
-    phoneClicks: 89,
-    appointments: 23,
-    rating: 4.7,
-    reviewsCount: 142,
+    profileViews: 0,
+    phoneClicks: 0,
+    appointments: 0,
+    rating: 0,
+    reviewsCount: 0,
   });
 
   const [profile, setProfile] = useState({
-    id: 'provider-1',
-    name: 'Dr. Ahmed Benali',
+    id: '',
+    name: '',
     type: 'doctor',
-    specialty: 'Cardiologie',
-    email: 'dr.benali@example.com',
-    phone: '+213 48 50 10 20',
-    address: '15 Rue principale, Centre Ville',
-    description: 'Cardiologue expérimenté avec plus de 15 ans de pratique. Spécialisé dans les maladies cardiovasculaires et la prévention.',
-    schedule: 'Lun-Ven: 9h-17h\nSam: 9h-13h',
-    license: 'license-2024-001.pdf',
+    specialty: '',
+    email: user?.email || '',
+    phone: '',
+    address: '',
+    description: '',
+    schedule: '',
+    license: '',
     photos: [] as string[],
     languages: ['Français', 'Arabe'],
     accessible: true,
     emergency: false,
+    lat: 35.1975,
+    lng: -0.6300,
   });
 
-  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('none');
+  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('pending');
+  const isPending = verificationStatus === 'pending';
+  const isRejected = verificationStatus === 'rejected';
+  const isVerified = verificationStatus === 'approved';
 
   // Update local state when provider data loads
   useEffect(() => {
@@ -61,29 +69,30 @@ export default function ProviderDashboard() {
       setVerificationStatus(
         providerData.verificationStatus === 'verified' ? 'approved' :
         providerData.verificationStatus === 'rejected' ? 'rejected' :
-        providerData.verificationStatus === 'pending' ? 'pending' : 'none'
+        'pending'
       );
       setProfile(prev => ({
         ...prev,
         id: providerData.id,
         name: providerData.name,
-        specialty: providerData.specialty || prev.specialty,
+        specialty: providerData.specialty || '',
         phone: providerData.phone,
         address: providerData.address,
-        description: providerData.description,
+        description: providerData.description || '',
+        lat: providerData.lat,
+        lng: providerData.lng,
       }));
     }
   }, [providerData]);
 
   const [recentActivity] = useState([
-    { type: 'view', date: '2025-01-10', count: 47 },
-    { type: 'contact', date: '2025-01-09', count: 12 },
-    { type: 'appointment', date: '2025-01-08', count: 5 },
+    { type: 'view', date: '2025-01-10', count: 0 },
+    { type: 'contact', date: '2025-01-09', count: 0 },
+    { type: 'appointment', date: '2025-01-08', count: 0 },
   ]);
 
   const profileFields = calculateProfileCompletion(profile);
   const isProfileComplete = profileFields.filter(f => f.required && !f.completed).length === 0;
-  const isVerified = verificationStatus === 'approved';
 
   const handleProfileUpdate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,20 +113,50 @@ export default function ProviderDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20 py-8 px-4">
       <div className="max-w-7xl mx-auto">
-        {/* Pending Verification Banner */}
-        {verificationStatus === 'pending' && (
+        {/* Pending Verification Banner - Prominent */}
+        {isPending && (
           <Alert className="mb-6 border-amber-500/50 bg-amber-500/10">
             <AlertTriangle className="h-5 w-5 text-amber-500" />
-            <AlertTitle className="text-amber-600">Vérification en cours</AlertTitle>
-            <AlertDescription className="text-amber-700">
-              Votre profil est en cours de vérification par notre équipe. Cela peut prendre 24 à 48 heures.
-              Votre profil ne sera pas visible dans les recherches publiques tant qu'il n'aura pas été approuvé.
+            <AlertTitle className="text-amber-600 text-lg">
+              Votre compte a été créé et est en attente de confirmation
+            </AlertTitle>
+            <AlertDescription className="text-amber-700 mt-2">
+              <p className="mb-4">
+                Notre équipe vérifiera vos informations dans les 24 à 48 heures. 
+                En attendant, vous pouvez compléter et modifier votre profil.
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <span>Accéder à votre espace</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <span>Modifier vos informations</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <span>Gérer vos services</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <span>Télécharger des documents</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Lock className="h-4 w-4" />
+                  <span>Visibilité publique (après validation)</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Lock className="h-4 w-4" />
+                  <span>Demandes de patients (après validation)</span>
+                </div>
+              </div>
             </AlertDescription>
           </Alert>
         )}
 
         {/* Rejected Verification Banner */}
-        {verificationStatus === 'rejected' && (
+        {isRejected && (
           <Alert variant="destructive" className="mb-6">
             <XCircle className="h-5 w-5" />
             <AlertTitle>Vérification refusée</AlertTitle>
@@ -128,24 +167,43 @@ export default function ProviderDashboard() {
           </Alert>
         )}
 
+        {/* Verified Success Banner */}
+        {isVerified && (
+          <Alert className="mb-6 border-green-500/50 bg-green-500/10">
+            <CheckCircle2 className="h-5 w-5 text-green-500" />
+            <AlertTitle className="text-green-600">Compte vérifié</AlertTitle>
+            <AlertDescription className="text-green-700">
+              Votre profil est maintenant visible dans les recherches publiques et sur la carte.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16">
                 <AvatarImage src="/placeholder.svg" />
-                <AvatarFallback>AB</AvatarFallback>
+                <AvatarFallback>{profile.name?.substring(0, 2).toUpperCase() || 'PR'}</AvatarFallback>
               </Avatar>
               <div>
-                <h1 className="text-3xl font-bold">{profile.name}</h1>
-                <p className="text-muted-foreground">{profile.specialty}</p>
+                <h1 className="text-3xl font-bold">{profile.name || 'Nouveau Professionnel'}</h1>
+                <p className="text-muted-foreground">{profile.specialty || 'Spécialité non définie'}</p>
                 {isVerified ? (
                   <Badge className="mt-1 bg-green-500 hover:bg-green-600">
                     <Shield className="h-3 w-3 mr-1" />
                     Vérifié
                   </Badge>
+                ) : isPending ? (
+                  <Badge variant="secondary" className="mt-1 bg-amber-500/20 text-amber-600">
+                    <Clock className="h-3 w-3 mr-1" />
+                    En attente de confirmation
+                  </Badge>
                 ) : (
-                  <Badge variant="secondary" className="mt-1">Non vérifié</Badge>
+                  <Badge variant="destructive" className="mt-1">
+                    <XCircle className="h-3 w-3 mr-1" />
+                    Refusé
+                  </Badge>
                 )}
               </div>
             </div>
@@ -161,18 +219,59 @@ export default function ProviderDashboard() {
           <ProfileProgressBar fields={profileFields} />
         </div>
 
-        {/* Stats Grid */}
+        {/* Locked Features Card - Only show when pending */}
+        {isPending && (
+          <Card className="mb-8 border-dashed">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5 text-muted-foreground" />
+                Fonctionnalités verrouillées
+              </CardTitle>
+              <CardDescription>
+                Ces fonctionnalités seront disponibles après la validation de votre compte
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
+                  <Globe className="h-8 w-8 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">Visibilité publique</p>
+                    <p className="text-sm text-muted-foreground">Apparaître dans la recherche</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
+                  <Search className="h-8 w-8 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">Carte interactive</p>
+                    <p className="text-sm text-muted-foreground">Être visible sur la carte</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
+                  <Users className="h-8 w-8 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">Demandes patients</p>
+                    <p className="text-sm text-muted-foreground">Recevoir des rendez-vous</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Stats Grid - Show zeros when pending */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-          <Card>
+          <Card className={cn(isPending && "opacity-60")}>
             <CardHeader className="pb-3">
               <CardDescription>Vues du profil</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-3xl font-bold">{stats.profileViews}</p>
+                  <p className="text-3xl font-bold">{isVerified ? stats.profileViews : 0}</p>
                   <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                    <TrendingUp className="h-3 w-3" /> +12% ce mois
+                    {isPending ? <Lock className="h-3 w-3" /> : <TrendingUp className="h-3 w-3" />}
+                    {isPending ? 'En attente' : '+12% ce mois'}
                   </p>
                 </div>
                 <Eye className="h-8 w-8 text-primary" />
@@ -180,16 +279,17 @@ export default function ProviderDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className={cn(isPending && "opacity-60")}>
             <CardHeader className="pb-3">
               <CardDescription>Appels reçus</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-3xl font-bold">{stats.phoneClicks}</p>
+                  <p className="text-3xl font-bold">{isVerified ? stats.phoneClicks : 0}</p>
                   <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                    <TrendingUp className="h-3 w-3" /> +8% ce mois
+                    {isPending ? <Lock className="h-3 w-3" /> : <TrendingUp className="h-3 w-3" />}
+                    {isPending ? 'En attente' : '+8% ce mois'}
                   </p>
                 </div>
                 <Phone className="h-8 w-8 text-primary" />
@@ -197,16 +297,17 @@ export default function ProviderDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className={cn(isPending && "opacity-60")}>
             <CardHeader className="pb-3">
               <CardDescription>Rendez-vous</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-3xl font-bold">{stats.appointments}</p>
+                  <p className="text-3xl font-bold">{isVerified ? stats.appointments : 0}</p>
                   <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                    <Calendar className="h-3 w-3" /> Cette semaine
+                    {isPending ? <Lock className="h-3 w-3" /> : <Calendar className="h-3 w-3" />}
+                    {isPending ? 'En attente' : 'Cette semaine'}
                   </p>
                 </div>
                 <Calendar className="h-8 w-8 text-primary" />
@@ -214,16 +315,17 @@ export default function ProviderDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className={cn(isPending && "opacity-60")}>
             <CardHeader className="pb-3">
               <CardDescription>Note moyenne</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-3xl font-bold">{stats.rating}</p>
+                  <p className="text-3xl font-bold">{isVerified ? stats.rating : '-'}</p>
                   <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" /> {stats.reviewsCount} avis
+                    {isPending ? <Lock className="h-3 w-3" /> : <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />}
+                    {isPending ? 'En attente' : `${stats.reviewsCount} avis`}
                   </p>
                 </div>
                 <Star className="h-8 w-8 text-primary fill-primary" />
@@ -231,16 +333,17 @@ export default function ProviderDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className={cn(isPending && "opacity-60")}>
             <CardHeader className="pb-3">
               <CardDescription>Taux de réponse</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-3xl font-bold">94%</p>
+                  <p className="text-3xl font-bold">{isVerified ? '94%' : '-'}</p>
                   <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                    <Clock className="h-3 w-3" /> Excellent
+                    {isPending ? <Lock className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                    {isPending ? 'En attente' : 'Excellent'}
                   </p>
                 </div>
                 <BarChart3 className="h-8 w-8 text-primary" />
@@ -253,16 +356,23 @@ export default function ProviderDashboard() {
         <Tabs defaultValue="profile" className="space-y-6">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="profile">Mon Profil</TabsTrigger>
+            <TabsTrigger value="location">
+              <MapPin className="h-4 w-4 mr-1" />
+              Localisation
+            </TabsTrigger>
             <TabsTrigger value="verification">
               <Shield className="h-4 w-4 mr-1" />
               Vérification
             </TabsTrigger>
-            <TabsTrigger value="ads">
+            <TabsTrigger value="ads" disabled={isPending}>
               <Megaphone className="h-4 w-4 mr-1" />
               Annonces
+              {isPending && <Lock className="h-3 w-3 ml-1" />}
             </TabsTrigger>
-            <TabsTrigger value="analytics">Statistiques</TabsTrigger>
-            <TabsTrigger value="reviews">Avis ({stats.reviewsCount})</TabsTrigger>
+            <TabsTrigger value="analytics" disabled={isPending}>
+              Statistiques
+              {isPending && <Lock className="h-3 w-3 ml-1" />}
+            </TabsTrigger>
           </TabsList>
 
           {/* Profile Tab */}
@@ -271,14 +381,14 @@ export default function ProviderDashboard() {
               <CardHeader>
                 <CardTitle>Informations du profil</CardTitle>
                 <CardDescription>
-                  Mettez à jour vos informations publiques
+                  Mettez à jour vos informations. {isPending && 'Ces informations seront visibles après validation.'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleProfileUpdate} className="space-y-6">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="name">Nom complet</Label>
+                      <Label htmlFor="name">Nom de l'établissement</Label>
                       <Input
                         id="name"
                         value={profile.name}
@@ -321,6 +431,7 @@ export default function ProviderDashboard() {
                       rows={4}
                       value={profile.description}
                       onChange={(e) => setProfile({...profile, description: e.target.value})}
+                      placeholder="Décrivez votre établissement, vos services, votre expérience..."
                     />
                   </div>
 
@@ -331,6 +442,7 @@ export default function ProviderDashboard() {
                       rows={3}
                       value={profile.schedule}
                       onChange={(e) => setProfile({...profile, schedule: e.target.value})}
+                      placeholder="Lun-Ven: 9h-17h&#10;Sam: 9h-13h"
                     />
                   </div>
 
@@ -388,6 +500,57 @@ export default function ProviderDashboard() {
             </Card>
           </TabsContent>
 
+          {/* Location Tab - Uses shared CityHealthMap */}
+          <TabsContent value="location">
+            <Card>
+              <CardHeader>
+                <CardTitle>Localisation de votre établissement</CardTitle>
+                <CardDescription>
+                  Vérifiez que votre position sur la carte est correcte
+                  {isPending && '. Votre position sera visible après validation.'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Latitude</Label>
+                      <Input 
+                        value={profile.lat} 
+                        onChange={(e) => setProfile({...profile, lat: parseFloat(e.target.value) || 0})}
+                      />
+                    </div>
+                    <div>
+                      <Label>Longitude</Label>
+                      <Input 
+                        value={profile.lng}
+                        onChange={(e) => setProfile({...profile, lng: parseFloat(e.target.value) || 0})}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="h-[400px] rounded-lg overflow-hidden border relative">
+                    {isPending && (
+                      <div className="absolute inset-0 bg-background/80 z-10 flex items-center justify-center">
+                        <div className="text-center">
+                          <Lock className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                          <p className="text-muted-foreground">
+                            Votre position sera visible sur la carte publique après validation
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    <CityHealthMap mode="all" />
+                  </div>
+
+                  <Button type="button" className="w-full">
+                    Mettre à jour la localisation
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Verification Tab */}
           <TabsContent value="verification">
             <VerificationRequest
@@ -439,85 +602,15 @@ export default function ProviderDashboard() {
                   </div>
                 </CardContent>
               </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Performance</CardTitle>
-                  <CardDescription>Comparaison avec les autres professionnels</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <span className="text-sm">Visibilité</span>
-                        <span className="text-sm font-medium">87%</span>
-                      </div>
-                      <div className="h-2 bg-muted rounded-full">
-                        <div className="h-2 bg-primary rounded-full" style={{width: '87%'}} />
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <span className="text-sm">Taux de réponse</span>
-                        <span className="text-sm font-medium">94%</span>
-                      </div>
-                      <div className="h-2 bg-muted rounded-full">
-                        <div className="h-2 bg-primary rounded-full" style={{width: '94%'}} />
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <span className="text-sm">Satisfaction patient</span>
-                        <span className="text-sm font-medium">92%</span>
-                      </div>
-                      <div className="h-2 bg-muted rounded-full">
-                        <div className="h-2 bg-primary rounded-full" style={{width: '92%'}} />
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
-          </TabsContent>
-
-          {/* Reviews Tab */}
-          <TabsContent value="reviews">
-            <Card>
-              <CardHeader>
-                <CardTitle>Avis patients</CardTitle>
-                <CardDescription>Ce que vos patients disent de vous</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="border-b pb-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback>P{i}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium text-sm">Patient {i}</p>
-                            <div className="flex">
-                              {[...Array(5)].map((_, idx) => (
-                                <Star key={idx} className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                        <span className="text-xs text-muted-foreground">Il y a {i} jours</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Excellent professionnel, très à l'écoute et compétent. Je recommande vivement.
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
       </div>
     </div>
   );
+}
+
+// Helper function
+function cn(...classes: (string | boolean | undefined)[]) {
+  return classes.filter(Boolean).join(' ');
 }

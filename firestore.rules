@@ -79,9 +79,10 @@ service cloud.firestore {
       // CREATE: Authenticated users can create providers (for registration)
       allow create: if isAuthenticated();
       
-      // UPDATE: Owner can update their own profile
+      // UPDATE: Owner can update their own profile (but NOT verification status fields)
       allow update: if isAuthenticated() && 
-                       resource.data.userId == request.auth.uid;
+                       resource.data.userId == request.auth.uid &&
+                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['verificationStatus', 'isPublic', 'verified']);
       
       // UPDATE: Admins can update any provider (for verification)
       allow update: if isAdmin();
