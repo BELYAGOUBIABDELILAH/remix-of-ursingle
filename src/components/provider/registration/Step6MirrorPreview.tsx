@@ -4,14 +4,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { 
-  CheckCircle2, Edit, Building2, MapPin, Stethoscope,
-  Phone, Mail, Clock, Home, Loader2, PartyPopper, Eye, Star,
+  CheckCircle2, Edit, Building2, MapPin, 
+  Phone, Clock, Home, Loader2, Eye, Star,
   Globe, Shield, AlertCircle
 } from 'lucide-react';
 import { ProviderFormData, PROVIDER_TYPE_LABELS, WeeklySchedule } from './types';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { createProviderFromRegistration } from '@/services/providerRegistrationService';
 
 interface ProfileScore {
   total: number;
@@ -44,107 +45,51 @@ export function Step6MirrorPreview({ formData, profileScore, resetForm, onPrev, 
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      // Create provider account, profile, role, and provider document
+      const result = await createProviderFromRegistration(formData);
 
-    // Save to localStorage with PENDING status and isPublic = false
-    const registrations = JSON.parse(localStorage.getItem('ch_pending_registrations') || '[]');
-    registrations.push({
-      ...formData,
-      id: `reg_${Date.now()}`,
-      facilityNameFr: formData.facilityNameFr,
-      facilityNameAr: formData.facilityNameAr,
-      providerName: formData.facilityNameFr,
-      type: formData.providerType,
-      status: 'pending',
-      submittedAt: new Date().toISOString(),
-      verificationStatus: 'pending',
-      isPublic: false,
-      isSearchable: profileScore.isSearchable,
-      profileCompletionScore: profileScore.total,
-    });
-    localStorage.setItem('ch_pending_registrations', JSON.stringify(registrations));
+      if (!result.success) {
+        toast({
+          title: "Erreur",
+          description: result.error || "Une erreur est survenue.",
+          variant: "destructive"
+        });
+        setIsSubmitting(false);
+        return;
+      }
 
-    // Clear draft
-    resetForm();
+      // Clear draft from localStorage
+      resetForm();
 
-    setIsSubmitting(false);
-    setIsSubmitted(true);
+      // Show success message
+      toast({
+        title: "Compte créé avec succès ! 🎉",
+        description: "Votre compte est en attente de confirmation. Vous pouvez accéder à votre espace professionnel.",
+      });
 
-    toast({
-      title: "Profil publié !",
-      description: "Votre demande sera examinée sous 24-48h.",
-    });
+      // Redirect to provider dashboard
+      navigate('/provider/dashboard');
+      
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue lors de la création du compte.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const providerTypeLabel = formData.providerType 
     ? PROVIDER_TYPE_LABELS[formData.providerType]?.fr 
     : '';
-
-  if (isSubmitted) {
-    return (
-      <div className="text-center py-12 space-y-6">
-        <div className="w-20 h-20 mx-auto bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
-          <PartyPopper className="h-10 w-10 text-green-600" />
-        </div>
-        <div>
-          <h2 className="text-3xl font-bold text-foreground mb-2">
-            Félicitations ! 🎉
-          </h2>
-          <p className="text-lg text-muted-foreground">
-            Votre profil a été soumis avec succès
-          </p>
-        </div>
-        
-        <Card className="max-w-md mx-auto text-left bg-gradient-to-br from-primary/5 to-transparent">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Shield className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-semibold">Vérification en cours</h3>
-                <p className="text-sm text-muted-foreground">Durée estimée: 24-48h</p>
-              </div>
-            </div>
-            <Separator className="my-4" />
-            <ol className="space-y-3 text-sm">
-              <li className="flex gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">✓</span>
-                <span>Profil soumis</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-bold">2</span>
-                <span>Vérification par notre équipe</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-bold">3</span>
-                <span>Email de confirmation</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-bold">4</span>
-                <span>Visibilité dans la recherche</span>
-              </li>
-            </ol>
-          </CardContent>
-        </Card>
-        
-        <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-          <Button onClick={() => navigate('/registration-status')}>
-            Voir le statut
-          </Button>
-          <Button variant="outline" onClick={() => navigate('/')}>
-            Retour à l'accueil
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-8">
@@ -335,6 +280,36 @@ export function Step6MirrorPreview({ formData, profileScore, resetForm, onPrev, 
         </CardContent>
       </Card>
 
+      {/* What happens next */}
+      <Card className="bg-gradient-to-br from-primary/5 to-transparent">
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <Shield className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-semibold">Que se passe-t-il ensuite ?</h3>
+              <p className="text-sm text-muted-foreground">Après la soumission</p>
+            </div>
+          </div>
+          <Separator className="my-4" />
+          <ol className="space-y-3 text-sm">
+            <li className="flex gap-3">
+              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">1</span>
+              <span>Votre compte sera créé et vous pourrez accéder à votre espace</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-bold">2</span>
+              <span>Notre équipe vérifiera vos informations (24-48h)</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-bold">3</span>
+              <span>Une fois approuvé, vous serez visible dans la recherche</span>
+            </li>
+          </ol>
+        </CardContent>
+      </Card>
+
       {/* Submit Notice */}
       <div className="bg-muted/50 p-4 rounded-lg border">
         <p className="text-sm text-muted-foreground">
@@ -358,12 +333,12 @@ export function Step6MirrorPreview({ formData, profileScore, resetForm, onPrev, 
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Publication...
+              Création du compte...
             </>
           ) : (
             <>
               <Globe className="mr-2 h-4 w-4" />
-              Publier mon profil
+              Créer mon compte
             </>
           )}
         </Button>

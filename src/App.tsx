@@ -235,6 +235,7 @@ const AppRoutes = () => {
           </PageTransition>
         } 
       />
+      {/* Provider Dashboard - accessible to providers */}
       <Route 
         path="/provider/dashboard" 
         element={
@@ -244,6 +245,11 @@ const AppRoutes = () => {
             </ProtectedRoute>
           </PageTransition>
         } 
+      />
+      {/* /provider alias redirects to dashboard */}
+      <Route 
+        path="/provider" 
+        element={<Navigate to="/provider/dashboard" replace />}
       />
       <Route 
         path="/admin/dashboard" 
