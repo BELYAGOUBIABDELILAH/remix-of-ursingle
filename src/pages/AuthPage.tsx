@@ -63,7 +63,7 @@ const AuthPage = () => {
       setIsLoading(true);
       await login(validated.email, validated.password);
       toast.success('Bienvenue sur CityHealth!', {
-        description: `Heureux de vous revoir${profile?.full_name ? `, ${profile.full_name}` : ''}!`
+        description: 'Heureux de vous revoir!'
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
