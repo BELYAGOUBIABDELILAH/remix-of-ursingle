@@ -225,13 +225,13 @@ export default function BloodDonationPage() {
         {/* CTA - View Map */}
         <div className="mb-8 flex flex-col sm:flex-row gap-4 justify-center">
           <Button size="lg" asChild className="gap-2">
-            <Link to="/carte?mode=blood">
+            <Link to="/map/blood">
               <Map className="h-5 w-5" />
               {tx.viewMap}
             </Link>
           </Button>
           <Button size="lg" variant="outline" asChild className="gap-2">
-            <Link to="/carte?mode=emergency">
+            <Link to="/map/emergency">
               <AlertTriangle className="h-5 w-5" />
               {tx.emergencyFinder}
             </Link>
@@ -372,7 +372,7 @@ export default function BloodDonationPage() {
                   </div>
                   
                   <Button className="w-full mt-4" asChild>
-                    <Link to="/carte?mode=blood">
+                    <Link to="/map/blood">
                       <MapPin className="h-4 w-4 mr-2" />
                       {tx.findCenter}
                     </Link>

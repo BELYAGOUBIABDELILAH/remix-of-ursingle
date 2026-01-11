@@ -31,7 +31,7 @@ const FloatingSidebar = () => {
   const menuItems: MenuItem[] = [
     { icon: Home, label: t('nav.home'), href: '/' },
     { icon: Search, label: t('nav.search'), href: '/search' },
-    { icon: MapPin, label: 'Carte', href: '/carte' },
+    { icon: MapPin, label: 'Carte', href: '/map/providers' },
     { icon: Heart, label: 'Don de Sang', href: '/blood-donation' },
     { icon: Bot, label: 'Assistant Médical', href: '/medical-assistant' },
     { icon: Heart, label: 'Favoris', href: '/favorites' },

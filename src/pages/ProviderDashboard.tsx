@@ -22,7 +22,7 @@ import { ProfileProgressBar, calculateProfileCompletion } from '@/components/pro
 import { VerificationRequest, type VerificationStatus } from '@/components/provider/VerificationRequest';
 import { MedicalAdsManager } from '@/components/provider/MedicalAdsManager';
 import { useProvider } from '@/contexts/ProviderContext';
-import { CityHealthMap } from '@/components/map/CityHealthMap';
+import { LocationPicker } from '@/components/provider/LocationPicker';
 import { cn } from '@/lib/utils';
 
 export default function ProviderDashboard() {
@@ -577,7 +577,11 @@ export default function ProviderDashboard() {
                         </div>
                       </div>
                     )}
-                    <CityHealthMap mode="all" />
+                    <LocationPicker 
+                      lat={profile.lat} 
+                      lng={profile.lng} 
+                      onLocationChange={(lat, lng) => setProfile({ ...profile, lat, lng })}
+                    />
                   </div>
 
                   <Button type="button" className="w-full">
