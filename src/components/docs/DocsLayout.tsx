@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { DocsSidebar } from './DocsSidebar';
 import { DocsContent } from './DocsContent';
+import { DocsRAGChat } from './DocsRAGChat';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 export const DocsLayout = () => {
@@ -141,6 +142,9 @@ export const DocsLayout = () => {
         {/* Content area */}
         <DocsContent />
       </div>
+
+      {/* AI Chat */}
+      <DocsRAGChat />
     </div>
   );
 };
