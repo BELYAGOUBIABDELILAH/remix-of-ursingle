@@ -282,3 +282,26 @@
 .leaflet-popup-content {
   margin: 12px 16px;
 }
+
+/* RTL Leaflet control positioning */
+[dir="rtl"] .leaflet-control-zoom,
+.rtl .leaflet-control-zoom {
+  left: 10px;
+  right: auto;
+}
+
+[dir="rtl"] .leaflet-control-attribution,
+.rtl .leaflet-control-attribution {
+  left: 0;
+  right: auto;
+}
+
+/* Dark mode Leaflet popup */
+.dark .leaflet-popup-content-wrapper {
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+}
+
+.dark .leaflet-popup-tip {
+  background: hsl(var(--card));
+}
