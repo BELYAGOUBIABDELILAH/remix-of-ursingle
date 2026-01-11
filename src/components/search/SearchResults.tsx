@@ -69,7 +69,7 @@ const ProviderCard = memo(({ provider, isGrid, isFavorite, onToggleFavorite }: P
   const { t } = useLanguage();
   
   return (
-    <Card className={`hover:shadow-lg transition-all duration-300 cursor-pointer group ${isGrid ? 'h-full' : ''}`}>
+    <Card className={`hover:shadow-lg transition-all duration-300 cursor-pointer group animate-fade-in hover-scale ${isGrid ? 'h-full' : ''}`}>
       <CardContent className={`p-4 ${isGrid ? 'h-full flex flex-col' : ''}`}>
         <div className={`${isGrid ? 'flex flex-col h-full' : 'flex gap-4'}`}>
           {/* Provider Image */}
