@@ -24,6 +24,8 @@ import { MedicalAdsManager } from '@/components/provider/MedicalAdsManager';
 import { useProvider } from '@/contexts/ProviderContext';
 import { LocationPicker } from '@/components/provider/LocationPicker';
 import { cn } from '@/lib/utils';
+import { useReviewStats } from '@/hooks/useReviews';
+import { useUpcomingAppointmentsCount } from '@/hooks/useAppointments';
 
 export default function ProviderDashboard() {
   const { toast } = useToast();
@@ -39,10 +41,7 @@ export default function ProviderDashboard() {
     refetch 
   } = useProvider();
   
-  // Import real stats from hooks
-  const { useReviewStats } = await import('@/hooks/useReviews');
-  const { useUpcomingAppointmentsCount } = await import('@/hooks/useAppointments');
-  
+  // Real stats from hooks
   const { data: reviewStats } = useReviewStats(providerData?.id);
   const { data: appointmentsCount = 0 } = useUpcomingAppointmentsCount(providerData?.id);
   
