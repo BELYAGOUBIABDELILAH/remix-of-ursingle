@@ -304,7 +304,7 @@ export const SearchResults = ({ providers, viewMode, searchQuery }: SearchResult
       {useVirtualization ? (
         // Virtualized rendering for large lists
         viewMode === 'grid' ? (
-          <Grid<GridCellProps>
+          <Grid
             columnCount={columnCount}
             columnWidth={columnWidth}
             rowCount={rowCount}
@@ -317,10 +317,10 @@ export const SearchResults = ({ providers, viewMode, searchQuery }: SearchResult
               favorites,
               onToggleFavorite: toggleFavorite,
               columnCount
-            }}
+            } as GridCellProps}
           />
         ) : (
-          <List<ListRowProps>
+          <List
             rowCount={providers.length}
             rowHeight={LIST_ITEM_HEIGHT}
             style={{ height: containerSize.height, width: containerSize.width }}
@@ -330,7 +330,7 @@ export const SearchResults = ({ providers, viewMode, searchQuery }: SearchResult
               providers,
               favorites,
               onToggleFavorite: toggleFavorite
-            }}
+            } as ListRowProps}
           />
         )
       ) : (
