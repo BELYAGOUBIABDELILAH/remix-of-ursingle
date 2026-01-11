@@ -5,6 +5,7 @@ export interface Appointment {
   patientName: string;
   patientPhone: string;
   patientEmail?: string;
+  patientId: string; // Firebase auth user ID - required for Firestore rules
   dateTime: string;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   notes?: string;

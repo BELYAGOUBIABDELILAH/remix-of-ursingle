@@ -1,16 +1,15 @@
-import React, { useMemo, useState } from 'react';
-import { addDays, format } from 'date-fns';
+import React, { useState } from 'react';
+import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Clock, Mail, Phone as PhoneIcon, User, CheckCircle } from 'lucide-react';
-import { saveAppointment } from '@/data/providers';
-import { saveAppointment as saveToStorage } from '@/utils/appointmentStorage';
+import { CalendarIcon, Clock, Mail, Phone as PhoneIcon, User, CheckCircle, Loader2 } from 'lucide-react';
+import { useCreateAppointment } from '@/hooks/useAppointments';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -31,7 +30,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({ open, onOpenChange, 
   const [email, setEmail] = useState('');
   const [notes, setNotes] = useState('');
   const [step, setStep] = useState<'details' | 'datetime' | 'confirm'>('details');
+  
+  const { user } = useAuth();
   const { sendNotification } = useNotifications();
+  const createAppointmentMutation = useCreateAppointment();
 
   const canProceed = () => {
     if (step === 'details') return name && phone;
@@ -46,58 +48,53 @@ export const BookingModal: React.FC<BookingModalProps> = ({ open, onOpenChange, 
     const appointmentDate = new Date(selectedDate);
     appointmentDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
     
-    const appointmentId = crypto.randomUUID();
-    const appointment = {
-      id: appointmentId,
-      providerId,
-      providerName,
-      patientName: name,
-      patientPhone: phone,
-      patientEmail: email,
-      dateTime: appointmentDate.toISOString(),
-      status: 'pending' as const,
-      notes,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    
-    saveAppointment({ 
-      id: appointmentId, 
-      providerId, 
-      when: appointmentDate.toISOString(), 
-      name, 
-      phone,
-      email 
-    });
-    
-    saveToStorage(appointment);
+    createAppointmentMutation.mutate(
+      {
+        providerId,
+        providerName,
+        patientName: name,
+        patientPhone: phone,
+        patientEmail: email || undefined,
+        dateTime: appointmentDate.toISOString(),
+        notes: notes || undefined,
+      },
+      {
+        onSuccess: () => {
+          // Send notification
+          sendNotification({
+            userId: user?.uid || 'anonymous',
+            type: 'appointment',
+            title: 'Rendez-vous confirmé',
+            body: `Rendez-vous avec ${providerName} le ${format(appointmentDate, 'EEEE d MMMM à HH:mm', { locale: fr })}`,
+            link: '/appointments',
+          });
 
-    sendNotification({
-      userId: 'current-user',
-      type: 'appointment',
-      title: 'Rendez-vous confirmé',
-      body: `Rendez-vous avec ${providerName} le ${format(appointmentDate, 'EEEE d MMMM à HH:mm', { locale: fr })}`,
-      link: '/appointments',
-    });
-
-    toast.success(
-      <div className="flex items-center gap-2">
-        <CheckCircle className="h-5 w-5 text-green-500" />
-        <div>
-          <p className="font-semibold">Rendez-vous confirmé!</p>
-          <p className="text-sm">Confirmation envoyée par SMS{email ? ' et email' : ''}</p>
-        </div>
-      </div>
+          toast.success(
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+              <div>
+                <p className="font-semibold">Rendez-vous confirmé!</p>
+                <p className="text-sm">Confirmation envoyée par SMS{email ? ' et email' : ''}</p>
+              </div>
+            </div>
+          );
+          
+          // Reset form
+          setStep('details');
+          setSelectedDate(undefined);
+          setSelectedTime('');
+          setName('');
+          setPhone('');
+          setEmail('');
+          setNotes('');
+          onOpenChange(false);
+        },
+        onError: (error) => {
+          console.error('Booking error:', error);
+          toast.error('Erreur lors de la réservation. Veuillez réessayer.');
+        }
+      }
     );
-    
-    setStep('details');
-    setSelectedDate(undefined);
-    setSelectedTime('');
-    setName('');
-    setPhone('');
-    setEmail('');
-    setNotes('');
-    onOpenChange(false);
   };
 
   return (
@@ -292,6 +289,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ open, onOpenChange, 
                 setStep(step === 'datetime' ? 'details' : 'datetime');
               }
             }}
+            disabled={createAppointmentMutation.isPending}
           >
             {step === 'details' ? 'Annuler' : 'Retour'}
           </Button>
@@ -302,9 +300,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({ open, onOpenChange, 
               else if (step === 'datetime') setStep('confirm');
               else confirm();
             }}
-            disabled={!canProceed()}
+            disabled={!canProceed() || createAppointmentMutation.isPending}
           >
-            {step === 'confirm' ? 'Confirmer le rendez-vous' : 'Continuer'}
+            {createAppointmentMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Réservation...
+              </>
+            ) : (
+              step === 'confirm' ? 'Confirmer le rendez-vous' : 'Continuer'
+            )}
           </Button>
         </div>
       </DialogContent>
