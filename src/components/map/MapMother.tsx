@@ -10,6 +10,7 @@ import { Header } from '@/components/layout/Header';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { createUserLocationMarker } from './MapMarkers';
 
 // Tile layer URLs
 const TILE_URLS = {
@@ -28,12 +29,15 @@ const MapMotherInner = () => {
     zoom, 
     setIsReady,
     isFullscreen,
-    isRTL 
+    isRTL,
+    geolocation,
+    setUserPosition
   } = useMapContext();
   const { theme } = useTheme();
   const { language } = useLanguage();
   const location = useLocation();
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const userMarkerRef = useRef<L.Marker | null>(null);
   const initRef = useRef(false);
   
   // Determine current mode from path
@@ -143,6 +147,40 @@ const MapMotherInner = () => {
       }, 100);
     }
   }, [isFullscreen, mapRef]);
+  
+  // Add/update user location marker when geolocation changes
+  useEffect(() => {
+    if (!mapRef.current || !geolocation.latitude || !geolocation.longitude) return;
+    
+    const userLatLng: L.LatLngExpression = [geolocation.latitude, geolocation.longitude];
+    
+    // Update context with user position
+    setUserPosition({ lat: geolocation.latitude, lng: geolocation.longitude });
+    
+    if (userMarkerRef.current) {
+      // Update existing marker position
+      userMarkerRef.current.setLatLng(userLatLng);
+    } else {
+      // Create new user location marker
+      userMarkerRef.current = L.marker(userLatLng, {
+        icon: createUserLocationMarker(),
+        zIndexOffset: 1000, // Above other markers
+      }).addTo(mapRef.current);
+      
+      userMarkerRef.current.bindPopup('Votre position', {
+        closeButton: false,
+        className: 'user-location-popup'
+      });
+    }
+    
+    return () => {
+      // Cleanup on unmount
+      if (userMarkerRef.current && mapRef.current) {
+        mapRef.current.removeLayer(userMarkerRef.current);
+        userMarkerRef.current = null;
+      }
+    };
+  }, [mapRef, geolocation.latitude, geolocation.longitude, setUserPosition]);
   
   return (
     <div className={cn("min-h-screen bg-background flex flex-col", isRTL && "rtl")}>

@@ -305,3 +305,21 @@
 .dark .leaflet-popup-tip {
   background: hsl(var(--card));
 }
+
+/* ====== USER LOCATION MARKER ====== */
+.user-location-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.user-location-popup .leaflet-popup-content-wrapper {
+  background: hsl(var(--primary));
+  color: white;
+  font-weight: 500;
+  border-radius: var(--radius-pill);
+  padding: 4px 12px;
+}
+
+.user-location-popup .leaflet-popup-tip {
+  background: hsl(var(--primary));
+}
