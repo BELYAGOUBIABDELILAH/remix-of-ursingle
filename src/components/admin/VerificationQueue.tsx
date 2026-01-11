@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Progress } from '@/components/ui/progress';
 import {
   Table,
   TableBody,
@@ -19,12 +20,28 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  CheckCircle, XCircle, Eye, FileText, Download, Search, User 
+  CheckCircle, XCircle, Eye, FileText, Download, Search, User,
+  FileSearch, CheckCircle2, AlertCircle, ChevronDown, Sparkles
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+
+interface OCRFieldResult {
+  found: boolean;
+  similarity: number;
+  expectedValue: string;
+  matchedWord?: string;
+}
+
+interface OCRResult {
+  success: boolean;
+  score: number;
+  fields: Record<string, OCRFieldResult>;
+}
 
 interface VerificationRequest {
   id: string;
@@ -34,11 +51,148 @@ interface VerificationRequest {
   submittedAt: string;
   documents: {
     license?: string;
+    licenseOCR?: OCRResult;
     id?: string;
+    idOCR?: OCRResult;
     additionalNotes?: string;
   };
   reviewedAt?: string;
   reviewNotes?: string;
+}
+
+// OCR Badge Component
+function OCRBadge({ ocr, compact = false }: { ocr: OCRResult | null | undefined; compact?: boolean }) {
+  if (!ocr) return null;
+  
+  if (compact) {
+    return (
+      <Badge 
+        variant="outline"
+        className={cn(
+          "text-xs",
+          ocr.success 
+            ? "bg-green-500/10 text-green-600 border-green-500/30" 
+            : "bg-amber-500/10 text-amber-600 border-amber-500/30"
+        )}
+      >
+        <Sparkles className="h-3 w-3 mr-1" />
+        {ocr.success ? 'IA ✓' : `${Math.round(ocr.score)}%`}
+      </Badge>
+    );
+  }
+  
+  return (
+    <div className={cn(
+      "flex items-center gap-2 px-2 py-1 rounded-md text-xs",
+      ocr.success 
+        ? "bg-green-500/10 text-green-600" 
+        : "bg-amber-500/10 text-amber-600"
+    )}>
+      <FileSearch className="h-3 w-3" />
+      <span>
+        {ocr.success ? 'Pré-vérifié par IA' : `Score: ${Math.round(ocr.score)}%`}
+      </span>
+    </div>
+  );
+}
+
+// OCR Details Panel
+function OCRDetailsPanel({ ocr, title }: { ocr: OCRResult; title: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  const fieldLabels: Record<string, string> = {
+    firstName: 'Prénom',
+    lastName: 'Nom',
+    fullName: 'Nom complet',
+    registrationNumber: 'N° Enregistrement',
+    date: 'Date',
+    facilityName: 'Établissement',
+  };
+  
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <div className={cn(
+        "border rounded-lg overflow-hidden",
+        ocr.success ? "border-green-500/30" : "border-amber-500/30"
+      )}>
+        <CollapsibleTrigger asChild>
+          <button className={cn(
+            "w-full flex items-center justify-between p-3 text-left transition-colors",
+            ocr.success ? "bg-green-500/5 hover:bg-green-500/10" : "bg-amber-500/5 hover:bg-amber-500/10"
+          )}>
+            <div className="flex items-center gap-2">
+              {ocr.success ? (
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+              ) : (
+                <AlertCircle className="h-4 w-4 text-amber-500" />
+              )}
+              <span className="text-sm font-medium">{title}</span>
+              <Badge 
+                variant="outline" 
+                className={cn(
+                  "text-xs",
+                  ocr.success 
+                    ? "bg-green-500/10 text-green-600 border-green-500/30" 
+                    : "bg-amber-500/10 text-amber-600 border-amber-500/30"
+                )}
+              >
+                <Sparkles className="h-3 w-3 mr-1" />
+                {ocr.success ? 'Pré-vérifié' : `${Math.round(ocr.score)}%`}
+              </Badge>
+            </div>
+            <ChevronDown className={cn(
+              "h-4 w-4 transition-transform",
+              isOpen && "rotate-180"
+            )} />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="p-3 border-t space-y-2">
+            <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+              <span>Score global de confiance</span>
+              <span className="font-medium">{Math.round(ocr.score)}%</span>
+            </div>
+            <Progress 
+              value={ocr.score} 
+              className={cn(
+                "h-2",
+                ocr.success ? "[&>div]:bg-green-500" : "[&>div]:bg-amber-500"
+              )} 
+            />
+            
+            <div className="mt-3 space-y-1">
+              {Object.entries(ocr.fields).map(([key, field]) => field && (
+                <div key={key} className="flex items-center justify-between py-1 border-b last:border-0">
+                  <div className="flex items-center gap-2">
+                    {field.found ? (
+                      <CheckCircle2 className="h-3 w-3 text-green-500" />
+                    ) : (
+                      <XCircle className="h-3 w-3 text-destructive" />
+                    )}
+                    <span className="text-xs">{fieldLabels[key] || key}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      "{field.expectedValue}"
+                    </span>
+                    <Badge 
+                      variant="outline" 
+                      className={cn(
+                        "text-xs",
+                        field.found ? "text-green-600" : "text-destructive"
+                      )}
+                    >
+                      {Math.round(field.similarity * 100)}%
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  );
 }
 
 export function VerificationQueue() {
@@ -110,16 +264,29 @@ export function VerificationQueue() {
   );
 
   const pendingCount = requests.filter(r => r.status === 'pending').length;
+  const preVerifiedCount = requests.filter(r => 
+    r.status === 'pending' && r.documents.licenseOCR?.success
+  ).length;
+
+  // Check if a request has any OCR data
+  const hasOCRData = (request: VerificationRequest) => 
+    request.documents.licenseOCR || request.documents.idOCR;
 
   return (
     <>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <CardTitle>File d'attente de vérification</CardTitle>
-              <CardDescription>
-                {pendingCount} demande{pendingCount > 1 ? 's' : ''} en attente
+              <CardDescription className="flex items-center gap-2 mt-1">
+                <span>{pendingCount} demande{pendingCount > 1 ? 's' : ''} en attente</span>
+                {preVerifiedCount > 0 && (
+                  <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    {preVerifiedCount} pré-vérifié{preVerifiedCount > 1 ? 's' : ''} par IA
+                  </Badge>
+                )}
               </CardDescription>
             </div>
             <div className="relative">
@@ -145,6 +312,7 @@ export function VerificationQueue() {
                 <TableRow>
                   <TableHead>Professionnel</TableHead>
                   <TableHead>Documents</TableHead>
+                  <TableHead>Vérification IA</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -152,7 +320,10 @@ export function VerificationQueue() {
               </TableHeader>
               <TableBody>
                 {filteredRequests.map((request) => (
-                  <TableRow key={request.id}>
+                  <TableRow key={request.id} className={cn(
+                    request.documents.licenseOCR?.success && request.status === 'pending' && 
+                    "bg-green-500/5"
+                  )}>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -176,6 +347,20 @@ export function VerificationQueue() {
                           </Badge>
                         )}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {hasOCRData(request) ? (
+                        <div className="flex items-center gap-1">
+                          {request.documents.licenseOCR && (
+                            <OCRBadge ocr={request.documents.licenseOCR} compact />
+                          )}
+                          {request.documents.idOCR && (
+                            <OCRBadge ocr={request.documents.idOCR} compact />
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <span className="text-sm text-muted-foreground">
@@ -208,6 +393,10 @@ export function VerificationQueue() {
                               size="sm" 
                               variant="default"
                               onClick={() => handleApprove(request)}
+                              className={cn(
+                                request.documents.licenseOCR?.success && 
+                                "bg-green-600 hover:bg-green-700"
+                              )}
                             >
                               <CheckCircle className="h-4 w-4" />
                             </Button>
@@ -241,34 +430,87 @@ export function VerificationQueue() {
           </DialogHeader>
           {selectedRequest && (
             <div className="space-y-4 py-4">
-              <div className="space-y-2">
+              {/* OCR Pre-verification Summary */}
+              {hasOCRData(selectedRequest) && (
+                <div className={cn(
+                  "p-3 rounded-lg border",
+                  selectedRequest.documents.licenseOCR?.success 
+                    ? "bg-green-500/5 border-green-500/30" 
+                    : "bg-amber-500/5 border-amber-500/30"
+                )}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className={cn(
+                      "h-4 w-4",
+                      selectedRequest.documents.licenseOCR?.success 
+                        ? "text-green-500" 
+                        : "text-amber-500"
+                    )} />
+                    <span className="font-medium text-sm">
+                      {selectedRequest.documents.licenseOCR?.success 
+                        ? 'Documents pré-vérifiés par IA - Validation recommandée' 
+                        : 'Vérification manuelle recommandée'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedRequest.documents.licenseOCR?.success 
+                      ? 'L\'analyse OCR a confirmé la correspondance des informations sur les documents.'
+                      : 'L\'analyse OCR n\'a pas pu confirmer toutes les informations. Veuillez vérifier manuellement.'}
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-3">
                 <h4 className="text-sm font-medium">Documents soumis</h4>
-                <div className="space-y-2">
-                  {selectedRequest.documents.license && (
+                
+                {/* License with OCR details */}
+                {selectedRequest.documents.license && (
+                  <div className="space-y-2">
                     <div className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-primary" />
                         <span className="text-sm">Licence professionnelle</span>
+                        {selectedRequest.documents.licenseOCR && (
+                          <OCRBadge ocr={selectedRequest.documents.licenseOCR} compact />
+                        )}
                       </div>
                       <Button size="sm" variant="outline">
                         <Download className="h-4 w-4 mr-1" />
                         Télécharger
                       </Button>
                     </div>
-                  )}
-                  {selectedRequest.documents.id && (
+                    {selectedRequest.documents.licenseOCR && (
+                      <OCRDetailsPanel 
+                        ocr={selectedRequest.documents.licenseOCR} 
+                        title="Résultats OCR - Licence" 
+                      />
+                    )}
+                  </div>
+                )}
+                
+                {/* ID with OCR details */}
+                {selectedRequest.documents.id && (
+                  <div className="space-y-2">
                     <div className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-primary" />
                         <span className="text-sm">Pièce d'identité</span>
+                        {selectedRequest.documents.idOCR && (
+                          <OCRBadge ocr={selectedRequest.documents.idOCR} compact />
+                        )}
                       </div>
                       <Button size="sm" variant="outline">
                         <Download className="h-4 w-4 mr-1" />
                         Télécharger
                       </Button>
                     </div>
-                  )}
-                </div>
+                    {selectedRequest.documents.idOCR && (
+                      <OCRDetailsPanel 
+                        ocr={selectedRequest.documents.idOCR} 
+                        title="Résultats OCR - ID" 
+                      />
+                    )}
+                  </div>
+                )}
               </div>
 
               {selectedRequest.documents.additionalNotes && (
@@ -294,11 +536,17 @@ export function VerificationQueue() {
               {selectedRequest.status === 'pending' && (
                 <div className="flex gap-2">
                   <Button 
-                    className="flex-1"
+                    className={cn(
+                      "flex-1",
+                      selectedRequest.documents.licenseOCR?.success && 
+                      "bg-green-600 hover:bg-green-700"
+                    )}
                     onClick={() => handleApprove(selectedRequest)}
                   >
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    Approuver
+                    {selectedRequest.documents.licenseOCR?.success 
+                      ? 'Approuver (Recommandé)' 
+                      : 'Approuver'}
                   </Button>
                   <Button 
                     variant="destructive"
