@@ -1,4 +1,4 @@
-import React, { useState, memo } from 'react';
+import React, { useState, memo, useCallback, useRef, useEffect } from 'react';
 import { Heart, Phone, Star, MapPin, Clock, Navigation, Calendar, Share2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Provider, ViewMode } from '@/pages/SearchPage';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { List, Grid } from 'react-window';
+import type { CSSProperties, ReactElement } from 'react';
 
 interface SearchResultsProps {
   providers: Provider[];
@@ -148,22 +150,122 @@ const ProviderCard = memo(({ provider, isGrid, isFavorite, onToggleFavorite }: P
 
 ProviderCard.displayName = 'ProviderCard';
 
+// Constants for virtualization
+const LIST_ITEM_HEIGHT = 220;
+const GRID_ITEM_HEIGHT = 420;
+const GRID_ITEM_MIN_WIDTH = 280;
+
+// Virtualization threshold - use virtualization only for large lists
+const VIRTUALIZATION_THRESHOLD = 50;
+
+// Custom props for List rows
+interface ListRowProps {
+  providers: Provider[];
+  favorites: string[];
+  onToggleFavorite: (id: string) => void;
+}
+
+// Custom props for Grid cells
+interface GridCellProps {
+  providers: Provider[];
+  favorites: string[];
+  onToggleFavorite: (id: string) => void;
+  columnCount: number;
+}
+
+// Row component for List virtualization
+const ListRowComponent = ({ 
+  index, 
+  style,
+  providers,
+  favorites,
+  onToggleFavorite
+}: {
+  ariaAttributes: { "aria-posinset": number; "aria-setsize": number; role: "listitem" };
+  index: number;
+  style: CSSProperties;
+} & ListRowProps): ReactElement | null => {
+  const provider = providers[index];
+  if (!provider) return null;
+
+  return (
+    <div style={{ ...style, paddingBottom: 16, paddingRight: 8 }}>
+      <ProviderCard
+        provider={provider}
+        isGrid={false}
+        isFavorite={favorites.includes(provider.id)}
+        onToggleFavorite={onToggleFavorite}
+      />
+    </div>
+  );
+};
+
+// Cell component for Grid virtualization
+const GridCellComponent = ({ 
+  columnIndex, 
+  rowIndex, 
+  style, 
+  providers, 
+  favorites, 
+  onToggleFavorite,
+  columnCount 
+}: {
+  ariaAttributes: { "aria-colindex": number; role: "gridcell" };
+  columnIndex: number;
+  rowIndex: number;
+  style: CSSProperties;
+} & GridCellProps): ReactElement | null => {
+  const index = rowIndex * columnCount + columnIndex;
+  const provider = providers[index];
+  if (!provider) return null;
+
+  return (
+    <div style={{ ...style, padding: 8 }}>
+      <ProviderCard
+        provider={provider}
+        isGrid={true}
+        isFavorite={favorites.includes(provider.id)}
+        onToggleFavorite={onToggleFavorite}
+      />
+    </div>
+  );
+};
+
 export const SearchResults = ({ providers, viewMode, searchQuery }: SearchResultsProps) => {
   const { t } = useLanguage();
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [visibleCount, setVisibleCount] = useState(20);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 600 });
 
-  const toggleFavorite = (providerId: string) => {
+  // Calculate container size for virtualization
+  useEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setContainerSize({
+          width: rect.width || 800,
+          height: Math.max(window.innerHeight - 200, 400)
+        });
+      }
+    };
+
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
+
+  const toggleFavorite = useCallback((providerId: string) => {
     setFavorites(prev =>
       prev.includes(providerId)
         ? prev.filter(id => id !== providerId)
         : [...prev, providerId]
     );
-  };
+  }, []);
 
-  const loadMore = () => {
-    setVisibleCount(prev => prev + 20);
-  };
+  // Calculate grid columns based on container width
+  const columnCount = Math.max(1, Math.floor(containerSize.width / GRID_ITEM_MIN_WIDTH));
+  const columnWidth = containerSize.width / columnCount;
+  const rowCount = Math.ceil(providers.length / columnCount);
 
   if (providers.length === 0) {
     return (
@@ -189,31 +291,64 @@ export const SearchResults = ({ providers, viewMode, searchQuery }: SearchResult
     );
   }
 
+  // Use standard rendering for small lists, virtualization for large lists
+  const useVirtualization = providers.length > VIRTUALIZATION_THRESHOLD;
+
   return (
-    <div className="flex-1 p-4">
-      {/* Results Grid/List */}
-      <div className={
-        viewMode === 'grid'
-          ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
-          : 'space-y-4'
-      }>
-        {providers.slice(0, visibleCount).map(provider => (
-          <ProviderCard
-            key={provider.id}
-            provider={provider}
-            isGrid={viewMode === 'grid'}
-            isFavorite={favorites.includes(provider.id)}
-            onToggleFavorite={toggleFavorite}
-          />
-        ))}
+    <div className="flex-1 p-4" ref={containerRef}>
+      {/* Results count */}
+      <div className="mb-4 text-sm text-muted-foreground">
+        {providers.length} {t('search', 'results')} {searchQuery && `pour "${searchQuery}"`}
       </div>
 
-      {/* Load More Button */}
-      {visibleCount < providers.length && (
-        <div className="text-center mt-8">
-          <Button variant="outline" onClick={loadMore} size="lg">
-            {t('common', 'next')} ({providers.length - visibleCount} {t('search', 'results')})
-          </Button>
+      {useVirtualization ? (
+        // Virtualized rendering for large lists
+        viewMode === 'grid' ? (
+          <Grid<GridCellProps>
+            columnCount={columnCount}
+            columnWidth={columnWidth}
+            rowCount={rowCount}
+            rowHeight={GRID_ITEM_HEIGHT}
+            style={{ height: containerSize.height, width: containerSize.width }}
+            className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
+            cellComponent={GridCellComponent}
+            cellProps={{
+              providers,
+              favorites,
+              onToggleFavorite: toggleFavorite,
+              columnCount
+            }}
+          />
+        ) : (
+          <List<ListRowProps>
+            rowCount={providers.length}
+            rowHeight={LIST_ITEM_HEIGHT}
+            style={{ height: containerSize.height, width: containerSize.width }}
+            className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
+            rowComponent={ListRowComponent}
+            rowProps={{
+              providers,
+              favorites,
+              onToggleFavorite: toggleFavorite
+            }}
+          />
+        )
+      ) : (
+        // Standard rendering for small lists
+        <div className={
+          viewMode === 'grid'
+            ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
+            : 'space-y-4'
+        }>
+          {providers.map(provider => (
+            <ProviderCard
+              key={provider.id}
+              provider={provider}
+              isGrid={viewMode === 'grid'}
+              isFavorite={favorites.includes(provider.id)}
+              onToggleFavorite={toggleFavorite}
+            />
+          ))}
         </div>
       )}
     </div>
