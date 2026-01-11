@@ -1,152 +1,93 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Bot, Send, Loader2, Sparkles, Heart, Activity, Brain, Lightbulb, 
-  MessageCircle, ArrowLeft, AlertTriangle, Phone, MapPin, Calendar,
-  Pill, Thermometer, Stethoscope, BookOpen, Shield
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
-import { useNavigate } from 'react-router-dom';
-import { useLanguage } from '@/contexts/LanguageContext';
+  ArrowLeft, Bot, MessageCircle, BookOpen, Calendar,
+  AlertTriangle, Phone, MapPin, Sparkles, Activity,
+  Thermometer, Pill, Heart, Brain, Shield
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { cn } from "@/lib/utils";
+import { ChatMessage } from "@/components/medical-assistant/ChatMessage";
+import { TypingIndicator } from "@/components/medical-assistant/TypingIndicator";
+import { EnhancedInput } from "@/components/medical-assistant/EnhancedInput";
+import { SuggestedQuestions } from "@/components/medical-assistant/SuggestedQuestions";
+import { HealthTipsGrid } from "@/components/medical-assistant/HealthTipsGrid";
+import { ReminderCalendar } from "@/components/medical-assistant/ReminderCalendar";
 
 interface Message {
-  id: string;
-  role: 'user' | 'assistant' | 'system';
+  role: "user" | "assistant";
   content: string;
   timestamp: Date;
   isEmergency?: boolean;
 }
 
-// Emergency keywords detection
 const EMERGENCY_KEYWORDS = {
-  fr: ['douleur thoracique', 'poitrine', 'respirer', 'saignement', 'inconscient', 'crise cardiaque', 'avc', 'accident vasculaire', 'étouffer', 'empoisonnement', 'overdose', 'suicide', 'hémorragie'],
-  ar: ['ألم في الصدر', 'نزيف', 'إغماء', 'نوبة قلبية', 'سكتة دماغية', 'تسمم', 'انتحار'],
-  en: ['chest pain', 'breathing', 'bleeding', 'unconscious', 'heart attack', 'stroke', 'choking', 'poisoning', 'overdose', 'suicide', 'hemorrhage']
+  fr: ["urgence", "crise cardiaque", "accident", "hémorragie", "inconscient", "respire plus", "étouffement", "suicide"],
+  ar: ["طوارئ", "نوبة قلبية", "حادث", "نزيف", "فاقد الوعي", "اختناق", "انتحار"],
+  en: ["emergency", "heart attack", "accident", "bleeding", "unconscious", "not breathing", "choking", "suicide"]
 };
 
 const SUGGESTED_CATEGORIES = [
   {
-    id: 'symptoms',
     icon: Thermometer,
-    title: { fr: 'Symptômes', ar: 'الأعراض', en: 'Symptoms' },
-    color: 'text-red-500',
-    bg: 'bg-red-500/10',
+    title: { fr: "Symptômes courants", ar: "الأعراض الشائعة", en: "Common symptoms" },
+    color: "text-orange-500",
+    bgColor: "bg-orange-500/10",
     questions: {
-      fr: [
-        "J'ai mal à la tête depuis ce matin",
-        "Quels sont les symptômes de la grippe?",
-        "J'ai de la fièvre, que faire?"
-      ],
-      ar: [
-        "أعاني من صداع منذ الصباح",
-        "ما هي أعراض الإنفلونزا؟",
-        "لدي حمى، ماذا أفعل؟"
-      ],
-      en: [
-        "I've had a headache since this morning",
-        "What are the symptoms of the flu?",
-        "I have a fever, what should I do?"
-      ]
+      fr: ["J'ai mal à la tête depuis ce matin", "J'ai de la fièvre, que faire?", "Je tousse beaucoup"],
+      ar: ["عندي صداع منذ الصباح", "عندي حمى، ماذا أفعل؟", "أسعل كثيراً"],
+      en: ["I've had a headache since morning", "I have a fever, what to do?", "I'm coughing a lot"]
     }
   },
-  {
-    id: 'firstaid',
-    icon: Activity,
-    title: { fr: 'Premiers secours', ar: 'الإسعافات الأولية', en: 'First Aid' },
-    color: 'text-blue-500',
-    bg: 'bg-blue-500/10',
-    questions: {
-      fr: [
-        "Comment traiter une brûlure légère?",
-        "Que faire en cas de coupure?",
-        "Comment réagir face à un évanouissement?"
-      ],
-      ar: [
-        "كيفية علاج الحروق الخفيفة؟",
-        "ماذا أفعل في حالة الجرح؟",
-        "كيف أتصرف أمام الإغماء؟"
-      ],
-      en: [
-        "How to treat a minor burn?",
-        "What to do for a cut?",
-        "How to react to fainting?"
-      ]
-    }
-  },
-  {
-    id: 'medication',
-    icon: Pill,
-    title: { fr: 'Médicaments', ar: 'الأدوية', en: 'Medication' },
-    color: 'text-purple-500',
-    bg: 'bg-purple-500/10',
-    questions: {
-      fr: [
-        "Quand prendre du paracétamol?",
-        "Effets secondaires des antibiotiques",
-        "Peut-on mélanger certains médicaments?"
-      ],
-      ar: [
-        "متى يجب تناول الباراسيتامول؟",
-        "الآثار الجانبية للمضادات الحيوية",
-        "هل يمكن خلط بعض الأدوية؟"
-      ],
-      en: [
-        "When to take paracetamol?",
-        "Antibiotic side effects",
-        "Can certain medications be mixed?"
-      ]
-    }
-  },
-  {
-    id: 'prevention',
-    icon: Shield,
-    title: { fr: 'Prévention', ar: 'الوقاية', en: 'Prevention' },
-    color: 'text-green-500',
-    bg: 'bg-green-500/10',
-    questions: {
-      fr: [
-        "Comment renforcer mon immunité?",
-        "Vaccinations recommandées",
-        "Conseils pour bien dormir"
-      ],
-      ar: [
-        "كيف أقوي مناعتي؟",
-        "التطعيمات الموصى بها",
-        "نصائح للنوم الجيد"
-      ],
-      en: [
-        "How to boost my immunity?",
-        "Recommended vaccinations",
-        "Tips for better sleep"
-      ]
-    }
-  }
-];
-
-const HEALTH_TIPS = [
   {
     icon: Heart,
-    title: { fr: 'Santé cardiaque', ar: 'صحة القلب', en: 'Heart Health' },
-    tip: { 
-      fr: '30 minutes d\'activité par jour réduisent les risques cardiovasculaires.',
-      ar: '30 دقيقة من النشاط يوميًا تقلل من مخاطر القلب والأوعية الدموية.',
-      en: '30 minutes of activity per day reduces cardiovascular risks.'
+    title: { fr: "Premiers secours", ar: "الإسعافات الأولية", en: "First aid" },
+    color: "text-red-500",
+    bgColor: "bg-red-500/10",
+    questions: {
+      fr: ["Comment traiter une brûlure légère?", "Que faire en cas d'étouffement?", "Comment arrêter un saignement?"],
+      ar: ["كيف أعالج حرقاً خفيفاً؟", "ماذا أفعل في حالة الاختناق؟", "كيف أوقف النزيف؟"],
+      en: ["How to treat a minor burn?", "What to do if someone is choking?", "How to stop bleeding?"]
+    }
+  },
+  {
+    icon: Pill,
+    title: { fr: "Médicaments", ar: "الأدوية", en: "Medications" },
+    color: "text-purple-500",
+    bgColor: "bg-purple-500/10",
+    questions: {
+      fr: ["Comment prendre du paracétamol?", "Effets secondaires des antibiotiques?", "Interactions médicamenteuses?"],
+      ar: ["كيف آخذ الباراسيتامول؟", "الآثار الجانبية للمضادات الحيوية؟", "التفاعلات الدوائية؟"],
+      en: ["How to take paracetamol?", "Antibiotic side effects?", "Drug interactions?"]
+    }
+  },
+  {
+    icon: Shield,
+    title: { fr: "Prévention", ar: "الوقاية", en: "Prevention" },
+    color: "text-teal-500",
+    bgColor: "bg-teal-500/10",
+    questions: {
+      fr: ["Comment renforcer mon immunité?", "Quand faire un check-up?", "Vaccins recommandés?"],
+      ar: ["كيف أقوي مناعتي؟", "متى أجري فحصاً طبياً؟", "اللقاحات الموصى بها؟"],
+      en: ["How to boost my immunity?", "When to get a check-up?", "Recommended vaccines?"]
     }
   },
   {
     icon: Brain,
-    title: { fr: 'Bien-être mental', ar: 'الصحة النفسية', en: 'Mental Wellness' },
-    tip: {
-      fr: 'La méditation et la respiration profonde aident à réduire le stress.',
-      ar: 'التأمل والتنفس العميق يساعدان في تقليل التوتر.',
-      en: 'Meditation and deep breathing help reduce stress.'
+    title: { fr: "Santé mentale", ar: "الصحة النفسية", en: "Mental health" },
+    color: "text-indigo-500",
+    bgColor: "bg-indigo-500/10",
+    questions: {
+      fr: ["Comment gérer le stress?", "Techniques de relaxation?", "Signes de dépression?"],
+      ar: ["كيف أتعامل مع التوتر؟", "تقنيات الاسترخاء؟", "علامات الاكتئاب؟"],
+      en: ["How to manage stress?", "Relaxation techniques?", "Signs of depression?"]
     }
   }
 ];
@@ -154,155 +95,154 @@ const HEALTH_TIPS = [
 export default function MedicalAssistantPage() {
   const navigate = useNavigate();
   const { language } = useLanguage();
-  const lang = language || 'fr';
-  const isRTL = lang === 'ar';
-
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('chat');
+  const [activeTab, setActiveTab] = useState("chat");
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Translations
-  const t = useMemo(() => ({
-    title: { fr: 'Assistant Médical IA', ar: 'المساعد الطبي الذكي', en: 'AI Medical Assistant' },
-    subtitle: { fr: 'Votre compagnon santé disponible 24/7', ar: 'رفيقك الصحي متاح على مدار الساعة', en: 'Your health companion available 24/7' },
-    disclaimer1: { fr: 'Cet assistant ne remplace pas un professionnel de santé.', ar: 'هذا المساعد لا يغني عن استشارة طبيب.', en: 'This assistant does not replace a healthcare professional.' },
-    disclaimer2: { fr: 'Pour les urgences, contactez immédiatement le 14 (SAMU) ou le 1021.', ar: 'للطوارئ، اتصل فوراً بـ 14 (سامو) أو 1021.', en: 'For emergencies, contact 14 (SAMU) or 1021 immediately.' },
-    placeholder: { fr: 'Décrivez vos symptômes ou posez une question...', ar: 'صف أعراضك أو اطرح سؤالاً...', en: 'Describe your symptoms or ask a question...' },
-    chat: { fr: 'Discussion', ar: 'محادثة', en: 'Chat' },
-    tips: { fr: 'Conseils', ar: 'نصائح', en: 'Tips' },
-    calendar: { fr: 'Rappels', ar: 'تذكيرات', en: 'Reminders' },
-    emergencyTitle: { fr: 'Urgence détectée', ar: 'تم الكشف عن حالة طوارئ', en: 'Emergency Detected' },
-    emergencyDesc: { fr: 'Si vous êtes en situation d\'urgence, appelez immédiatement les secours.', ar: 'إذا كنت في حالة طوارئ، اتصل بالإسعاف فوراً.', en: 'If you are in an emergency, call for help immediately.' },
-    callEmergency: { fr: 'Appeler le SAMU (14)', ar: 'اتصل بالإسعاف (14)', en: 'Call SAMU (14)' },
-    findNearby: { fr: 'Trouver les urgences proches', ar: 'العثور على أقرب طوارئ', en: 'Find nearby emergency' },
-    welcome: { 
-      fr: 'Bonjour! 👋 Je suis votre assistant santé virtuel CityHealth. Je peux vous aider à:\n\n• Comprendre vos symptômes\n• Obtenir des conseils de premiers secours\n• Trouver des informations sur les médicaments\n• Vous orienter vers les bons professionnels\n\nComment puis-je vous aider?',
-      ar: 'مرحباً! 👋 أنا مساعدك الصحي الافتراضي CityHealth. يمكنني مساعدتك في:\n\n• فهم أعراضك\n• الحصول على نصائح الإسعافات الأولية\n• العثور على معلومات حول الأدوية\n• توجيهك إلى المهنيين المناسبين\n\nكيف يمكنني مساعدتك؟',
-      en: 'Hello! 👋 I am your virtual CityHealth health assistant. I can help you:\n\n• Understand your symptoms\n• Get first aid advice\n• Find medication information\n• Guide you to the right professionals\n\nHow can I help you?'
-    }
-  }), []);
+  const t = useMemo(() => {
+    const translations = {
+      fr: {
+        title: "Assistant Médical IA",
+        subtitle: "Votre compagnon santé 24/7",
+        online: "En ligne",
+        stats: "10k+ réponses",
+        disclaimer: "Important : Cet assistant ne remplace pas un professionnel de santé. En cas d'urgence, appelez le 15 (SAMU).",
+        emergencyTitle: "Urgence détectée",
+        emergencyDesc: "Si vous êtes en situation d'urgence, contactez immédiatement les secours.",
+        callEmergency: "Appeler le 15",
+        findFacility: "Trouver un hôpital",
+        tabs: { chat: "Discussion", tips: "Conseils", reminders: "Rappels" },
+        categories: "Questions fréquentes",
+        welcome: "Bonjour ! 👋 Je suis votre assistant santé virtuel. Je peux vous aider à comprendre vos symptômes, obtenir des conseils de premiers secours et trouver des informations médicales. Comment puis-je vous aider ?",
+        placeholder: "Décrivez vos symptômes ou posez une question..."
+      },
+      ar: {
+        title: "المساعد الطبي الذكي",
+        subtitle: "رفيقك الصحي 24/7",
+        online: "متصل",
+        stats: "+10k إجابة",
+        disclaimer: "هام: هذا المساعد لا يحل محل المتخصص الصحي. في حالة الطوارئ، اتصل بالإسعاف.",
+        emergencyTitle: "تم اكتشاف حالة طوارئ",
+        emergencyDesc: "إذا كنت في حالة طوارئ، اتصل بالإسعاف فوراً.",
+        callEmergency: "اتصل بالإسعاف",
+        findFacility: "ابحث عن مستشفى",
+        tabs: { chat: "المحادثة", tips: "النصائح", reminders: "التذكيرات" },
+        categories: "الأسئلة الشائعة",
+        welcome: "مرحباً! 👋 أنا مساعدك الصحي الافتراضي. يمكنني مساعدتك في فهم أعراضك والحصول على نصائح الإسعافات الأولية. كيف يمكنني مساعدتك؟",
+        placeholder: "صف أعراضك أو اطرح سؤالاً..."
+      },
+      en: {
+        title: "AI Medical Assistant",
+        subtitle: "Your 24/7 health companion",
+        online: "Online",
+        stats: "10k+ answers",
+        disclaimer: "Important: This assistant does not replace a healthcare professional. In case of emergency, call emergency services.",
+        emergencyTitle: "Emergency detected",
+        emergencyDesc: "If you are in an emergency, contact emergency services immediately.",
+        callEmergency: "Call Emergency",
+        findFacility: "Find hospital",
+        tabs: { chat: "Chat", tips: "Tips", reminders: "Reminders" },
+        categories: "Frequently Asked",
+        welcome: "Hello! 👋 I'm your virtual health assistant. I can help you understand your symptoms, get first aid advice, and find medical information. How can I help you?",
+        placeholder: "Describe your symptoms or ask a question..."
+      }
+    };
+    return translations[language as keyof typeof translations] || translations.fr;
+  }, [language]);
 
-  // Initialize with welcome message
+  // Initialize welcome message
   useEffect(() => {
     if (messages.length === 0) {
       setMessages([{
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: t.welcome[lang as keyof typeof t.welcome] || t.welcome.fr,
+        role: "assistant",
+        content: t.welcome,
         timestamp: new Date()
       }]);
     }
-  }, [lang]);
+  }, [t.welcome]);
 
+  // Auto-scroll on new messages
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isLoading]);
 
-  const checkForEmergency = (text: string): boolean => {
-    const keywords = EMERGENCY_KEYWORDS[lang as keyof typeof EMERGENCY_KEYWORDS] || EMERGENCY_KEYWORDS.fr;
-    const lowerText = text.toLowerCase();
-    return keywords.some(keyword => lowerText.includes(keyword.toLowerCase()));
-  };
+  const checkForEmergency = useCallback((text: string): boolean => {
+    const keywords = EMERGENCY_KEYWORDS[language as keyof typeof EMERGENCY_KEYWORDS] || EMERGENCY_KEYWORDS.fr;
+    return keywords.some(keyword => text.toLowerCase().includes(keyword.toLowerCase()));
+  }, [language]);
 
-  const sendMessage = async (messageText?: string) => {
-    const textToSend = messageText || input;
-    if (!textToSend.trim() || isLoading) return;
+  const sendMessage = useCallback(async (messageText?: string) => {
+    const textToSend = messageText || input.trim();
+    if (!textToSend || isLoading) return;
 
     const isEmergency = checkForEmergency(textToSend);
-
     const userMessage: Message = {
-      id: crypto.randomUUID(),
-      role: 'user',
+      role: "user",
       content: textToSend,
       timestamp: new Date(),
       isEmergency
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInput('');
+    setInput("");
     setIsLoading(true);
 
-    // If emergency, add warning first
-    if (isEmergency) {
-      setMessages(prev => [...prev, {
-        id: crypto.randomUUID(),
-        role: 'system',
-        content: 'emergency',
-        timestamp: new Date(),
-        isEmergency: true
-      }]);
-    }
-
-    let assistantContent = '';
-
     try {
-      const { streamChat } = await import('@/services/aiChatService');
+      const { streamChat } = await import("@/services/aiChatService");
       
-      // Add health context to the system prompt
-      const systemContext = lang === 'ar' 
-        ? 'أنت مساعد صحي افتراضي. قدم معلومات دقيقة ومفيدة ولكن ذكّر دائماً المستخدم باستشارة طبيب للتشخيص.'
-        : lang === 'en'
-        ? 'You are a virtual health assistant. Provide accurate and helpful information but always remind users to consult a doctor for diagnosis.'
-        : 'Tu es un assistant santé virtuel. Fournis des informations précises et utiles mais rappelle toujours à l\'utilisateur de consulter un médecin pour un diagnostic.';
+      const systemPrompt = language === "ar" 
+        ? "أنت مساعد صحي افتراضي. قدم معلومات دقيقة ومفيدة ولكن ذكّر دائماً المستخدم باستشارة طبيب."
+        : language === "en"
+        ? "You are a virtual health assistant. Provide accurate information but always remind users to consult a doctor."
+        : "Tu es un assistant santé virtuel. Fournis des informations précises mais rappelle toujours de consulter un médecin.";
+
+      let assistantContent = "";
+      setMessages(prev => [...prev, { role: "assistant", content: "", timestamp: new Date() }]);
 
       await streamChat({
         messages: [
-          { role: 'assistant' as const, content: systemContext },
-          ...messages.filter(m => m.role !== 'system').concat(userMessage).map(m => ({
-            role: m.role as 'user' | 'assistant',
-            content: m.content,
-          }))
+          { role: "assistant", content: systemPrompt },
+          ...messages.map(m => ({ role: m.role, content: m.content })),
+          { role: "user", content: textToSend }
         ],
-        onDelta: (chunk) => {
-          assistantContent += chunk;
+        onDelta: (delta) => {
+          assistantContent += delta;
           setMessages(prev => {
-            const lastMsg = prev[prev.length - 1];
-            if (lastMsg?.role === 'assistant' && !lastMsg.isEmergency) {
-              return prev.map((m, i) => 
-                i === prev.length - 1 
-                  ? { ...m, content: assistantContent }
-                  : m
-              );
-            }
-            return [...prev, {
-              id: crypto.randomUUID(),
-              role: 'assistant',
-              content: assistantContent,
-              timestamp: new Date(),
-            }];
+            const updated = [...prev];
+            updated[updated.length - 1] = {
+              ...updated[updated.length - 1],
+              content: assistantContent
+            };
+            return updated;
           });
         },
-        onDone: () => {
-          setIsLoading(false);
-        },
-        onError: (error) => {
-          toast.error(error.message);
-          setIsLoading(false);
-        },
+        onDone: () => setIsLoading(false),
+        onError: () => setIsLoading(false)
       });
-    } catch (error) {
-      toast.error('Erreur lors de l\'envoi du message');
-      console.error('Chat error:', error);
+    } catch {
       setIsLoading(false);
     }
-  };
+  }, [input, isLoading, messages, language, checkForEmergency]);
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
+  const lastUserMessage = messages.filter(m => m.role === "user").pop();
+  const showEmergencyAlert = lastUserMessage?.isEmergency;
 
   return (
-    <div className={cn("min-h-screen bg-gradient-to-br from-teal-50 via-blue-50 to-cyan-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900", isRTL && "rtl")}>
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur border-b">
+    <div className={cn(
+      "min-h-screen bg-gradient-to-br from-teal-50/50 via-cyan-50/30 to-background dark:from-teal-950/20 dark:via-cyan-950/10 dark:to-background",
+      language === "ar" && "rtl"
+    )}>
+      {/* Animated Header */}
+      <motion.header
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border/50"
+      >
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -310,258 +250,271 @@ export default function MedicalAssistantPage() {
                 variant="ghost"
                 size="icon"
                 onClick={() => navigate(-1)}
+                className="rounded-full hover:bg-muted"
               >
-                <ArrowLeft className={cn("h-5 w-5", isRTL && "rotate-180")} />
+                <ArrowLeft className={cn("h-5 w-5", language === "ar" && "rotate-180")} />
               </Button>
+
               <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-full flex items-center justify-center">
-                    <Stethoscope className="h-6 w-6 text-white" />
+                {/* Animated Bot Icon */}
+                <motion.div
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  className="relative"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-teal-500/25">
+                    <Bot className="w-6 h-6 text-white" />
                   </div>
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-background" />
-                </div>
+                  <motion.span 
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                    className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-background"
+                  />
+                </motion.div>
+
                 <div>
-                  <h1 className="text-xl font-bold flex items-center gap-2">
-                    {t.title[lang as keyof typeof t.title] || t.title.fr}
-                    <Sparkles className="h-5 w-5 text-teal-500" />
+                  <h1 className="font-bold text-lg flex items-center gap-2">
+                    {t.title}
+                    <Sparkles className="w-4 h-4 text-teal-500" />
                   </h1>
-                  <p className="text-sm text-muted-foreground">
-                    {t.subtitle[lang as keyof typeof t.subtitle] || t.subtitle.fr}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{t.subtitle}</p>
                 </div>
               </div>
             </div>
-            <Badge variant="secondary" className="hidden md:flex items-center gap-1 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              En ligne
-            </Badge>
+
+            <div className="flex items-center gap-3">
+              <Badge 
+                variant="secondary" 
+                className="hidden sm:flex items-center gap-1.5 bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20"
+              >
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                {t.online}
+              </Badge>
+              <Badge variant="outline" className="hidden md:flex items-center gap-1">
+                <Activity className="w-3 h-3" />
+                {t.stats}
+              </Badge>
+              <Button 
+                variant="destructive" 
+                size="sm"
+                className="gap-1.5"
+                onClick={() => window.location.href = "tel:15"}
+              >
+                <Phone className="w-4 h-4" />
+                <span className="hidden sm:inline">15</span>
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      </motion.header>
 
-      {/* Mandatory Disclaimers */}
-      <div className="container mx-auto px-4 py-2">
-        <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950 dark:border-amber-800">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <AlertDescription className="text-amber-800 dark:text-amber-200 text-sm">
-            <strong>{t.disclaimer1[lang as keyof typeof t.disclaimer1] || t.disclaimer1.fr}</strong>{' '}
-            {t.disclaimer2[lang as keyof typeof t.disclaimer2] || t.disclaimer2.fr}
+      {/* Disclaimer Banner */}
+      <div className="container mx-auto px-4 py-3">
+        <Alert className="border-amber-500/30 bg-amber-500/5">
+          <AlertTriangle className="h-4 w-4 text-amber-500" />
+          <AlertDescription className="text-sm text-muted-foreground">
+            {t.disclaimer}
           </AlertDescription>
         </Alert>
       </div>
 
-      <div className="container mx-auto px-4 py-4 max-w-6xl">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 mb-4">
-            <TabsTrigger value="chat" className="flex items-center gap-2">
-              <MessageCircle className="h-4 w-4" />
-              {t.chat[lang as keyof typeof t.chat] || t.chat.fr}
+      {/* Main Content */}
+      <main className="container mx-auto px-4 pb-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="w-full max-w-md mx-auto grid grid-cols-3 mb-6">
+            <TabsTrigger value="chat" className="gap-2">
+              <MessageCircle className="w-4 h-4" />
+              <span className="hidden sm:inline">{t.tabs.chat}</span>
             </TabsTrigger>
-            <TabsTrigger value="tips" className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4" />
-              {t.tips[lang as keyof typeof t.tips] || t.tips.fr}
+            <TabsTrigger value="tips" className="gap-2">
+              <BookOpen className="w-4 h-4" />
+              <span className="hidden sm:inline">{t.tabs.tips}</span>
             </TabsTrigger>
-            <TabsTrigger value="calendar" className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              {t.calendar[lang as keyof typeof t.calendar] || t.calendar.fr}
+            <TabsTrigger value="reminders" className="gap-2">
+              <Calendar className="w-4 h-4" />
+              <span className="hidden sm:inline">{t.tabs.reminders}</span>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="chat">
-            <div className="grid lg:grid-cols-3 gap-6">
-              {/* Sidebar - Categories */}
-              <div className="lg:col-span-1 space-y-4">
-                <Card className="border-teal-200 dark:border-teal-800">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Lightbulb className="h-5 w-5 text-teal-500" />
-                      Questions fréquentes
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    {SUGGESTED_CATEGORIES.map((category) => (
-                      <div key={category.id} className="space-y-1">
-                        <Button
-                          variant="ghost"
-                          className={cn("w-full justify-start gap-2", category.bg)}
-                        >
-                          <category.icon className={cn("h-4 w-4", category.color)} />
-                          {category.title[lang as keyof typeof category.title] || category.title.fr}
-                        </Button>
-                        <div className="pl-6 space-y-1">
-                          {(category.questions[lang as keyof typeof category.questions] || category.questions.fr).map((q, i) => (
-                            <Button
-                              key={i}
-                              variant="ghost"
-                              size="sm"
-                              className="w-full justify-start text-xs h-auto py-2 text-muted-foreground hover:text-foreground"
-                              onClick={() => sendMessage(q)}
-                            >
-                              {q}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
+          {/* Chat Tab */}
+          <TabsContent value="chat" className="mt-0">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              {/* Sidebar - Accordion Categories */}
+              <motion.aside
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.4, delay: 0.1 }}
+                className="lg:col-span-1 order-2 lg:order-1"
+              >
+                <div className="sticky top-32 space-y-4">
+                  <h3 className="font-semibold text-sm flex items-center gap-2 px-1">
+                    <Sparkles className="w-4 h-4 text-teal-500" />
+                    {t.categories}
+                  </h3>
+                  
+                  <Accordion type="single" collapsible className="space-y-2">
+                    {SUGGESTED_CATEGORIES.map((category, index) => (
+                      <AccordionItem 
+                        key={index} 
+                        value={`category-${index}`}
+                        className="border rounded-xl px-3 bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-colors"
+                      >
+                        <AccordionTrigger className="hover:no-underline py-3">
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "w-8 h-8 rounded-lg flex items-center justify-center transition-transform",
+                              category.bgColor
+                            )}>
+                              <category.icon className={cn("w-4 h-4", category.color)} />
+                            </div>
+                            <span className="text-sm font-medium">
+                              {category.title[language as keyof typeof category.title] || category.title.fr}
+                            </span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-1.5 pb-2">
+                            {(category.questions[language as keyof typeof category.questions] || category.questions.fr).map((question, qIndex) => (
+                              <motion.button
+                                key={qIndex}
+                                whileHover={{ x: 4 }}
+                                onClick={() => sendMessage(question)}
+                                className="w-full text-left text-sm px-3 py-2 rounded-lg hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                {question}
+                              </motion.button>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
                     ))}
-                  </CardContent>
-                </Card>
-              </div>
+                  </Accordion>
+                </div>
+              </motion.aside>
 
               {/* Chat Area */}
-              <div className="lg:col-span-2">
-                <Card className="h-[600px] flex flex-col border-teal-200 dark:border-teal-800">
-                  {/* Messages */}
-                  <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-                    <div className="space-y-4">
-                      {messages.map((message) => {
-                        // Render emergency warning
-                        if (message.role === 'system' && message.isEmergency) {
-                          return (
-                            <Alert key={message.id} variant="destructive" className="bg-red-50 border-red-300 dark:bg-red-950">
-                              <AlertTriangle className="h-5 w-5" />
-                              <AlertTitle>{t.emergencyTitle[lang as keyof typeof t.emergencyTitle] || t.emergencyTitle.fr}</AlertTitle>
-                              <AlertDescription className="mt-2">
-                                <p className="mb-3">{t.emergencyDesc[lang as keyof typeof t.emergencyDesc] || t.emergencyDesc.fr}</p>
-                                <div className="flex flex-wrap gap-2">
-                                  <Button 
-                                    variant="destructive" 
-                                    size="sm"
-                                    onClick={() => window.location.href = 'tel:14'}
-                                  >
-                                    <Phone className="h-4 w-4 mr-2" />
-                                    {t.callEmergency[lang as keyof typeof t.callEmergency] || t.callEmergency.fr}
-                                  </Button>
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => navigate('/providers-map?type=hospital')}
-                                  >
-                                    <MapPin className="h-4 w-4 mr-2" />
-                                    {t.findNearby[lang as keyof typeof t.findNearby] || t.findNearby.fr}
-                                  </Button>
-                                </div>
-                              </AlertDescription>
-                            </Alert>
-                          );
-                        }
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.2 }}
+                className="lg:col-span-3 order-1 lg:order-2"
+              >
+                <div className="rounded-2xl border bg-card/50 backdrop-blur-sm overflow-hidden shadow-xl shadow-teal-500/5">
+                  {/* Emergency Alert */}
+                  <AnimatePresence>
+                    {showEmergencyAlert && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <Alert variant="destructive" className="rounded-none border-x-0 border-t-0">
+                          <AlertTriangle className="h-4 w-4" />
+                          <AlertTitle>{t.emergencyTitle}</AlertTitle>
+                          <AlertDescription className="mt-2">
+                            {t.emergencyDesc}
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              <Button 
+                                size="sm" 
+                                variant="destructive"
+                                onClick={() => window.location.href = "tel:15"}
+                              >
+                                <Phone className="w-4 h-4 mr-1" />
+                                {t.callEmergency}
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => navigate("/emergency")}
+                              >
+                                <MapPin className="w-4 h-4 mr-1" />
+                                {t.findFacility}
+                              </Button>
+                            </div>
+                          </AlertDescription>
+                        </Alert>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
-                        return (
-                          <div
-                            key={message.id}
-                            className={cn(
-                              "flex gap-3",
-                              message.role === 'user' ? 'justify-end' : 'justify-start'
-                            )}
-                          >
-                            {message.role === 'assistant' && (
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center flex-shrink-0">
-                                <Bot className="h-4 w-4 text-white" />
-                              </div>
-                            )}
-                            <div
-                              className={cn(
-                                "max-w-[85%] rounded-2xl p-4 shadow-sm",
-                                message.role === 'user'
-                                  ? 'bg-gradient-to-br from-teal-500 to-cyan-500 text-white rounded-br-sm'
-                                  : 'bg-white dark:bg-slate-800 rounded-bl-sm border border-teal-100 dark:border-teal-900'
-                              )}
-                            >
-                              <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                              <p className={cn(
-                                "text-xs mt-2",
-                                message.role === 'user' ? 'text-white/70' : 'text-muted-foreground'
-                              )}>
-                                {message.timestamp.toLocaleTimeString(lang === 'ar' ? 'ar-DZ' : 'fr-FR', { 
-                                  hour: '2-digit', 
-                                  minute: '2-digit' 
-                                })}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      {isLoading && (
-                        <div className="flex gap-3 justify-start">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center">
-                            <Bot className="h-4 w-4 text-white" />
-                          </div>
-                          <div className="bg-white dark:bg-slate-800 rounded-2xl rounded-bl-sm p-4 shadow-sm border border-teal-100">
-                            <div className="flex items-center gap-2">
-                              <Loader2 className="h-4 w-4 animate-spin text-teal-500" />
-                              <span className="text-sm text-muted-foreground">Analyse en cours...</span>
-                            </div>
-                          </div>
-                        </div>
+                  {/* Messages Area */}
+                  <ScrollArea className="h-[500px] p-6" ref={scrollRef as any}>
+                    <div className="space-y-6">
+                      <AnimatePresence mode="popLayout">
+                        {messages.map((message, index) => (
+                          <ChatMessage
+                            key={index}
+                            role={message.role}
+                            content={message.content}
+                            timestamp={message.timestamp}
+                            isEmergency={message.isEmergency}
+                          />
+                        ))}
+                      </AnimatePresence>
+
+                      {/* Typing Indicator */}
+                      {isLoading && messages[messages.length - 1]?.content === "" && (
+                        <TypingIndicator />
+                      )}
+
+                      {/* Suggested Follow-ups */}
+                      {messages.length > 1 && 
+                       messages[messages.length - 1]?.role === "assistant" && 
+                       messages[messages.length - 1]?.content && 
+                       !isLoading && (
+                        <SuggestedQuestions
+                          questions={
+                            SUGGESTED_CATEGORIES[0].questions[language as keyof typeof SUGGESTED_CATEGORIES[0]["questions"]] || 
+                            SUGGESTED_CATEGORIES[0].questions.fr
+                          }
+                          onSelect={sendMessage}
+                        />
                       )}
                     </div>
                   </ScrollArea>
 
-                  {/* Input */}
-                  <div className="p-4 border-t bg-teal-50/50 dark:bg-slate-800/50">
-                    <div className="flex gap-2">
-                      <Input
-                        ref={inputRef}
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        placeholder={t.placeholder[lang as keyof typeof t.placeholder] || t.placeholder.fr}
-                        disabled={isLoading}
-                        className="flex-1 bg-white dark:bg-slate-900"
-                        dir={isRTL ? 'rtl' : 'ltr'}
-                      />
-                      <Button 
-                        onClick={() => sendMessage()} 
-                        disabled={isLoading || !input.trim()}
-                        size="icon"
-                        className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600"
-                      >
-                        <Send className={cn("h-4 w-4", isRTL && "rotate-180")} />
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="tips">
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {HEALTH_TIPS.map((tip, i) => (
-                <Card key={i} className="border-teal-200 dark:border-teal-800">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-full bg-teal-100 dark:bg-teal-900 flex items-center justify-center">
-                        <tip.icon className="h-5 w-5 text-teal-600" />
-                      </div>
-                      <h3 className="font-semibold">
-                        {tip.title[lang as keyof typeof tip.title] || tip.title.fr}
-                      </h3>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {tip.tip[lang as keyof typeof tip.tip] || tip.tip.fr}
+                  {/* Enhanced Input */}
+                  <div className="p-4 border-t bg-muted/30">
+                    <EnhancedInput
+                      value={input}
+                      onChange={setInput}
+                      onSend={() => sendMessage()}
+                      isLoading={isLoading}
+                      placeholder={t.placeholder}
+                    />
+                    <p className="text-[11px] text-center text-muted-foreground/60 mt-3">
+                      ⚕️ Les informations fournies ne remplacent pas un avis médical professionnel
                     </p>
-                  </CardContent>
-                </Card>
-              ))}
+                  </div>
+                </div>
+              </motion.div>
             </div>
           </TabsContent>
 
-          <TabsContent value="calendar">
-            <Card className="border-teal-200 dark:border-teal-800">
-              <CardContent className="p-6 text-center">
-                <Calendar className="h-12 w-12 mx-auto text-teal-500 mb-4" />
-                <h3 className="font-semibold text-lg mb-2">Rappels de santé</h3>
-                <p className="text-muted-foreground mb-4">
-                  Connectez-vous pour configurer vos rappels de vaccination et check-up.
-                </p>
-                <Button onClick={() => navigate('/auth')}>
-                  Se connecter
-                </Button>
-              </CardContent>
-            </Card>
+          {/* Tips Tab */}
+          <TabsContent value="tips" className="mt-0">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              <HealthTipsGrid language={language} />
+            </motion.div>
+          </TabsContent>
+
+          {/* Reminders Tab */}
+          <TabsContent value="reminders" className="mt-0">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              <ReminderCalendar language={language} isLoggedIn={false} />
+            </motion.div>
           </TabsContent>
         </Tabs>
-      </div>
+      </main>
     </div>
   );
 }
