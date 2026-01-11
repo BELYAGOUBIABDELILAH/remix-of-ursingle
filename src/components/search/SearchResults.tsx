@@ -1,5 +1,5 @@
 import React, { useState, memo, useCallback, useRef, useEffect } from 'react';
-import { Heart, Phone, Star, MapPin, Clock, Navigation, Calendar, Share2 } from 'lucide-react';
+import { Heart, Phone, Star, MapPin, Clock, Navigation, Calendar, Share2, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,48 @@ import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { List, Grid } from 'react-window';
 import type { CSSProperties, ReactElement } from 'react';
+
+// Custom hook for detecting fast scrolling
+const useScrollingIndicator = (threshold = 150) => {
+  const [isScrolling, setIsScrolling] = useState(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastScrollTimeRef = useRef<number>(0);
+  const scrollVelocityRef = useRef<number>(0);
+
+  const handleScroll = useCallback(() => {
+    const now = Date.now();
+    const timeDiff = now - lastScrollTimeRef.current;
+    
+    // Calculate scroll velocity (lower time diff = faster scrolling)
+    if (timeDiff < threshold && timeDiff > 0) {
+      scrollVelocityRef.current = Math.min(1, threshold / timeDiff);
+      setIsScrolling(true);
+    }
+    
+    lastScrollTimeRef.current = now;
+
+    // Clear existing timeout
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+
+    // Set timeout to detect scroll stop
+    scrollTimeoutRef.current = setTimeout(() => {
+      setIsScrolling(false);
+      scrollVelocityRef.current = 0;
+    }, 150);
+  }, [threshold]);
+
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  return { isScrolling, onScroll: handleScroll };
+};
 
 interface SearchResultsProps {
   providers: Provider[];
@@ -236,6 +278,7 @@ export const SearchResults = ({ providers, viewMode, searchQuery }: SearchResult
   const [favorites, setFavorites] = useState<string[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 600 });
+  const { isScrolling, onScroll } = useScrollingIndicator();
 
   // Calculate container size for virtualization
   useEffect(() => {
@@ -295,43 +338,57 @@ export const SearchResults = ({ providers, viewMode, searchQuery }: SearchResult
   const useVirtualization = providers.length > VIRTUALIZATION_THRESHOLD;
 
   return (
-    <div className="flex-1 p-4" ref={containerRef}>
+    <div className="flex-1 p-4 relative" ref={containerRef}>
       {/* Results count */}
       <div className="mb-4 text-sm text-muted-foreground">
         {providers.length} {t('search', 'results')} {searchQuery && `pour "${searchQuery}"`}
       </div>
 
+      {/* Fast scroll indicator */}
+      {isScrolling && useVirtualization && (
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none">
+          <div className="bg-background/90 backdrop-blur-sm border border-border rounded-full px-4 py-2 shadow-lg flex items-center gap-2 animate-pulse">
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            <span className="text-sm font-medium text-foreground">Chargement...</span>
+          </div>
+        </div>
+      )}
+
       {useVirtualization ? (
         // Virtualized rendering for large lists
         viewMode === 'grid' ? (
-          <Grid
-            columnCount={columnCount}
-            columnWidth={columnWidth}
-            rowCount={rowCount}
-            rowHeight={GRID_ITEM_HEIGHT}
-            style={{ height: containerSize.height, width: containerSize.width }}
-            className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
-            cellComponent={GridCellComponent}
-            cellProps={{
-              providers,
-              favorites,
-              onToggleFavorite: toggleFavorite,
-              columnCount
-            } as GridCellProps}
-          />
+          <div onScroll={onScroll}>
+            <Grid
+              columnCount={columnCount}
+              columnWidth={columnWidth}
+              rowCount={rowCount}
+              rowHeight={GRID_ITEM_HEIGHT}
+              style={{ height: containerSize.height, width: containerSize.width }}
+              className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
+              cellComponent={GridCellComponent}
+              cellProps={{
+                providers,
+                favorites,
+                onToggleFavorite: toggleFavorite,
+                columnCount
+              } as GridCellProps}
+            />
+          </div>
         ) : (
-          <List
-            rowCount={providers.length}
-            rowHeight={LIST_ITEM_HEIGHT}
-            style={{ height: containerSize.height, width: containerSize.width }}
-            className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
-            rowComponent={ListRowComponent}
-            rowProps={{
-              providers,
-              favorites,
-              onToggleFavorite: toggleFavorite
-            } as ListRowProps}
-          />
+          <div onScroll={onScroll}>
+            <List
+              rowCount={providers.length}
+              rowHeight={LIST_ITEM_HEIGHT}
+              style={{ height: containerSize.height, width: containerSize.width }}
+              className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
+              rowComponent={ListRowComponent}
+              rowProps={{
+                providers,
+                favorites,
+                onToggleFavorite: toggleFavorite
+              } as ListRowProps}
+            />
+          </div>
         )
       ) : (
         // Standard rendering for small lists
