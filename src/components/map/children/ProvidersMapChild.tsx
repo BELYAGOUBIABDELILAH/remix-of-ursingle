@@ -2,7 +2,7 @@ import { useEffect, useMemo, useCallback, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet.markercluster';
-import { Filter, X, Clock, Building2, Search, MapPin } from 'lucide-react';
+import { Filter, X, Clock, Building2, Search, MapPin, Maximize2 } from 'lucide-react';
 import { useMapContext } from '@/contexts/MapContext';
 import { useVerifiedProviders } from '@/hooks/useProviders';
 import { ProviderCard } from '../ProviderCard';
@@ -50,6 +50,7 @@ const ProvidersMapChild = () => {
     selectedProvider,
     setSelectedProvider,
     flyTo,
+    fitBounds,
     geolocation,
     isRTL
   } = useMapContext();
@@ -88,7 +89,8 @@ const ProvidersMapChild = () => {
       search: 'Rechercher...',
       searchPlaceholder: 'Nom, spécialité, adresse...',
       noResults: 'Aucun résultat trouvé',
-      results: 'résultats'
+      results: 'résultats',
+      fitAll: 'Voir tous'
     },
     ar: {
       filters: 'الفلاتر',
@@ -99,7 +101,8 @@ const ProvidersMapChild = () => {
       search: 'بحث...',
       searchPlaceholder: 'الاسم، التخصص، العنوان...',
       noResults: 'لم يتم العثور على نتائج',
-      results: 'نتائج'
+      results: 'نتائج',
+      fitAll: 'عرض الكل'
     },
     en: {
       filters: 'Filters',
@@ -110,7 +113,8 @@ const ProvidersMapChild = () => {
       search: 'Search...',
       searchPlaceholder: 'Name, specialty, address...',
       noResults: 'No results found',
-      results: 'results'
+      results: 'results',
+      fitAll: 'Fit all'
     }
   }), []);
   
@@ -228,6 +232,17 @@ const ProvidersMapChild = () => {
     setSearchQuery(provider.name);
     handleProviderClick(provider);
   }, [handleProviderClick]);
+  
+  // Fit bounds to show all filtered providers
+  const handleFitAll = useCallback(() => {
+    if (filteredProviders.length === 0 || !mapRef.current) return;
+    
+    const bounds = L.latLngBounds(
+      filteredProviders.map(p => [p.lat, p.lng] as [number, number])
+    );
+    
+    fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+  }, [filteredProviders, mapRef, fitBounds]);
   
   // Optimized marker management
   useEffect(() => {
@@ -387,7 +402,7 @@ const ProvidersMapChild = () => {
       
       {/* Filter Panel */}
       <div className={cn(
-        "absolute top-16 z-10",
+        "absolute top-16 z-10 flex gap-2",
         isRTL ? "right-4" : "left-4"
       )}>
         <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
@@ -406,6 +421,23 @@ const ProvidersMapChild = () => {
               )}
             </Button>
           </CollapsibleTrigger>
+          
+          {/* Fit All Button - next to filters */}
+          {filteredProviders.length > 0 && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleFitAll}
+              className="shadow-lg bg-background/90 backdrop-blur-sm gap-2"
+              title={tx.fitAll}
+            >
+              <Maximize2 className="h-4 w-4" />
+              <span className="hidden sm:inline">{tx.fitAll}</span>
+              <Badge variant="outline" className="ml-1 h-5 px-1.5 text-xs">
+                {filteredProviders.length}
+              </Badge>
+            </Button>
+          )}
           
           <CollapsibleContent className="mt-2">
             <div className="bg-background/95 backdrop-blur-sm rounded-lg border shadow-lg p-4 w-64 space-y-4">
