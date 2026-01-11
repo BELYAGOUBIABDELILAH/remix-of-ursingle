@@ -7,10 +7,10 @@ import {
   Ambulance, 
   Heart,
   Eye,
-  Baby,
-  Brain
+  Baby
 } from 'lucide-react';
 
+// Balanced to 8 services for symmetric grid
 const services = [
   {
     icon: Stethoscope,
@@ -75,14 +75,6 @@ const services = [
     href: '/search?specialty=pediatrics',
     color: 'from-yellow-500 to-yellow-600',
     count: '25+'
-  },
-  {
-    icon: Brain,
-    title: 'Neurologie',
-    description: 'Spécialistes du système nerveux',
-    href: '/search?specialty=neurology',
-    color: 'from-indigo-500 to-indigo-600',
-    count: '10+'
   }
 ];
 
@@ -100,28 +92,29 @@ export const ServicesGrid = () => {
           </p>
         </div>
 
-        {/* Services Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4 md:gap-6">
+        {/* Services Grid - 4x2 on desktop, 2x4 on mobile */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
           {services.map((service, index) => (
             <Link
               key={service.title}
               to={service.href}
-              className="group relative overflow-hidden rounded-2xl bg-card border border-border/50 p-6 transition-all duration-300 hover:shadow-xl hover:border-primary/30 hover:-translate-y-1"
+              className="group relative overflow-hidden rounded-2xl bg-card border border-border/50 p-6 transition-all duration-300 hover:shadow-xl hover:border-primary/30 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               style={{ animationDelay: `${index * 50}ms` }}
+              aria-label={`${service.title} - ${service.description}`}
             >
               {/* Gradient Background on Hover */}
-              <div className={`absolute inset-0 bg-gradient-to-br ${service.color} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
+              <div className={`absolute inset-0 bg-gradient-to-br ${service.color} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} aria-hidden="true" />
               
               {/* Icon */}
               <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${service.color} flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                <service.icon className="h-7 w-7 text-white" />
+                <service.icon className="h-7 w-7 text-white" aria-hidden="true" />
               </div>
               
               {/* Content */}
               <h3 className="text-lg font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
                 {service.title}
               </h3>
-              <p className="text-sm text-muted-foreground mb-3">
+              <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                 {service.description}
               </p>
               
