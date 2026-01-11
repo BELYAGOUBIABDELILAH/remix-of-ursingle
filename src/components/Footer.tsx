@@ -17,7 +17,8 @@ import {
   Droplets,
   Baby,
   Pill,
-  Wrench
+  Wrench,
+  BookOpen
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
@@ -35,7 +36,8 @@ const Footer = () => {
         { label: isRTL ? 'طوارئ 24/7' : 'Urgences 24/7', href: '/map/emergency' },
         { label: isRTL ? 'مساعد الذكاء الاصطناعي' : 'Assistant IA Santé', href: '/medical-assistant' },
         { label: isRTL ? 'التبرع بالدم' : 'Don de sang', href: '/blood-donation' },
-        { label: isRTL ? 'المفضلة' : 'Mes favoris', href: '/favorites' }
+        { label: isRTL ? 'المفضلة' : 'Mes favoris', href: '/favorites' },
+        { label: isRTL ? 'التوثيق' : 'Documentation', href: '/docs', icon: BookOpen }
       ]
     },
     {
