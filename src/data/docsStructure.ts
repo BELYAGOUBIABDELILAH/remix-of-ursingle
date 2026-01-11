@@ -152,6 +152,132 @@ Chaque profil de professionnel affiche :
 
 Utilisez l'assistant IA en cliquant sur l'icône en bas à droite de l'écran pour poser vos questions.
         `
+      },
+      {
+        id: 'why-cityhealth',
+        title: 'Pourquoi CityHealth ?',
+        titleAr: 'لماذا CityHealth؟',
+        titleEn: 'Why CityHealth?',
+        description: 'Comprendre notre mission et nos valeurs',
+        icon: Heart,
+        tags: ['mission', 'valeurs', 'pourquoi', 'vision'],
+        content: `
+# Pourquoi CityHealth ?
+
+Révolutionner l'accès aux soins de santé à Sidi Bel Abbès.
+
+## 🎯 Parce que l'accès aux soins doit être simple
+
+Dans une ville en pleine croissance, trouver le bon professionnel de santé peut être un défi :
+- **Centralisation** : Toutes les informations au même endroit
+- **Disponibilité 24h/24** : Accédez à la plateforme à tout moment
+- **Multilingue** : Arabe, Français et Anglais
+
+## ⚡ Parce que les urgences n'attendent pas
+
+Chaque seconde compte en situation d'urgence :
+- **Accès instantané** aux pharmacies de garde
+- **Numéros d'urgence** toujours visibles
+- **Itinéraires GPS** vers l'établissement le plus proche
+
+## ✅ Parce que la confiance est essentielle
+
+Votre santé mérite les meilleurs professionnels :
+- **Vérification** des diplômes et accréditations
+- **Badge de confiance** pour les praticiens certifiés
+- **Avis vérifiés** de vrais patients
+
+## 🤝 Parce que la santé est une affaire collective
+
+Nous connectons toute la communauté :
+- **500+** professionnels de santé référencés
+- **Services 24/7** pour les urgences
+- **3 langues** pour tous les citoyens
+
+## 📍 Parce que nous connaissons notre ville
+
+CityHealth est fait par et pour Sidi Bel Abbès :
+- **Données locales** actualisées
+- **Carte interactive** de la ville
+- **Support local** réactif
+
+## Notre vision
+
+Faire de Sidi Bel Abbès un modèle d'accès aux soins en Algérie, où chaque citoyen peut trouver le professionnel adapté à ses besoins en quelques clics.
+        `
+      },
+      {
+        id: 'how-it-works',
+        title: 'Comment ça marche ?',
+        titleAr: 'كيف يعمل؟',
+        titleEn: 'How It Works',
+        description: 'Guide complet du fonctionnement de la plateforme',
+        icon: Zap,
+        tags: ['guide', 'fonctionnement', 'tutoriel', 'étapes'],
+        content: `
+# Comment fonctionne CityHealth ?
+
+Une plateforme simple et intuitive pour connecter les citoyens aux professionnels de santé.
+
+## 🔍 Pour les Citoyens - 4 étapes simples
+
+### 1. Recherchez
+Utilisez notre moteur de recherche intelligent :
+- Par **spécialité** : cardiologue, dentiste, pédiatre...
+- Par **symptôme** : mal de tête, douleur au dos...
+- Par **localisation** : près de chez vous
+
+### 2. Comparez
+Consultez les profils détaillés :
+- Qualifications et diplômes
+- Horaires d'ouverture
+- Avis des patients
+- Photos du cabinet
+
+### 3. Localisez
+Visualisez sur la carte interactive :
+- Position exacte sur la carte
+- Distance depuis votre position
+- Itinéraire GPS en un clic
+
+### 4. Contactez
+Prenez rendez-vous facilement :
+- Appel direct depuis l'application
+- Réservation en ligne (si disponible)
+- Chat avec l'assistant IA
+
+## 👨‍⚕️ Pour les Professionnels
+
+| Étape | Description | Résultat |
+|-------|-------------|----------|
+| Inscription | Créez votre profil | Compte activé |
+| Vérification | Soumettez vos documents | Badge ✅ |
+| Personnalisation | Complétez votre profil | Visibilité maximale |
+| Gestion | Gérez vos RDV | Patients satisfaits |
+
+## 📱 Accès multi-plateforme
+
+CityHealth fonctionne sur :
+- **Ordinateur** : Chrome, Firefox, Safari, Edge
+- **Tablette** : Interface adaptée
+- **Mobile** : Progressive Web App
+
+## 🆘 Numéros d'urgence
+
+| Service | Numéro |
+|---------|--------|
+| SAMU | 14 |
+| Police | 17 |
+| Protection Civile | 14 |
+| Gendarmerie | 1055 |
+
+## 🤖 Assistant IA
+
+Notre assistant intelligent peut :
+- Répondre à vos questions de santé
+- Suggérer des spécialistes adaptés
+- Guider votre navigation sur la plateforme
+        `
       }
     ]
   },
