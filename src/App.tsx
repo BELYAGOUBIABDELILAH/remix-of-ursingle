@@ -174,14 +174,15 @@ const AppRoutes = () => {
           </PageTransition>
         } 
       />
-      <Route 
-        path="/carte"
-        element={
-          <PageTransition>
-            <CartePage />
-          </PageTransition>
-        } 
-      />
+      {/* Unified Map Routes - MapMother with nested children */}
+      <Route path="/map" element={<MapMother />}>
+        <Route index element={<Navigate to="/map/providers" replace />} />
+        <Route path="providers" element={<ProvidersMapChild />} />
+        <Route path="emergency" element={<EmergencyMapChild />} />
+        <Route path="blood" element={<BloodMapChild />} />
+      </Route>
+      {/* Legacy /carte redirects to new map */}
+      <Route path="/carte" element={<Navigate to="/map/providers" replace />} />
       <Route 
         path="/contact" 
         element={
@@ -293,14 +294,8 @@ const AppRoutes = () => {
           </PageTransition>
         } 
       />
-      <Route 
-        path="/providers-map" 
-        element={
-          <PageTransition>
-            <ProvidersMapPage />
-          </PageTransition>
-        } 
-      />
+      {/* Legacy /providers-map redirects to new map */}
+      <Route path="/providers-map" element={<Navigate to="/map/providers" replace />} />
       <Route 
         path="/medical-assistant" 
         element={
@@ -326,8 +321,7 @@ const AppRoutes = () => {
         } 
       />
       {/* Redirect routes for backwards compatibility */}
-      <Route path="/map" element={<Navigate to="/carte" replace />} />
-      <Route path="/urgences" element={<Navigate to="/carte?mode=emergency" replace />} />
+      <Route path="/urgences" element={<Navigate to="/map/emergency" replace />} />
       <Route 
         path="*" 
         element={
