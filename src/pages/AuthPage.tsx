@@ -8,6 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { z } from 'zod';
+import { toast } from 'sonner';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 const loginSchema = z.object({
   email: z.string().email('Email invalide').max(255),
@@ -29,6 +32,9 @@ const AuthPage = () => {
   const { login, signup, loginWithGoogle, isAuthenticated, isLoading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
   const [isLoading, setIsLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotEmailSent, setForgotEmailSent] = useState(false);
   
   // Login form
   const [loginEmail, setLoginEmail] = useState('');
@@ -81,6 +87,7 @@ const AuthPage = () => {
       });
       setIsLoading(true);
       await signup(validated.email, validated.password, validated.fullName);
+      toast.success('Compte créé avec succès! Bienvenue sur CityHealth.');
       setSignupEmail('');
       setSignupPassword('');
       setFullName('');
@@ -106,10 +113,100 @@ const AuthPage = () => {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail) {
+      toast.error('Veuillez entrer votre email');
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, forgotEmail);
+      setForgotEmailSent(true);
+      toast.success('Email de réinitialisation envoyé! Vérifiez votre boîte de réception.');
+    } catch (error: any) {
+      if (error.code === 'auth/user-not-found') {
+        toast.error('Aucun compte associé à cet email');
+      } else {
+        toast.error('Erreur lors de l\'envoi. Veuillez réessayer.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Forgot Password View
+  if (showForgotPassword) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background to-muted">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Mot de passe oublié</CardTitle>
+            <CardDescription>
+              {forgotEmailSent 
+                ? 'Un email de réinitialisation a été envoyé' 
+                : 'Entrez votre email pour recevoir un lien de réinitialisation'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {forgotEmailSent ? (
+              <div className="space-y-4">
+                <div className="p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
+                  <p className="text-sm text-green-900 dark:text-green-100">
+                    📧 Vérifiez votre boîte de réception et suivez les instructions pour réinitialiser votre mot de passe.
+                  </p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  className="w-full" 
+                  onClick={() => {
+                    setShowForgotPassword(false);
+                    setForgotEmailSent(false);
+                    setForgotEmail('');
+                  }}
+                >
+                  Retour à la connexion
+                </Button>
+              </div>
+            ) : (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="forgot-email">Email</Label>
+                  <Input
+                    id="forgot-email"
+                    type="email"
+                    placeholder="votre@email.com"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Envoyer le lien'}
+                </Button>
+
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  className="w-full" 
+                  onClick={() => setShowForgotPassword(false)}
+                >
+                  Retour à la connexion
+                </Button>
+              </form>
+            )}
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -146,7 +243,16 @@ const AuthPage = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="login-password">Mot de passe</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="login-password">Mot de passe</Label>
+                    <button
+                      type="button"
+                      onClick={() => setShowForgotPassword(true)}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Mot de passe oublié?
+                    </button>
+                  </div>
                   <Input
                     id="login-password"
                     type="password"

@@ -1,5 +1,5 @@
-
 import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { Search, MapPin, Phone, Clock, Users, Heart, Stethoscope, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ import ToastContainer from "@/components/ToastContainer";
 import { Header } from "@/components/layout/Header";
 
 const Index = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedService, setSelectedService] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("");
@@ -107,7 +108,12 @@ const Index = () => {
     
     setIsLoading(true);
     
-    // Simulate search with loading
+    // Build query params and navigate to search
+    const params = new URLSearchParams();
+    if (searchQuery) params.set('q', searchQuery);
+    if (selectedService) params.set('type', selectedService);
+    if (selectedLocation) params.set('location', selectedLocation);
+    
     setTimeout(() => {
       setIsLoading(false);
       addToast({
@@ -115,9 +121,8 @@ const Index = () => {
         title: 'Search Complete',
         message: `Found providers for: ${searchQuery || selectedService || selectedLocation}`
       });
-      // Navigate to search results page
-      console.log("Searching for:", { searchQuery, selectedService, selectedLocation });
-    }, 1500);
+      navigate(`/search?${params.toString()}`);
+    }, 500);
   };
 
   return (
@@ -307,9 +312,11 @@ const Index = () => {
             
             
             <div className="text-center mt-8 animate-slide-up">
-              <Button variant="outline" size="lg" className="hover-lift ripple-effect">
-                View All Providers
-              </Button>
+              <Link to="/search">
+                <Button variant="outline" size="lg" className="hover-lift ripple-effect">
+                  View All Providers
+                </Button>
+              </Link>
             </div>
           </div>
         </section>
@@ -328,9 +335,11 @@ const Index = () => {
                   <p className="text-muted-foreground">
                     Join our verified healthcare provider network and connect with patients
                   </p>
-                  <Button className="w-full ripple-effect">
-                    Get Started
-                  </Button>
+                  <Link to="/provider/register">
+                    <Button className="w-full ripple-effect">
+                      Get Started
+                    </Button>
+                  </Link>
                 </CardContent>
               </Card>
               
@@ -344,9 +353,11 @@ const Index = () => {
                   <p className="text-muted-foreground">
                     Use our smart search to find healthcare providers near your location
                   </p>
-                  <Button variant="outline" className="w-full ripple-effect">
-                    Search Now
-                  </Button>
+                  <Link to="/search">
+                    <Button variant="outline" className="w-full ripple-effect">
+                      Search Now
+                    </Button>
+                  </Link>
                 </CardContent>
               </Card>
             </div>

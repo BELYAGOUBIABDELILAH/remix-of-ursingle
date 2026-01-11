@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { SearchInterface } from '@/components/search/SearchInterface';
 import { AdvancedFilters } from '@/components/search/AdvancedFilters';
 import { SearchResults } from '@/components/search/SearchResults';
@@ -6,6 +7,7 @@ import { SearchMap } from '@/components/search/SearchMap';
 import { SearchResultsSkeleton } from '@/components/search/SearchResultsSkeleton';
 import { SearchError } from '@/components/search/SearchError';
 import { useVerifiedProviders } from '@/hooks/useProviders';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import type { CityHealthProvider } from '@/data/providers';
 
 export type ViewMode = 'list' | 'grid' | 'map';
@@ -27,11 +29,17 @@ export interface FilterState {
 export type Provider = CityHealthProvider;
 
 const SearchPage = () => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchParams] = useSearchParams();
+  const initialQuery = searchParams.get('q') || '';
+  
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [sortBy, setSortBy] = useState<SortOption>('relevance');
   const [showFilters, setShowFilters] = useState(false);
   
+  // Debounce search query for performance
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
+
   const [filters, setFilters] = useState<FilterState>({
     categories: [],
     location: '',
@@ -52,9 +60,9 @@ const SearchPage = () => {
   const filteredProviders = useMemo(() => {
     let results = [...allProviders];
 
-    // Text search
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+    // Text search with debounced value
+    if (debouncedSearchQuery) {
+      const query = debouncedSearchQuery.toLowerCase();
       results = results.filter(provider =>
         provider.name.toLowerCase().includes(query) ||
         (provider.specialty || '').toLowerCase().includes(query) ||
@@ -125,7 +133,7 @@ const SearchPage = () => {
     }
 
     return sortedResults;
-  }, [allProviders, searchQuery, filters, sortBy]);
+  }, [allProviders, debouncedSearchQuery, filters, sortBy]);
 
   // Render content based on state
   const renderContent = () => {

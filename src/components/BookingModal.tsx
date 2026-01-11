@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, Clock, Mail, Phone as PhoneIcon, User, CheckCircle, Loader2 } from 'lucide-react';
+import { CalendarIcon, Clock, Mail, Phone as PhoneIcon, User, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import { useCreateAppointment } from '@/hooks/useAppointments';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,11 +22,46 @@ interface BookingModalProps {
 
 const timeSlots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30'];
 
+// Algerian phone number validation (05XX XX XX XX, 06XX XX XX XX, 07XX XX XX XX)
+const formatPhoneNumber = (value: string): string => {
+  // Remove all non-digits
+  const digits = value.replace(/\D/g, '');
+  
+  // Limit to 10 digits
+  const limited = digits.slice(0, 10);
+  
+  // Format as XX XX XX XX XX
+  if (limited.length <= 2) return limited;
+  if (limited.length <= 4) return `${limited.slice(0, 2)} ${limited.slice(2)}`;
+  if (limited.length <= 6) return `${limited.slice(0, 2)} ${limited.slice(2, 4)} ${limited.slice(4)}`;
+  if (limited.length <= 8) return `${limited.slice(0, 2)} ${limited.slice(2, 4)} ${limited.slice(4, 6)} ${limited.slice(6)}`;
+  return `${limited.slice(0, 2)} ${limited.slice(2, 4)} ${limited.slice(4, 6)} ${limited.slice(6, 8)} ${limited.slice(8)}`;
+};
+
+const validatePhoneNumber = (value: string): { valid: boolean; error?: string } => {
+  const digits = value.replace(/\D/g, '');
+  
+  if (digits.length === 0) {
+    return { valid: false, error: 'Le numéro de téléphone est requis' };
+  }
+  
+  if (digits.length < 10) {
+    return { valid: false, error: 'Le numéro doit contenir 10 chiffres' };
+  }
+  
+  if (!/^0[5-7]/.test(digits)) {
+    return { valid: false, error: 'Le numéro doit commencer par 05, 06 ou 07' };
+  }
+  
+  return { valid: true };
+};
+
 export const BookingModal: React.FC<BookingModalProps> = ({ open, onOpenChange, providerName, providerId }) => {
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [notes, setNotes] = useState('');
   const [step, setStep] = useState<'details' | 'datetime' | 'confirm'>('details');
@@ -35,10 +70,45 @@ export const BookingModal: React.FC<BookingModalProps> = ({ open, onOpenChange, 
   const { sendNotification } = useNotifications();
   const createAppointmentMutation = useCreateAppointment();
 
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setPhone(formatted);
+    
+    // Clear error while typing
+    if (phoneError) {
+      setPhoneError(null);
+    }
+  };
+
+  const handlePhoneBlur = () => {
+    const validation = validatePhoneNumber(phone);
+    if (!validation.valid) {
+      setPhoneError(validation.error || null);
+    }
+  };
+
   const canProceed = () => {
-    if (step === 'details') return name && phone;
+    if (step === 'details') {
+      const phoneValidation = validatePhoneNumber(phone);
+      return name && phoneValidation.valid;
+    }
     if (step === 'datetime') return selectedDate && selectedTime;
     return true;
+  };
+
+  const handleNext = () => {
+    if (step === 'details') {
+      const phoneValidation = validatePhoneNumber(phone);
+      if (!phoneValidation.valid) {
+        setPhoneError(phoneValidation.error || null);
+        return;
+      }
+      setStep('datetime');
+    } else if (step === 'datetime') {
+      setStep('confirm');
+    } else {
+      confirm();
+    }
   };
 
   const confirm = () => {
@@ -53,7 +123,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ open, onOpenChange, 
         providerId,
         providerName,
         patientName: name,
-        patientPhone: phone,
+        patientPhone: phone.replace(/\s/g, ''), // Store without spaces
         patientEmail: email || undefined,
         dateTime: appointmentDate.toISOString(),
         notes: notes || undefined,
@@ -85,6 +155,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ open, onOpenChange, 
           setSelectedTime('');
           setName('');
           setPhone('');
+          setPhoneError(null);
           setEmail('');
           setNotes('');
           onOpenChange(false);
@@ -155,9 +226,21 @@ export const BookingModal: React.FC<BookingModalProps> = ({ open, onOpenChange, 
                 </label>
                 <Input 
                   value={phone} 
-                  onChange={(e) => setPhone(e.target.value)} 
-                  placeholder="0550 00 00 00" 
+                  onChange={handlePhoneChange}
+                  onBlur={handlePhoneBlur}
+                  placeholder="05 50 00 00 00"
+                  className={cn(phoneError && "border-destructive focus-visible:ring-destructive")}
                 />
+                {phoneError ? (
+                  <p className="text-xs text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {phoneError}
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Format: 05XX XX XX XX
+                  </p>
+                )}
               </div>
               
               <div className="space-y-2">
@@ -295,11 +378,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ open, onOpenChange, 
           </Button>
           
           <Button 
-            onClick={() => {
-              if (step === 'details') setStep('datetime');
-              else if (step === 'datetime') setStep('confirm');
-              else confirm();
-            }}
+            onClick={handleNext}
             disabled={!canProceed() || createAppointmentMutation.isPending}
           >
             {createAppointmentMutation.isPending ? (

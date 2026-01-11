@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { Heart, Phone, Star, MapPin, Clock, Navigation, Calendar, Share2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Provider, ViewMode } from '@/pages/SearchPage';
 import { Link } from 'react-router-dom';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface SearchResultsProps {
   providers: Provider[];
@@ -12,48 +13,18 @@ interface SearchResultsProps {
   searchQuery: string;
 }
 
-export const SearchResults = ({ providers, viewMode, searchQuery }: SearchResultsProps) => {
-  const [favorites, setFavorites] = useState<string[]>([]);
-  const [visibleCount, setVisibleCount] = useState(20);
+interface ProviderCardProps {
+  provider: Provider;
+  isGrid: boolean;
+  isFavorite: boolean;
+  onToggleFavorite: (id: string) => void;
+}
 
-  const toggleFavorite = (providerId: string) => {
-    setFavorites(prev =>
-      prev.includes(providerId)
-        ? prev.filter(id => id !== providerId)
-        : [...prev, providerId]
-    );
-  };
-
-  const loadMore = () => {
-    setVisibleCount(prev => prev + 20);
-  };
-
-  if (providers.length === 0) {
-    return (
-      <div className="flex-1 flex items-center justify-center min-h-[400px]">
-        <div className="text-center max-w-md mx-auto p-8">
-          <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-            <Heart className="w-12 h-12 text-muted-foreground" />
-          </div>
-          <h3 className="text-xl font-semibold mb-2">No providers found</h3>
-          <p className="text-muted-foreground mb-4">
-            We couldn't find any healthcare providers matching your search criteria.
-          </p>
-          <div className="space-y-2 text-sm text-muted-foreground">
-            <p>Try adjusting your filters:</p>
-            <ul className="list-disc list-inside text-left">
-              <li>Expand your search radius</li>
-              <li>Remove some category filters</li>
-              <li>Try different keywords</li>
-              <li>Check availability settings</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const ProviderCard = ({ provider, isGrid = false }: { provider: Provider; isGrid?: boolean }) => (
+// Memoized ProviderCard component to prevent unnecessary re-renders
+const ProviderCard = memo(({ provider, isGrid, isFavorite, onToggleFavorite }: ProviderCardProps) => {
+  const { t } = useLanguage();
+  
+  return (
     <Card className={`hover:shadow-lg transition-all duration-300 cursor-pointer group ${isGrid ? 'h-full' : ''}`}>
       <CardContent className={`p-4 ${isGrid ? 'h-full flex flex-col' : ''}`}>
         <div className={`${isGrid ? 'flex flex-col h-full' : 'flex gap-4'}`}>
@@ -63,6 +34,7 @@ export const SearchResults = ({ providers, viewMode, searchQuery }: SearchResult
               src={provider.image}
               alt={provider.name}
               className={`${isGrid ? 'w-full h-32' : 'w-20 h-20'} object-cover rounded-lg`}
+              loading="lazy"
             />
           </div>
 
@@ -78,7 +50,7 @@ export const SearchResults = ({ providers, viewMode, searchQuery }: SearchResult
                 <p className="text-muted-foreground text-sm">{provider.specialty}</p>
                 {provider.verified && (
                   <Badge variant="secondary" className="mt-1">
-                    ✅ Verified
+                    ✅ {t('provider', 'verified')}
                   </Badge>
                 )}
               </div>
@@ -89,13 +61,13 @@ export const SearchResults = ({ providers, viewMode, searchQuery }: SearchResult
                   size="sm"
                   onClick={(e) => {
                     e.preventDefault();
-                    toggleFavorite(provider.id);
+                    onToggleFavorite(provider.id);
                   }}
                   className="text-muted-foreground hover:text-destructive"
                 >
                   <Heart
                     size={18}
-                    className={favorites.includes(provider.id) ? 'fill-destructive text-destructive' : ''}
+                    className={isFavorite ? 'fill-destructive text-destructive' : ''}
                   />
                 </Button>
               )}
@@ -125,23 +97,21 @@ export const SearchResults = ({ providers, viewMode, searchQuery }: SearchResult
               <div className={`flex items-center gap-2 text-sm ${isGrid ? 'justify-center' : ''}`}>
                 <Clock size={14} />
                 <span className={provider.isOpen ? 'text-green-600' : 'text-destructive'}>
-                  {provider.isOpen ? 'Open now' : 'Closed'}
+                  {provider.isOpen ? t('provider', 'hours') + ' ✓' : t('common', 'error')}
                 </span>
               </div>
             </div>
-
-            {/* Price - Note: Pricing not available in CityHealthProvider yet */}
 
             {/* Action Buttons */}
             <div className={`grid grid-cols-2 gap-2 mt-auto ${isGrid ? 'mt-4' : ''}`}>
               <Button size="sm" variant="outline" onClick={() => window.open(`tel:${provider.phone}`, '_self')}>
                 <Phone size={14} className="mr-1" />
-                Call
+                {t('provider', 'callNow')}
               </Button>
               <Link to={`/provider/${provider.id}`}>
                 <Button size="sm" className="w-full">
                   <Calendar size={14} className="mr-1" />
-                  Book
+                  {t('provider', 'bookAppointment')}
                 </Button>
               </Link>
             </div>
@@ -153,12 +123,12 @@ export const SearchResults = ({ providers, viewMode, searchQuery }: SearchResult
                   size="sm"
                   onClick={(e) => {
                     e.preventDefault();
-                    toggleFavorite(provider.id);
+                    onToggleFavorite(provider.id);
                   }}
                 >
                   <Heart
                     size={16}
-                    className={favorites.includes(provider.id) ? 'fill-destructive text-destructive' : ''}
+                    className={isFavorite ? 'fill-destructive text-destructive' : ''}
                   />
                 </Button>
                 <Button variant="ghost" size="sm">
@@ -174,6 +144,50 @@ export const SearchResults = ({ providers, viewMode, searchQuery }: SearchResult
       </CardContent>
     </Card>
   );
+});
+
+ProviderCard.displayName = 'ProviderCard';
+
+export const SearchResults = ({ providers, viewMode, searchQuery }: SearchResultsProps) => {
+  const { t } = useLanguage();
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [visibleCount, setVisibleCount] = useState(20);
+
+  const toggleFavorite = (providerId: string) => {
+    setFavorites(prev =>
+      prev.includes(providerId)
+        ? prev.filter(id => id !== providerId)
+        : [...prev, providerId]
+    );
+  };
+
+  const loadMore = () => {
+    setVisibleCount(prev => prev + 20);
+  };
+
+  if (providers.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-[400px]">
+        <div className="text-center max-w-md mx-auto p-8">
+          <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+            <Heart className="w-12 h-12 text-muted-foreground" />
+          </div>
+          <h3 className="text-xl font-semibold mb-2">{t('search', 'noResults')}</h3>
+          <p className="text-muted-foreground mb-4">
+            {t('common', 'error')} - {t('search', 'noResults')}
+          </p>
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>{t('common', 'filters')}:</p>
+            <ul className="list-disc list-inside text-left">
+              <li>{t('search', 'filterByArea')}</li>
+              <li>{t('search', 'filterByType')}</li>
+              <li>{t('search', 'filterByRating')}</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 p-4">
@@ -188,6 +202,8 @@ export const SearchResults = ({ providers, viewMode, searchQuery }: SearchResult
             key={provider.id}
             provider={provider}
             isGrid={viewMode === 'grid'}
+            isFavorite={favorites.includes(provider.id)}
+            onToggleFavorite={toggleFavorite}
           />
         ))}
       </div>
@@ -196,7 +212,7 @@ export const SearchResults = ({ providers, viewMode, searchQuery }: SearchResult
       {visibleCount < providers.length && (
         <div className="text-center mt-8">
           <Button variant="outline" onClick={loadMore} size="lg">
-            Load More Providers ({providers.length - visibleCount} remaining)
+            {t('common', 'next')} ({providers.length - visibleCount} {t('search', 'results')})
           </Button>
         </div>
       )}

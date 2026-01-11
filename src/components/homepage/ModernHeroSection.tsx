@@ -1,8 +1,8 @@
-import { Search, MapPin } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
+import heroImage from '@/assets/hero-healthcare.png';
 
 export const ModernHeroSection = () => {
   const { t } = useLanguage();
@@ -49,9 +49,10 @@ export const ModernHeroSection = () => {
         <div className="mt-16 relative">
           <div className="aspect-video max-w-4xl mx-auto rounded-3xl shadow-2xl overflow-hidden border border-primary/20 animate-fade-in">
             <img 
-              src="/src/assets/hero-healthcare.png" 
+              src={heroImage} 
               alt="Professional healthcare consultation illustration"
               className="w-full h-full object-cover"
+              loading="lazy"
             />
           </div>
         </div>
