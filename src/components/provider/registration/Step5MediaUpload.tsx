@@ -8,13 +8,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
   FileText, Image, Upload, X, CheckCircle2, AlertCircle,
-  Shield, Camera, Loader2, User, Crop, Facebook, Instagram, Linkedin, Globe
+  Shield, Camera, Loader2, User, Crop, Facebook, Instagram, Linkedin, Globe, FileSearch
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProviderFormData, INSURANCE_OPTIONS } from './types';
 import { useToast } from '@/hooks/use-toast';
 import { ImageCropModal } from './ImageCropModal';
 import { RichTextEditor } from './RichTextEditor';
+import { DocumentOCRVerifier } from '../DocumentOCRVerifier';
+import type { VerificationResult } from '@/types/ocr';
 
 interface Step5MediaUploadProps {
   formData: ProviderFormData;
@@ -29,6 +31,8 @@ interface UploadedFile {
   progress: number;
   status: 'uploading' | 'complete' | 'error';
   type: 'credential' | 'gallery';
+  ocrResult?: VerificationResult;
+  showOCR?: boolean;
 }
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -401,39 +405,99 @@ export function Step5MediaUpload({ formData, updateFormData, onNext, onPrev }: S
 
           {/* Uploaded credentials list */}
           {credentialFiles.length > 0 && (
-            <div className="mt-4 space-y-2">
+            <div className="mt-4 space-y-3">
               {credentialFiles.map((file, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border"
-                >
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <FileText className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{file.file.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {(file.file.size / 1024).toFixed(1)} KB
-                    </p>
-                    {file.status === 'uploading' && (
-                      <Progress value={file.progress} className="h-1 mt-1" />
+                <div key={index} className="space-y-2">
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{file.file.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(file.file.size / 1024).toFixed(1)} KB
+                      </p>
+                      {file.status === 'uploading' && (
+                        <Progress value={file.progress} className="h-1 mt-1" />
+                      )}
+                    </div>
+                    {file.status === 'complete' && !file.ocrResult && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setCredentialFiles(prev => prev.map((f, i) => 
+                            i === index ? { ...f, showOCR: !f.showOCR } : f
+                          ));
+                        }}
+                      >
+                        <FileSearch className="h-4 w-4 mr-1" />
+                        Vérifier
+                      </Button>
                     )}
+                    {file.ocrResult && (
+                      <Badge 
+                        variant={file.ocrResult.success ? 'default' : 'outline'}
+                        className={file.ocrResult.success 
+                          ? 'bg-green-500/10 text-green-600 border-green-500/20' 
+                          : 'border-amber-500/30 text-amber-600'
+                        }
+                      >
+                        {file.ocrResult.success ? (
+                          <>
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Vérifié
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            {Math.round(file.ocrResult.overallScore)}%
+                          </>
+                        )}
+                      </Badge>
+                    )}
+                    {file.status === 'complete' && !file.showOCR && !file.ocrResult && (
+                      <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                    )}
+                    {file.status === 'error' && (
+                      <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="flex-shrink-0"
+                      onClick={() => removeCredentialFile(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
-                  {file.status === 'complete' && (
-                    <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                  
+                  {/* OCR Verification Panel */}
+                  {file.showOCR && file.status === 'complete' && !file.ocrResult && (
+                    <DocumentOCRVerifier
+                      file={file.file}
+                      expectedData={{
+                        fullName: formData.contactPersonName,
+                        registrationNumber: formData.legalRegistrationNumber,
+                        facilityName: formData.facilityNameFr || formData.facilityNameAr,
+                      }}
+                      onVerificationComplete={(result) => {
+                        setCredentialFiles(prev => prev.map((f, i) => 
+                          i === index ? { ...f, ocrResult: result, showOCR: false } : f
+                        ));
+                        toast({
+                          title: result.success ? 'Document vérifié' : 'Vérification partielle',
+                          description: result.success 
+                            ? 'Les informations correspondent au document.'
+                            : `Score de correspondance: ${Math.round(result.overallScore)}%`,
+                          variant: result.success ? 'default' : 'destructive',
+                        });
+                      }}
+                      showDebug={true}
+                    />
                   )}
-                  {file.status === 'error' && (
-                    <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
-                  )}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="flex-shrink-0"
-                    onClick={() => removeCredentialFile(index)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
                 </div>
               ))}
             </div>
