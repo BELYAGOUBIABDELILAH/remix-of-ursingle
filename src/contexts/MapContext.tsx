@@ -26,6 +26,10 @@ interface MapContextType {
   selectedProvider: CityHealthProvider | null;
   setSelectedProvider: (provider: CityHealthProvider | null) => void;
   
+  // User position
+  userPosition: { lat: number; lng: number } | null;
+  setUserPosition: (pos: { lat: number; lng: number } | null) => void;
+  
   // Marker layers registry
   markerLayers: Map<string, L.MarkerClusterGroup>;
   registerMarkerLayer: (layerId: string, layer: L.MarkerClusterGroup) => void;
@@ -52,6 +56,7 @@ export const MapProvider = ({ children }: { children: ReactNode }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<CityHealthProvider | null>(null);
+  const [userPosition, setUserPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [markerLayers] = useState(() => new Map<string, L.MarkerClusterGroup>());
   const [isFullscreen, setIsFullscreen] = useState(false);
   
@@ -149,6 +154,8 @@ export const MapProvider = ({ children }: { children: ReactNode }) => {
       isRTL,
       selectedProvider,
       setSelectedProvider,
+      userPosition,
+      setUserPosition,
       markerLayers,
       registerMarkerLayer,
       removeMarkerLayer,
