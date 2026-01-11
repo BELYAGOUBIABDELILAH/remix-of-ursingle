@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, BadgeCheck, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import useEmblaCarousel from 'embla-carousel-react';
+import Autoplay from 'embla-carousel-autoplay';
 
 interface MedicalAd {
   id: string;
@@ -75,44 +77,54 @@ const getMockApprovedAds = (): MedicalAd[] => {
 
 export const MedicalAdsCarousel = () => {
   const [ads, setAds] = useState<MedicalAd[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true }, [
+    Autoplay({ delay: 5000, stopOnInteraction: true })
+  ]);
 
   useEffect(() => {
     setAds(getMockApprovedAds());
   }, []);
 
   useEffect(() => {
-    if (!isAutoPlaying || ads.length <= 1) return;
+    if (!emblaApi) return;
     
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % ads.length);
-    }, 5000);
+    const onSelect = () => {
+      setSelectedIndex(emblaApi.selectedScrollSnap());
+    };
     
-    return () => clearInterval(interval);
-  }, [isAutoPlaying, ads.length]);
+    emblaApi.on('select', onSelect);
+    onSelect();
+    
+    return () => {
+      emblaApi.off('select', onSelect);
+    };
+  }, [emblaApi]);
 
-  const nextSlide = () => {
-    setCurrentIndex((prev) => (prev + 1) % ads.length);
-    setIsAutoPlaying(false);
-  };
+  const scrollPrev = useCallback(() => {
+    if (emblaApi) emblaApi.scrollPrev();
+  }, [emblaApi]);
 
-  const prevSlide = () => {
-    setCurrentIndex((prev) => (prev - 1 + ads.length) % ads.length);
-    setIsAutoPlaying(false);
-  };
+  const scrollNext = useCallback(() => {
+    if (emblaApi) emblaApi.scrollNext();
+  }, [emblaApi]);
+
+  const scrollTo = useCallback((index: number) => {
+    if (emblaApi) emblaApi.scrollTo(index);
+  }, [emblaApi]);
 
   if (ads.length === 0) return null;
 
   return (
-    <section className="py-20 bg-gradient-to-b from-background to-muted/30">
+    <section className="py-20 bg-gradient-to-b from-background to-muted/30" aria-labelledby="medical-ads-title">
       <div className="container-wide">
         {/* Section Header */}
         <div className="text-center mb-12">
           <Badge variant="outline" className="mb-4 px-4 py-1 border-primary/30 text-primary">
             Annonces Partenaires
           </Badge>
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+          <h2 id="medical-ads-title" className="text-3xl md:text-4xl font-bold text-foreground mb-4">
             Services de Santé à Découvrir
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
@@ -121,27 +133,23 @@ export const MedicalAdsCarousel = () => {
         </div>
 
         {/* Carousel Container */}
-        <div 
-          className="relative max-w-5xl mx-auto"
-          onMouseEnter={() => setIsAutoPlaying(false)}
-          onMouseLeave={() => setIsAutoPlaying(true)}
-        >
-          {/* Main Carousel */}
-          <div className="overflow-hidden rounded-2xl shadow-xl">
-            <div 
-              className="flex transition-transform duration-500 ease-out"
-              style={{ transform: `translateX(-${currentIndex * 100}%)` }}
-            >
+        <div className="relative max-w-5xl mx-auto">
+          {/* Main Carousel with Embla */}
+          <div className="overflow-hidden rounded-2xl shadow-xl" ref={emblaRef}>
+            <div className="flex">
               {ads.map((ad) => (
                 <div 
                   key={ad.id}
-                  className="w-full flex-shrink-0"
+                  className="flex-shrink-0 w-full"
                 >
                   <div className="relative h-[400px] md:h-[450px] group">
-                    {/* Background Image */}
-                    <div 
-                      className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
-                      style={{ backgroundImage: `url(${ad.imageUrl})` }}
+                    {/* Background Image with lazy loading */}
+                    <img
+                      src={ad.imageUrl}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      loading="lazy"
+                      aria-hidden="true"
                     />
                     
                     {/* Gradient Overlay */}
@@ -155,7 +163,7 @@ export const MedicalAdsCarousel = () => {
                         </Badge>
                         {ad.isVerified && (
                           <Badge variant="secondary" className="bg-emerald-500/90 text-white">
-                            <BadgeCheck className="w-3 h-3 mr-1" />
+                            <BadgeCheck className="w-3 h-3 mr-1" aria-hidden="true" />
                             Vérifié
                           </Badge>
                         )}
@@ -178,7 +186,7 @@ export const MedicalAdsCarousel = () => {
                           className="bg-white text-foreground hover:bg-white/90 shadow-lg group/btn"
                         >
                           Voir le profil
-                          <ExternalLink className="w-4 h-4 ml-2 transition-transform group-hover/btn:translate-x-1" />
+                          <ExternalLink className="w-4 h-4 ml-2 transition-transform group-hover/btn:translate-x-1" aria-hidden="true" />
                         </Button>
                       </Link>
                     </div>
@@ -194,16 +202,18 @@ export const MedicalAdsCarousel = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={prevSlide}
-                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white shadow-lg rounded-full h-12 w-12 z-10"
+                onClick={scrollPrev}
+                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white shadow-lg rounded-full h-12 w-12 z-10 focus-visible:ring-2 focus-visible:ring-primary"
+                aria-label="Annonce précédente"
               >
                 <ChevronLeft className="h-6 w-6" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={nextSlide}
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white shadow-lg rounded-full h-12 w-12 z-10"
+                onClick={scrollNext}
+                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white shadow-lg rounded-full h-12 w-12 z-10 focus-visible:ring-2 focus-visible:ring-primary"
+                aria-label="Annonce suivante"
               >
                 <ChevronRight className="h-6 w-6" />
               </Button>
@@ -212,16 +222,16 @@ export const MedicalAdsCarousel = () => {
 
           {/* Dots Indicator */}
           {ads.length > 1 && (
-            <div className="flex justify-center gap-2 mt-6">
+            <div className="flex justify-center gap-2 mt-6" role="tablist" aria-label="Sélection d'annonce">
               {ads.map((_, index) => (
                 <button
                   key={index}
-                  onClick={() => {
-                    setCurrentIndex(index);
-                    setIsAutoPlaying(false);
-                  }}
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    index === currentIndex 
+                  onClick={() => scrollTo(index)}
+                  role="tab"
+                  aria-selected={index === selectedIndex}
+                  aria-label={`Annonce ${index + 1}`}
+                  className={`h-2 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                    index === selectedIndex 
                       ? 'w-8 bg-primary' 
                       : 'w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50'
                   }`}

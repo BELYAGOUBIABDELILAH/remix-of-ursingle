@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export const AntigravityHeader = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -27,6 +28,11 @@ export const AntigravityHeader = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [navigate]);
+
   const servicesLinks = [
     { label: 'Recherche médecins', href: '/search' },
     { label: 'Carte interactive', href: '/carte' },
@@ -36,6 +42,7 @@ export const AntigravityHeader = () => {
   ];
 
   const resourcesLinks = [
+    { label: 'Documentation', href: '/docs' },
     { label: 'Pourquoi CityHealth', href: '/why' },
     { label: 'Comment ça marche', href: '/how' },
     { label: 'Contact', href: '/contact' },
@@ -57,13 +64,14 @@ export const AntigravityHeader = () => {
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled 
           ? 'bg-background/95 backdrop-blur-lg shadow-md border-b border-border/50' 
-          : 'bg-transparent'
+          : 'bg-background/50 backdrop-blur-sm'
       }`}
+      role="banner"
     >
       <div className="container-wide">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 group">
+          <Link to="/" className="flex items-center gap-2 group" aria-label="CityHealth - Accueil">
             <div className="w-9 h-9 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 shadow-lg">
               <Stethoscope className="h-5 w-5 text-primary-foreground" />
             </div>
@@ -73,13 +81,16 @@ export const AntigravityHeader = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-1">
+          <nav className="hidden lg:flex items-center gap-1" role="navigation" aria-label="Navigation principale">
             {/* Services Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted/50">
+                <button 
+                  className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-foreground/80 hover:text-foreground transition-colors rounded-lg hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  aria-haspopup="menu"
+                >
                   Services
-                  <ChevronDown className="h-4 w-4" />
+                  <ChevronDown className="h-4 w-4" aria-hidden="true" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56 bg-popover/95 backdrop-blur-lg">
@@ -96,9 +107,12 @@ export const AntigravityHeader = () => {
             {/* Providers Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted/50">
+                <button 
+                  className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-foreground/80 hover:text-foreground transition-colors rounded-lg hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  aria-haspopup="menu"
+                >
                   Professionnels
-                  <ChevronDown className="h-4 w-4" />
+                  <ChevronDown className="h-4 w-4" aria-hidden="true" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56 bg-popover/95 backdrop-blur-lg">
@@ -115,9 +129,12 @@ export const AntigravityHeader = () => {
             {/* Resources Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted/50">
+                <button 
+                  className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-foreground/80 hover:text-foreground transition-colors rounded-lg hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  aria-haspopup="menu"
+                >
                   Ressources
-                  <ChevronDown className="h-4 w-4" />
+                  <ChevronDown className="h-4 w-4" aria-hidden="true" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56 bg-popover/95 backdrop-blur-lg">
@@ -134,7 +151,7 @@ export const AntigravityHeader = () => {
             {/* Direct Links */}
             <Link 
               to="/emergency"
-              className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30"
+              className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
             >
               Urgences
             </Link>
@@ -145,12 +162,15 @@ export const AntigravityHeader = () => {
             {/* Language Selector */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1 px-2 py-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted/50">
+                <button 
+                  className="flex items-center gap-1 px-2 py-1 text-sm font-medium text-foreground/80 hover:text-foreground transition-colors rounded-lg hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  aria-label="Changer de langue"
+                >
                   {languages.find((l) => l.code === language)?.flag}
                   <span className="hidden sm:inline ml-1">
                     {languages.find((l) => l.code === language)?.name}
                   </span>
-                  <ChevronDown className="h-3 w-3" />
+                  <ChevronDown className="h-3 w-3" aria-hidden="true" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-popover/95 backdrop-blur-lg">
@@ -171,13 +191,13 @@ export const AntigravityHeader = () => {
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="gap-2">
+                  <Button variant="ghost" size="sm" className="gap-2" aria-label="Menu utilisateur">
                     <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
                       <span className="text-xs font-medium text-primary">
                         {user.email?.[0]?.toUpperCase()}
                       </span>
                     </div>
-                    <ChevronDown className="h-3 w-3" />
+                    <ChevronDown className="h-3 w-3" aria-hidden="true" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 bg-popover/95 backdrop-blur-lg">
@@ -204,7 +224,7 @@ export const AntigravityHeader = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate('/auth')}
-                className="hidden sm:flex"
+                className="hidden sm:flex focus-visible:ring-2 focus-visible:ring-primary"
               >
                 Connexion
               </Button>
@@ -213,7 +233,7 @@ export const AntigravityHeader = () => {
             {/* CTA Button */}
             <Button
               onClick={() => navigate('/search')}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             >
               <span className="hidden sm:inline">Trouver un médecin</span>
               <span className="sm:hidden">Rechercher</span>
@@ -223,72 +243,82 @@ export const AntigravityHeader = () => {
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden"
+              className="lg:hidden focus-visible:ring-2 focus-visible:ring-primary"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label={isMobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+              aria-expanded={isMobileMenuOpen}
             >
               {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        {isMobileMenuOpen && (
-          <div className="lg:hidden border-t border-border/50 bg-background/95 backdrop-blur-lg">
-            <nav className="py-4 space-y-2">
-              <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Services
-              </div>
-              {servicesLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  className="block px-4 py-2 text-sm text-foreground hover:bg-muted/50"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              
-              <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-4">
-                Professionnels
-              </div>
-              {providerLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  className="block px-4 py-2 text-sm text-foreground hover:bg-muted/50"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              
-              <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-4">
-                Ressources
-              </div>
-              {resourcesLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  className="block px-4 py-2 text-sm text-foreground hover:bg-muted/50"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              
-              <div className="px-4 pt-4 border-t border-border/50">
-                <Link
-                  to="/emergency"
-                  className="block px-4 py-2 text-sm font-medium text-red-600"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  🚨 Urgences 24/7
-                </Link>
-              </div>
-            </nav>
-          </div>
-        )}
+        {/* Mobile Menu with Animation */}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="lg:hidden border-t border-border/50 bg-background/95 backdrop-blur-lg overflow-hidden"
+            >
+              <nav className="py-4 space-y-2" role="navigation" aria-label="Navigation mobile">
+                <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Services
+                </div>
+                {servicesLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    to={link.href}
+                    className="block px-4 py-2 text-sm text-foreground hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+                
+                <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-4">
+                  Professionnels
+                </div>
+                {providerLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    to={link.href}
+                    className="block px-4 py-2 text-sm text-foreground hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+                
+                <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-4">
+                  Ressources
+                </div>
+                {resourcesLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    to={link.href}
+                    className="block px-4 py-2 text-sm text-foreground hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+                
+                <div className="px-4 pt-4 border-t border-border/50">
+                  <Link
+                    to="/emergency"
+                    className="block px-4 py-2 text-sm font-medium text-red-600 focus-visible:outline-none focus-visible:bg-red-50 dark:focus-visible:bg-red-950/30"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    🚨 Urgences 24/7
+                  </Link>
+                </div>
+              </nav>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </header>
   );
