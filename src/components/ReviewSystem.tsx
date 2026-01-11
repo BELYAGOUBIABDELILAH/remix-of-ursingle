@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Star, ThumbsUp, Send, MessageSquare } from 'lucide-react';
+import React, { useState } from 'react';
+import { Star, ThumbsUp, Send, MessageSquare, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -8,9 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Review, ReviewStats } from '@/types/reviews';
-import { getReviewsByProvider, saveReview, voteReview, updateReview, getReviewStats } from '@/utils/reviewStorage';
+import { useProviderReviews, useReviewStats, useSubmitReview, useVoteReview, useAddProviderResponse } from '@/hooks/useReviews';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ReviewSystemProps {
   providerId: string;
@@ -25,24 +26,19 @@ export const ReviewSystem: React.FC<ReviewSystemProps> = ({
   canReview = false,
   isProvider = false,
 }) => {
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [stats, setStats] = useState<ReviewStats | null>(null);
+  const { user } = useAuth();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [patientName, setPatientName] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [responseText, setResponseText] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    loadReviews();
-  }, [providerId]);
-
-  const loadReviews = () => {
-    const providerReviews = getReviewsByProvider(providerId);
-    setReviews(providerReviews);
-    setStats(getReviewStats(providerId));
-  };
+  // TanStack Query hooks
+  const { data: reviews = [], isLoading: reviewsLoading } = useProviderReviews(providerId);
+  const { data: stats, isLoading: statsLoading } = useReviewStats(providerId);
+  const submitReviewMutation = useSubmitReview(providerId);
+  const voteReviewMutation = useVoteReview(providerId);
+  const addResponseMutation = useAddProviderResponse(providerId);
 
   const submitReview = () => {
     if (!rating || !comment.trim() || !patientName.trim()) {
@@ -50,37 +46,39 @@ export const ReviewSystem: React.FC<ReviewSystemProps> = ({
       return;
     }
 
-    setIsSubmitting(true);
+    if (!user) {
+      toast.error('Vous devez être connecté pour laisser un avis');
+      return;
+    }
 
-    const newReview: Review = {
-      id: crypto.randomUUID(),
-      providerId,
-      patientName,
-      rating,
-      comment,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      status: 'approved',
-      helpfulVotes: 0,
-      votedBy: [],
-    };
-
-    saveReview(newReview);
-    loadReviews();
-
-    toast.success('Votre avis a été publié avec succès!');
-    setRating(0);
-    setComment('');
-    setPatientName('');
-    setShowForm(false);
-    setIsSubmitting(false);
+    submitReviewMutation.mutate(
+      { patientName, rating, comment },
+      {
+        onSuccess: () => {
+          toast.success('Votre avis a été publié avec succès!');
+          setRating(0);
+          setComment('');
+          setPatientName('');
+          setShowForm(false);
+        },
+        onError: (error) => {
+          toast.error('Erreur lors de la publication de l\'avis');
+          console.error('Review submission error:', error);
+        }
+      }
+    );
   };
 
   const handleVoteHelpful = (reviewId: string) => {
-    const userId = 'current-user';
-    voteReview(reviewId, userId);
-    loadReviews();
-    toast.success('Merci pour votre retour!');
+    if (!user) {
+      toast.error('Vous devez être connecté pour voter');
+      return;
+    }
+
+    voteReviewMutation.mutate(reviewId, {
+      onSuccess: () => toast.success('Merci pour votre retour!'),
+      onError: () => toast.error('Erreur lors du vote')
+    });
   };
 
   const submitResponse = (reviewId: string) => {
@@ -91,17 +89,32 @@ export const ReviewSystem: React.FC<ReviewSystemProps> = ({
       return;
     }
 
-    updateReview(reviewId, {
-      providerResponse: {
-        text,
-        respondedAt: new Date().toISOString(),
-      },
-    });
-
-    loadReviews();
-    setResponseText({ ...responseText, [reviewId]: '' });
-    toast.success('Votre réponse a été publiée!');
+    addResponseMutation.mutate(
+      { reviewId, text },
+      {
+        onSuccess: () => {
+          setResponseText({ ...responseText, [reviewId]: '' });
+          toast.success('Votre réponse a été publiée!');
+        },
+        onError: () => toast.error('Erreur lors de l\'envoi de la réponse')
+      }
+    );
   };
+
+  // Loading skeleton
+  if (statsLoading) {
+    return (
+      <Card className="glass-card">
+        <CardHeader>
+          <Skeleton className="h-6 w-48" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-16 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!stats) return null;
 
@@ -208,8 +221,15 @@ export const ReviewSystem: React.FC<ReviewSystemProps> = ({
               </div>
 
               <div className="flex gap-2">
-                <Button onClick={submitReview} disabled={isSubmitting}>
-                  <Send className="h-4 w-4 mr-2" />
+                <Button 
+                  onClick={submitReview} 
+                  disabled={submitReviewMutation.isPending}
+                >
+                  {submitReviewMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
                   Publier l'avis
                 </Button>
                 <Button variant="outline" onClick={() => setShowForm(false)}>
@@ -223,7 +243,19 @@ export const ReviewSystem: React.FC<ReviewSystemProps> = ({
         {/* Reviews List */}
         <Separator />
         
-        {reviews.length === 0 ? (
+        {reviewsLoading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="flex gap-3">
+                <Skeleton className="h-10 w-10 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-full" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : reviews.length === 0 ? (
           <div className="text-center py-12">
             <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">
@@ -282,7 +314,7 @@ export const ReviewSystem: React.FC<ReviewSystemProps> = ({
                       variant="ghost"
                       size="sm"
                       onClick={() => handleVoteHelpful(review.id)}
-                      disabled={review.votedBy.includes('current-user')}
+                      disabled={review.votedBy.includes(user?.uid || '') || voteReviewMutation.isPending}
                       className="h-8"
                     >
                       <ThumbsUp className="h-4 w-4 mr-2" />
@@ -320,9 +352,13 @@ export const ReviewSystem: React.FC<ReviewSystemProps> = ({
                       <Button
                         size="sm"
                         onClick={() => submitResponse(review.id)}
-                        disabled={!responseText[review.id]?.trim()}
+                        disabled={!responseText[review.id]?.trim() || addResponseMutation.isPending}
                       >
-                        <Send className="h-3 w-3 mr-2" />
+                        {addResponseMutation.isPending ? (
+                          <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                        ) : (
+                          <Send className="h-3 w-3 mr-2" />
+                        )}
                         Envoyer la réponse
                       </Button>
                     </div>

@@ -39,13 +39,20 @@ export default function ProviderDashboard() {
     refetch 
   } = useProvider();
   
-  const [stats] = useState({
-    profileViews: 0,
+  // Import real stats from hooks
+  const { useReviewStats } = await import('@/hooks/useReviews');
+  const { useUpcomingAppointmentsCount } = await import('@/hooks/useAppointments');
+  
+  const { data: reviewStats } = useReviewStats(providerData?.id);
+  const { data: appointmentsCount = 0 } = useUpcomingAppointmentsCount(providerData?.id);
+  
+  const stats = {
+    profileViews: 0, // Keep mocked until analytics
     phoneClicks: 0,
-    appointments: 0,
-    rating: 0,
-    reviewsCount: 0,
-  });
+    appointments: appointmentsCount,
+    rating: reviewStats?.averageRating || 0,
+    reviewsCount: reviewStats?.totalReviews || 0,
+  };
 
   const [profile, setProfile] = useState({
     id: '',
