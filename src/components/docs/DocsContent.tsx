@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { TableOfContents } from './TableOfContents';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { docsStructure, findDocPage, getAllDocPages } from '@/data/docsStructure';
@@ -36,21 +37,25 @@ const renderContent = (content: string) => {
       );
     }
     if (line.startsWith('## ')) {
+      const title = line.slice(3);
+      const id = title.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
       return (
         <h2 
           key={index} 
-          className="text-2xl font-semibold mt-10 mb-4 text-foreground flex items-center gap-2 group" 
-          id={line.slice(3).toLowerCase().replace(/\s+/g, '-')}
+          className="text-2xl font-semibold mt-10 mb-4 text-foreground flex items-center gap-2 group scroll-mt-24" 
+          id={id}
         >
           <span className="w-1 h-6 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-          {line.slice(3)}
+          {title}
         </h2>
       );
     }
     if (line.startsWith('### ')) {
+      const title = line.slice(4);
+      const id = title.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
       return (
-        <h3 key={index} className="text-xl font-medium mt-8 mb-3 text-foreground">
-          {line.slice(4)}
+        <h3 key={index} className="text-xl font-medium mt-8 mb-3 text-foreground scroll-mt-24" id={id}>
+          {title}
         </h3>
       );
     }
@@ -360,8 +365,9 @@ export const DocsContent = () => {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.3 }}
-      className="flex-1 flex flex-col"
+      className="flex-1 flex"
     >
+      {/* Main Content */}
       <ScrollArea className="flex-1">
         <div className="max-w-3xl mx-auto p-6 md:p-8 lg:p-12">
           {/* Breadcrumb */}
@@ -453,6 +459,9 @@ export const DocsContent = () => {
           </div>
         </div>
       </ScrollArea>
+      
+      {/* Table of Contents - Right side */}
+      <TableOfContents content={currentPage.content} className="p-6" />
     </motion.div>
   );
 };
