@@ -133,20 +133,7 @@ const MapMotherInner = () => {
     tileLayerRef.current.setUrl(newUrl);
   }, [theme, mapRef]);
   
-  // Update zoom control position on RTL change
-  useEffect(() => {
-    if (!mapRef.current) return;
-    
-    // Remove existing zoom control and add new one with correct position
-    mapRef.current.eachLayer((layer: any) => {
-      if (layer._zoomIn) {
-        // This is the zoom control
-        mapRef.current?.removeControl(layer);
-      }
-    });
-    
-    // Note: This approach has limitations. Better to use CSS positioning.
-  }, [isRTL, mapRef]);
+  // Note: Zoom control position is set at map init. RTL changes require page reload.
   
   // Invalidate size when fullscreen changes
   useEffect(() => {

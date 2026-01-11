@@ -1,15 +1,6 @@
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 
-// MapPage now redirects to /carte for unified map experience
-const MapPage = () => {
-  const navigate = useNavigate();
-  
-  useEffect(() => {
-    navigate('/carte', { replace: true });
-  }, [navigate]);
-
-  return null;
-};
+// Legacy redirect to new unified map architecture
+const MapPage = () => <Navigate to="/map/providers" replace />;
 
 export default MapPage;

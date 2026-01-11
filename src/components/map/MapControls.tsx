@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { 
   Locate, 
   Maximize2, 
@@ -31,7 +31,6 @@ export const MapControls = ({ mode }: MapControlsProps) => {
   } = useMapContext();
   const { theme, toggleTheme } = useTheme();
   const { language } = useLanguage();
-  const location = useLocation();
   
   const t = useMemo(() => ({
     fr: {

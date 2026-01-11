@@ -1,15 +1,6 @@
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 
-// EmergencyPage now redirects to /carte?mode=emergency for unified map experience
-const EmergencyPage = () => {
-  const navigate = useNavigate();
-  
-  useEffect(() => {
-    navigate('/carte?mode=emergency', { replace: true });
-  }, [navigate]);
-
-  return null;
-};
+// Legacy redirect to new unified map architecture
+const EmergencyPage = () => <Navigate to="/map/emergency" replace />;
 
 export default EmergencyPage;
