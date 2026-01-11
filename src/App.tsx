@@ -46,6 +46,7 @@ const MedicalAssistantPage = lazy(() => import("./pages/MedicalAssistantPage"));
 const CitizenProfilePage = lazy(() => import("./pages/CitizenProfilePage"));
 const BloodDonationPage = lazy(() => import("./pages/BloodDonationPage"));
 const AdminMigratePage = lazy(() => import("./pages/AdminMigratePage"));
+const DocsPage = lazy(() => import("./pages/DocsPage"));
 
 const queryClient = new QueryClient();
 
@@ -328,6 +329,15 @@ const AppRoutes = () => {
           element={
             <PageTransition>
               <AdminMigratePage />
+            </PageTransition>
+          } 
+        />
+        {/* Documentation */}
+        <Route 
+          path="/docs/*" 
+          element={
+            <PageTransition>
+              <DocsPage />
             </PageTransition>
           } 
         />

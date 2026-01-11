@@ -1,4 +1,4 @@
-import { Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/hooks/useLanguage';
 import { Link } from 'react-router-dom';
@@ -33,6 +33,7 @@ export const ModernFooter = () => {
 
   const footerLinks = {
     quickLinks: [
+      { label: 'Documentation', path: '/docs', icon: BookOpen },
       { label: t('footer.contact'), path: '/contact' },
       { label: t('footer.terms'), path: '/terms' },
       { label: t('footer.privacy'), path: '/privacy' },
@@ -87,8 +88,9 @@ export const ModernFooter = () => {
                 <li key={link.path}>
                   <Link
                     to={link.path}
-                    className="text-muted-foreground hover:text-primary transition-colors text-sm"
+                    className="text-muted-foreground hover:text-primary transition-colors text-sm flex items-center gap-2"
                   >
+                    {link.icon && <link.icon className="h-3.5 w-3.5" />}
                     {link.label}
                   </Link>
                 </li>
