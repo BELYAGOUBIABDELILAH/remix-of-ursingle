@@ -325,9 +325,17 @@ const AppRoutes = () => {
             </PageTransition>
           } 
         />
-        {/* Documentation */}
+        {/* Documentation Routes */}
         <Route 
-          path="/docs/*" 
+          path="/docs" 
+          element={
+            <PageTransition>
+              <DocsPage />
+            </PageTransition>
+          } 
+        />
+        <Route 
+          path="/docs/:sectionId/:pageId" 
           element={
             <PageTransition>
               <DocsPage />
