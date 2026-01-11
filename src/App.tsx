@@ -128,21 +128,14 @@ const AppRoutes = () => {
             </PageTransition>
           } 
         />
+        {/* Redirect /why and /how to documentation */}
         <Route 
           path="/why" 
-          element={
-            <PageTransition>
-              <WhyPage />
-            </PageTransition>
-          } 
+          element={<Navigate to="/docs/getting-started/why-cityhealth" replace />}
         />
         <Route 
           path="/how" 
-          element={
-            <PageTransition>
-              <HowPage />
-            </PageTransition>
-          } 
+          element={<Navigate to="/docs/getting-started/how-it-works" replace />}
         />
         <Route 
           path="/manage" 
