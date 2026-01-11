@@ -62,6 +62,9 @@ const AuthPage = () => {
       const validated = loginSchema.parse({ email: loginEmail, password: loginPassword });
       setIsLoading(true);
       await login(validated.email, validated.password);
+      toast.success('Bienvenue sur CityHealth!', {
+        description: `Heureux de vous revoir${profile?.full_name ? `, ${profile.full_name}` : ''}!`
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         const errors: Record<string, string> = {};

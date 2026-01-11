@@ -32,12 +32,16 @@ export const SearchInterface = ({
   const { t } = useLanguage();
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [recentSearches] = useState([
-    'Cardiology near me',
-    '24/7 pharmacies',
-    'Emergency dentist',
-    'Pediatrician Algiers'
-  ]);
+  
+  // Load recent searches from localStorage
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('cityhealth_recent_searches');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -75,6 +79,27 @@ export const SearchInterface = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Save search to history
+  const saveToHistory = (query: string) => {
+    if (!query.trim()) return;
+    const updated = [query, ...recentSearches.filter(s => s !== query)].slice(0, 5);
+    setRecentSearches(updated);
+    localStorage.setItem('cityhealth_recent_searches', JSON.stringify(updated));
+  };
+
+  // Clear search history
+  const clearHistory = () => {
+    setRecentSearches([]);
+    localStorage.removeItem('cityhealth_recent_searches');
+  };
+
+  // Handle search submission
+  const handleSearchSubmit = (query: string) => {
+    saveToHistory(query);
+    setSearchQuery(query);
+    setShowSuggestions(false);
+  };
 
   const sortOptions = [
     { value: 'relevance', label: 'Relevance' },
@@ -115,18 +140,23 @@ export const SearchInterface = ({
 
           {/* Search Suggestions */}
           {showSuggestions && (
-            <Card className="absolute top-full left-0 right-0 mt-1 p-4 shadow-lg z-50">
+            <Card className="absolute top-full left-0 right-0 mt-1 p-4 shadow-lg z-50 bg-popover">
               {recentSearches.length > 0 && (
                 <div className="mb-4">
-                  <p className="text-sm font-medium text-muted-foreground mb-2">Recent Searches</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-medium text-muted-foreground">Recent Searches</p>
+                    <button
+                      onClick={clearHistory}
+                      className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      Effacer
+                    </button>
+                  </div>
                   {recentSearches.map((search, index) => (
                     <button
                       key={index}
-                      onClick={() => {
-                        setSearchQuery(search);
-                        setShowSuggestions(false);
-                      }}
-                      className="block w-full text-left px-2 py-1 hover:bg-muted rounded text-sm"
+                      onClick={() => handleSearchSubmit(search)}
+                      className="block w-full text-left px-2 py-1 hover:bg-muted rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
                     >
                       {search}
                     </button>
@@ -142,11 +172,8 @@ export const SearchInterface = ({
                   .map((suggestion, index) => (
                     <button
                       key={index}
-                      onClick={() => {
-                        setSearchQuery(suggestion);
-                        setShowSuggestions(false);
-                      }}
-                      className="block w-full text-left px-2 py-1 hover:bg-muted rounded text-sm"
+                      onClick={() => handleSearchSubmit(suggestion)}
+                      className="block w-full text-left px-2 py-1 hover:bg-muted rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
                     >
                       {suggestion}
                     </button>

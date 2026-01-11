@@ -210,6 +210,7 @@ const FavoritesPage = () => {
                       onClick={() => handleRemoveFavorite(favorite.id)}
                       disabled={removeFavorite.isPending}
                       className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      aria-label={`Retirer ${favorite.name} des favoris`}
                     >
                       <Trash2 size={18} />
                     </Button>
@@ -217,18 +218,18 @@ const FavoritesPage = () => {
                   
                   <div className="space-y-3 mb-4">
                     <div className="flex items-center gap-2">
-                      <MapPin size={16} className="text-muted-foreground flex-shrink-0" />
+                      <MapPin size={16} className="text-muted-foreground flex-shrink-0" aria-hidden="true" />
                       <span className="text-sm">{favorite.address}</span>
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      <Phone size={16} className="text-muted-foreground flex-shrink-0" />
+                      <Phone size={16} className="text-muted-foreground flex-shrink-0" aria-hidden="true" />
                       <span className="text-sm">{favorite.phone}</span>
                     </div>
                     
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1">
-                        <Star size={16} className="text-yellow-500 fill-yellow-500" />
+                        <Star size={16} className="text-yellow-500 fill-yellow-500" aria-hidden="true" />
                         <span className="text-sm">{favorite.rating}</span>
                       </div>
                       
@@ -238,7 +239,7 @@ const FavoritesPage = () => {
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      <Clock size={16} className="text-muted-foreground flex-shrink-0" />
+                      <Clock size={16} className="text-muted-foreground flex-shrink-0" aria-hidden="true" />
                       <span className="text-sm">{favorite.area}</span>
                     </div>
                   </div>
@@ -249,7 +250,7 @@ const FavoritesPage = () => {
                       className="flex-1"
                       onClick={() => handleBookAppointment(favorite.id)}
                     >
-                      <Calendar className="mr-1" size={14} />
+                      <Calendar className="mr-1" size={14} aria-hidden="true" />
                       RDV
                     </Button>
                     <Button 
@@ -258,7 +259,7 @@ const FavoritesPage = () => {
                       className="flex-1"
                       onClick={() => handleCall(favorite.phone)}
                     >
-                      <Phone className="mr-1" size={14} />
+                      <Phone className="mr-1" size={14} aria-hidden="true" />
                       Appeler
                     </Button>
                   </div>
