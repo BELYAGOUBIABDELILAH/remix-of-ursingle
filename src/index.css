@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Enhanced focus visible styles for accessibility */
+@layer base {
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+  }
+}
+
 /* ============================================
    CITYHEALTH DESIGN SYSTEM
    Clean, accessible healthcare design

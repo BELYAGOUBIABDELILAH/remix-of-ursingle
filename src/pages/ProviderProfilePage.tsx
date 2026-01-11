@@ -3,7 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, Star, Phone, Share2, Flag, Calendar, Languages, Award, Image as ImageIcon, Heart, Navigation } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { MapPin, Star, Phone, Share2, Flag, Calendar, Languages, Award, Image as ImageIcon, Heart, Navigation, Copy, Check, QrCode } from "lucide-react";
 import { useProvider } from "@/hooks/useProviders";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { BookingModal } from "@/components/BookingModal";
@@ -12,12 +13,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import ProviderMap from "@/components/ProviderMap";
 import { Skeleton } from "@/components/ui/skeleton";
+import { QRCodeSVG } from 'qrcode.react';
 
 const ProviderProfilePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const [bookingOpen, setBookingOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  
+  // Get current URL for sharing
+  const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
 
   // Use TanStack Query for provider data
   const { data: provider, isLoading: loading, isError } = useProvider(id);
@@ -56,6 +62,35 @@ const ProviderProfilePage = () => {
     if (!provider) return;
     const url = `https://www.google.com/maps/dir/?api=1&destination=${provider.lat},${provider.lng}`;
     window.open(url, '_blank');
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      toast.success('Lien copié!');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('Impossible de copier le lien');
+    }
+  };
+
+  const handleNativeShare = async () => {
+    if (!provider) return;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: provider.name,
+          text: `Découvrez ${provider.name} sur CityHealth`,
+          url: shareUrl
+        });
+      } catch (err) {
+        // User cancelled or share failed
+      }
+    } else {
+      handleCopyLink();
+    }
   };
 
 
@@ -143,7 +178,50 @@ const ProviderProfilePage = () => {
               <Heart className={`h-4 w-4 mr-2 ${isFavorite ? "fill-current" : ""}`} />
               {isFavorite ? "Favori" : "Ajouter aux Favoris"}
             </Button>
-            <Button variant="ghost"><Share2 className="h-4 w-4" /></Button>
+            
+            {/* Share Dialog with QR Code */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost"><Share2 className="h-4 w-4" /></Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Partager ce profil</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  {/* QR Code */}
+                  <div className="flex justify-center p-4 bg-white rounded-lg">
+                    <QRCodeSVG 
+                      value={shareUrl} 
+                      size={180}
+                      level="M"
+                      includeMargin
+                    />
+                  </div>
+                  
+                  {/* Copy Link */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={shareUrl}
+                      readOnly
+                      className="flex-1 px-3 py-2 border rounded-lg text-sm bg-muted"
+                    />
+                    <Button size="sm" onClick={handleCopyLink}>
+                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  
+                  {/* Native Share (mobile) */}
+                  {typeof navigator !== 'undefined' && navigator.share && (
+                    <Button className="w-full" onClick={handleNativeShare}>
+                      <Share2 className="h-4 w-4 mr-2" />
+                      Partager
+                    </Button>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
             <Button variant="ghost"><Flag className="h-4 w-4" /></Button>
           </div>
         </div>

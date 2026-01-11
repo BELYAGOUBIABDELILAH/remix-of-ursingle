@@ -7,7 +7,8 @@ import {
   ExternalLink, 
   Star,
   BadgeCheck,
-  MapPin
+  MapPin,
+  Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +23,15 @@ interface ProviderCardProps {
   distance?: number | null;
   onClose?: () => void;
 }
+
+// Check if provider was registered within the last 7 days
+const isNewProvider = (createdAt?: string | Date): boolean => {
+  if (!createdAt) return false;
+  const createdDate = new Date(createdAt);
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  return createdDate > sevenDaysAgo;
+};
 
 export const ProviderCard = ({ provider, distance, onClose }: ProviderCardProps) => {
   const { getDirections, isRTL } = useMapContext();
@@ -61,6 +71,8 @@ export const ProviderCard = ({ provider, distance, onClose }: ProviderCardProps)
   
   const typeLabel = PROVIDER_TYPE_LABELS[provider.type]?.[language === 'en' ? 'fr' : language as 'fr' | 'ar'] || provider.type;
   
+  const isNew = isNewProvider((provider as any).createdAt);
+  
   return (
     <Card className={cn(
       "absolute bottom-4 z-20 w-80 shadow-xl animate-slide-up",
@@ -68,6 +80,13 @@ export const ProviderCard = ({ provider, distance, onClose }: ProviderCardProps)
       "md:left-4 md:right-auto"
     )}>
       <CardContent className="p-4">
+        {/* New badge */}
+        {isNew && (
+          <Badge className="absolute -top-2 -right-2 bg-green-500 hover:bg-green-600 text-white text-xs animate-pulse">
+            <Sparkles className="h-3 w-3 mr-1" />
+            Nouveau
+          </Badge>
+        )}
         {/* Close button */}
         {onClose && (
           <Button

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -11,6 +11,50 @@ import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { createUserLocationMarker } from './MapMarkers';
+import { Skeleton } from '@/components/ui/skeleton';
+import { MapPin, Loader2 } from 'lucide-react';
+
+// Map Skeleton Component
+const MapSkeleton = () => (
+  <div className="absolute inset-0 z-10 bg-muted/50 flex flex-col items-center justify-center gap-4">
+    <div className="relative">
+      <Skeleton className="w-full h-full absolute inset-0" />
+      <div className="grid grid-cols-3 gap-2 p-4">
+        {Array.from({ length: 9 }).map((_, i) => (
+          <Skeleton key={i} className="w-20 h-20 rounded" />
+        ))}
+      </div>
+    </div>
+    <div className="flex items-center gap-2 text-muted-foreground">
+      <Loader2 className="h-5 w-5 animate-spin" />
+      <span>Chargement de la carte...</span>
+    </div>
+  </div>
+);
+
+// Geolocation Indicator Component
+const GeolocationIndicator = ({ isLocating, hasError }: { isLocating: boolean; hasError: boolean }) => {
+  if (!isLocating && !hasError) return null;
+  
+  return (
+    <div className={cn(
+      "absolute top-20 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-full shadow-lg flex items-center gap-2 text-sm",
+      hasError ? "bg-destructive/90 text-destructive-foreground" : "bg-primary/90 text-primary-foreground"
+    )}>
+      {isLocating ? (
+        <>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Localisation en cours...</span>
+        </>
+      ) : hasError ? (
+        <>
+          <MapPin className="h-4 w-4" />
+          <span>Impossible d'obtenir votre position</span>
+        </>
+      ) : null}
+    </div>
+  );
+};
 
 // Tile layer URLs
 const TILE_URLS = {
@@ -31,7 +75,8 @@ const MapMotherInner = () => {
     isFullscreen,
     isRTL,
     geolocation,
-    setUserPosition
+    setUserPosition,
+    isReady
   } = useMapContext();
   const { theme } = useTheme();
   const { language } = useLanguage();
@@ -39,6 +84,24 @@ const MapMotherInner = () => {
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
   const initRef = useRef(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [geoError, setGeoError] = useState(false);
+  
+  // Track geolocation state
+  useEffect(() => {
+    if (geolocation.loading) {
+      setIsLocating(true);
+      setGeoError(false);
+    } else {
+      setIsLocating(false);
+      if (geolocation.error) {
+        setGeoError(true);
+        // Hide error after 3 seconds
+        const timer = setTimeout(() => setGeoError(false), 3000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [geolocation.loading, geolocation.error]);
   
   // Determine current mode from path
   const mode: MapMode = useMemo(() => {
@@ -186,7 +249,7 @@ const MapMotherInner = () => {
     <div className={cn("min-h-screen bg-background flex flex-col", isRTL && "rtl")}>
       <Header />
       
-      <main className={cn(
+      <main id="main-content" className={cn(
         "flex-1 flex flex-col",
         isFullscreen ? "fixed inset-0 z-50 pt-0" : "container mx-auto px-4 py-6"
       )}>
@@ -207,6 +270,12 @@ const MapMotherInner = () => {
           "relative flex-1 rounded-xl overflow-hidden border border-border shadow-lg",
           isFullscreen && "rounded-none border-0"
         )}>
+          {/* Map skeleton loader */}
+          {!isReady && <MapSkeleton />}
+          
+          {/* Geolocation indicator */}
+          <GeolocationIndicator isLocating={isLocating} hasError={geoError} />
+          
           {/* Map div */}
           <div 
             ref={mapContainerRef} 

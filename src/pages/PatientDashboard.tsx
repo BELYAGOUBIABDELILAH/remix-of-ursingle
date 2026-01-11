@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, MapPin, Star, MessageSquare, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, MapPin, Star, MessageSquare, CheckCircle, XCircle, AlertCircle, Download, FileText } from 'lucide-react';
 import { getAppointmentsByPatient, updateAppointmentStatus } from '@/utils/appointmentStorage';
 import { getReviews } from '@/utils/reviewStorage';
 import { Appointment } from '@/types/appointments';
@@ -15,6 +15,7 @@ import { Review } from '@/types/reviews';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fr, ar, enUS } from 'date-fns/locale';
+import jsPDF from 'jspdf';
 
 const PatientDashboard = () => {
   const { profile, isAuthenticated } = useAuth();
@@ -45,6 +46,90 @@ const PatientDashboard = () => {
     updateAppointmentStatus(id, 'cancelled');
     toast.success('Rendez-vous annulé');
     loadData();
+  };
+
+  // Export appointments to PDF
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    // Title
+    doc.setFontSize(20);
+    doc.setTextColor(59, 130, 246); // Primary blue
+    doc.text('Mes Rendez-vous - CityHealth', pageWidth / 2, 20, { align: 'center' });
+    
+    // Date
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Exporté le ${format(new Date(), 'PPP', { locale: fr })}`, pageWidth / 2, 28, { align: 'center' });
+    
+    let yPosition = 45;
+    
+    // Upcoming appointments section
+    if (upcomingAppointments.length > 0) {
+      doc.setFontSize(14);
+      doc.setTextColor(0);
+      doc.text('Rendez-vous à venir', 14, yPosition);
+      yPosition += 10;
+      
+      upcomingAppointments.forEach((apt) => {
+        if (yPosition > 270) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        
+        doc.setFontSize(12);
+        doc.setTextColor(0);
+        doc.text(`• ${apt.providerName}`, 14, yPosition);
+        yPosition += 6;
+        
+        doc.setFontSize(10);
+        doc.setTextColor(80);
+        doc.text(`  Date: ${format(new Date(apt.dateTime), 'PPP à p', { locale: fr })}`, 14, yPosition);
+        yPosition += 5;
+        
+        if (apt.notes) {
+          doc.text(`  Notes: ${apt.notes}`, 14, yPosition);
+          yPosition += 5;
+        }
+        yPosition += 5;
+      });
+    }
+    
+    // Past appointments section
+    if (pastAppointments.length > 0) {
+      yPosition += 10;
+      doc.setFontSize(14);
+      doc.setTextColor(0);
+      doc.text('Historique', 14, yPosition);
+      yPosition += 10;
+      
+      pastAppointments.slice(0, 10).forEach((apt) => {
+        if (yPosition > 270) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        
+        doc.setFontSize(12);
+        doc.setTextColor(apt.status === 'cancelled' ? 150 : 0);
+        doc.text(`• ${apt.providerName} (${apt.status === 'completed' ? 'Terminé' : 'Annulé'})`, 14, yPosition);
+        yPosition += 6;
+        
+        doc.setFontSize(10);
+        doc.setTextColor(80);
+        doc.text(`  Date: ${format(new Date(apt.dateTime), 'PPP', { locale: fr })}`, 14, yPosition);
+        yPosition += 8;
+      });
+    }
+    
+    // Footer
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text('CityHealth - Sidi Bel Abbès', pageWidth / 2, 290, { align: 'center' });
+    
+    // Save
+    doc.save(`rendez-vous-cityhealth-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    toast.success('PDF téléchargé!');
   };
 
   const upcomingAppointments = appointments.filter(
@@ -97,13 +182,24 @@ const PatientDashboard = () => {
       <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-secondary/10 py-12">
         <div className="container mx-auto px-4">
           {/* Header Section */}
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
-              Mon Tableau de Bord
-            </h1>
-            <p className="text-muted-foreground">
-              Bienvenue, {profile?.full_name}
-            </p>
+          <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
+                Mon Tableau de Bord
+              </h1>
+              <p className="text-muted-foreground">
+                Bienvenue, {profile?.full_name}
+              </p>
+            </div>
+            
+            {/* Export PDF Button */}
+            {appointments.length > 0 && (
+              <Button onClick={exportToPDF} variant="outline" className="gap-2">
+                <Download className="h-4 w-4" />
+                <FileText className="h-4 w-4" />
+                Exporter PDF
+              </Button>
+            )}
           </div>
 
           {/* Stats Cards */}

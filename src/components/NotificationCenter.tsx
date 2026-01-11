@@ -28,19 +28,20 @@ export const NotificationCenter = () => {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+        <Button variant="ghost" size="icon" className="relative" aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} non lues)` : ''}`}>
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <Badge 
               variant="destructive" 
               className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+              aria-hidden="true"
             >
               {unreadCount > 9 ? '9+' : unreadCount}
             </Badge>
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="end">
+      <PopoverContent className="w-80 p-0" align="end" role="region" aria-label="Centre de notifications">
         <div className="flex items-center justify-between p-4 border-b">
           <h3 className="font-semibold">Notifications</h3>
           <div className="flex gap-2">
@@ -63,13 +64,18 @@ export const NotificationCenter = () => {
         )}
 
         <ScrollArea className="h-[400px]">
+          {/* Live region for screen readers */}
+          <div role="status" aria-live="polite" className="sr-only">
+            {unreadCount > 0 ? `${unreadCount} nouvelles notifications` : 'Aucune nouvelle notification'}
+          </div>
+          
           {notifications.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
-              <Bell className="h-12 w-12 mx-auto mb-2 opacity-20" />
+              <Bell className="h-12 w-12 mx-auto mb-2 opacity-20" aria-hidden="true" />
               <p>Aucune notification</p>
             </div>
           ) : (
-            <div className="divide-y">
+            <div className="divide-y" role="list" aria-label="Liste des notifications">
               {notifications.map((notification) => (
                 <div
                   key={notification.id}

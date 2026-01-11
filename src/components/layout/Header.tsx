@@ -14,6 +14,17 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { NotificationCenter } from '@/components/NotificationCenter';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -209,11 +220,20 @@ export const Header = () => {
   );
 
   return (
-    <header className={cn(
-      "sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60",
-      isRTL && "rtl"
-    )}>
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+    <>
+      {/* Skip to main content - Accessibility */}
+      <a 
+        href="#main-content" 
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:outline-none"
+      >
+        {language === 'ar' ? 'تخطي إلى المحتوى الرئيسي' : 'Aller au contenu principal'}
+      </a>
+      
+      <header className={cn(
+        "sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60",
+        isRTL && "rtl"
+      )}>
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
         {/* Logo */}
         <Link 
           to="/" 
@@ -340,10 +360,34 @@ export const Header = () => {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={logout} className="cursor-pointer text-destructive">
-                    <LogOut className={`${isRTL ? 'ml-2' : 'mr-2'} h-4 w-4`} />
-                    {t('header', 'logout')}
-                  </DropdownMenuItem>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer text-destructive">
+                        <LogOut className={`${isRTL ? 'ml-2' : 'mr-2'} h-4 w-4`} />
+                        {t('header', 'logout')}
+                      </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          {language === 'ar' ? 'تأكيد تسجيل الخروج' : 'Confirmer la déconnexion'}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {language === 'ar' 
+                            ? 'هل أنت متأكد من رغبتك في تسجيل الخروج؟'
+                            : 'Êtes-vous sûr de vouloir vous déconnecter?'}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>
+                          {language === 'ar' ? 'إلغاء' : 'Annuler'}
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={logout} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          {language === 'ar' ? 'تسجيل الخروج' : 'Se déconnecter'}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
@@ -501,5 +545,6 @@ export const Header = () => {
         </div>
       </div>
     </header>
+    </>
   );
 };
