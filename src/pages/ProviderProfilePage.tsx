@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { MapPin, Star, Phone, Share2, Flag, Calendar, Languages, Award, Image as ImageIcon, Heart, Navigation, Copy, Check, QrCode } from "lucide-react";
+import { MapPin, Star, Phone, Share2, Flag, Calendar, Languages, Award, Image as ImageIcon, Heart, Navigation, Copy, Check, QrCode, Clock } from "lucide-react";
 import { useProvider } from "@/hooks/useProviders";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { BookingModal } from "@/components/BookingModal";
@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import ProviderMap from "@/components/ProviderMap";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QRCodeSVG } from 'qrcode.react';
+import { getProviderGallery, getDefaultSchedule } from "@/data/providerAssets";
 
 const ProviderProfilePage = () => {
   const { id } = useParams();
@@ -255,11 +256,34 @@ const ProviderProfilePage = () => {
           <Card className="glass-card">
             <CardHeader className="py-4"><CardTitle>Galerie</CardTitle></CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="aspect-video rounded-lg bg-muted/50" />
-                ))}
-              </div>
+              {(() => {
+                const gallery = provider.gallery?.length ? provider.gallery : getProviderGallery(provider.type);
+                return (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {gallery.slice(0, 6).map((img, i) => (
+                      <Dialog key={i}>
+                        <DialogTrigger asChild>
+                          <div className="aspect-video rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity">
+                            <img 
+                              src={img} 
+                              alt={`${provider.name} - Photo ${i + 1}`}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                          </div>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-3xl">
+                          <img 
+                            src={img.replace('w=600', 'w=1200')} 
+                            alt={`${provider.name} - Photo ${i + 1}`}
+                            className="w-full h-auto rounded-lg"
+                          />
+                        </DialogContent>
+                      </Dialog>
+                    ))}
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
 
@@ -285,7 +309,41 @@ const ProviderProfilePage = () => {
               <div className="text-xs text-muted-foreground">
                 {provider.isOpen ? "Ouvert maintenant" : "Fermé"}
               </div>
-              <Button variant="outline" className="w-full mt-2">
+              
+              {/* Opening Hours */}
+              {(() => {
+                const schedule = provider.schedule || getDefaultSchedule(provider.type, provider.emergency);
+                const days = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+                const dayLabels: Record<string, string> = {
+                  lundi: 'Lun', mardi: 'Mar', mercredi: 'Mer', jeudi: 'Jeu',
+                  vendredi: 'Ven', samedi: 'Sam', dimanche: 'Dim'
+                };
+                return (
+                  <div className="mt-4 pt-3 border-t">
+                    <div className="flex items-center gap-2 mb-2 text-sm font-medium">
+                      <Clock className="h-4 w-4" /> Horaires
+                    </div>
+                    <div className="space-y-1 text-xs">
+                      {days.map(day => {
+                        const hours = schedule[day as keyof typeof schedule] as { open: string; close: string; closed?: boolean } | undefined;
+                        if (!hours) return null;
+                        const isClosed = ('closed' in hours && hours.closed) || (hours.open === '00:00' && hours.close === '00:00');
+                        const is24h = hours.open === '00:00' && hours.close === '23:59';
+                        return (
+                          <div key={day} className="flex justify-between">
+                            <span className="text-muted-foreground">{dayLabels[day]}</span>
+                            <span className={isClosed ? 'text-destructive' : ''}>
+                              {isClosed ? 'Fermé' : is24h ? '24h/24' : `${hours.open} - ${hours.close}`}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+              
+              <Button variant="outline" className="w-full mt-4">
                 <Calendar className="h-4 w-4 mr-2" /> Voir disponibilités
               </Button>
             </CardContent>

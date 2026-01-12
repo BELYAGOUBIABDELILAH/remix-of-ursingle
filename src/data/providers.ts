@@ -17,6 +17,33 @@ export type Lang = 'ar' | 'fr' | 'en';
 
 export type VerificationStatus = 'pending' | 'verified' | 'rejected';
 
+// Opening hours for a day
+export interface DaySchedule {
+  open: string;
+  close: string;
+  closed?: boolean;
+}
+
+// Weekly schedule
+export interface WeeklySchedule {
+  lundi?: DaySchedule;
+  mardi?: DaySchedule;
+  mercredi?: DaySchedule;
+  jeudi?: DaySchedule;
+  vendredi?: DaySchedule;
+  samedi?: DaySchedule;
+  dimanche?: DaySchedule;
+}
+
+// Review for a provider
+export interface ProviderReview {
+  id: string;
+  patientName: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
+
 export interface CityHealthProvider {
   id: string;
   name: string;
@@ -46,6 +73,10 @@ export interface CityHealthProvider {
   urgentNeed?: boolean;
   stockStatus?: 'critical' | 'low' | 'normal' | 'high';
   imagingTypes?: string[];
+  // New fields for enhanced profile
+  gallery?: string[];
+  schedule?: WeeklySchedule;
+  reviews?: ProviderReview[];
 }
 
 // Provider Type Labels (French/Arabic)
