@@ -19,9 +19,10 @@ import {
   Trash2, Star, Navigation, ExternalLink
 } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
-import { getAppointments, AppointmentRecord, CityHealthProvider, toggleFavorite, PROVIDER_TYPE_LABELS } from '@/data/providers';
-import { getProviderById, getVerifiedProviders } from '@/services/firestoreProviderService';
-import { favoritesService } from '@/services/favoritesService';
+import { getAppointments, AppointmentRecord, CityHealthProvider, PROVIDER_TYPE_LABELS } from '@/data/providers';
+import { getProviderById } from '@/services/firestoreProviderService';
+import { useFavorites, useRemoveFavorite } from '@/hooks/useFavorites';
+import { useVerifiedProviders } from '@/hooks/useProviders';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -37,9 +38,17 @@ const calculateProfileCompletion = (profile: any) => {
 };
 
 export default function CitizenProfilePage() {
-  const { profile, updateProfile, logout, isAuthenticated } = useAuth();
+  const { profile, updateProfile, logout, isAuthenticated, hasRole } = useAuth();
   const { preferences, updatePreferences } = useNotifications();
   const navigate = useNavigate();
+  
+  // TanStack Query hooks for favorites - synchronized with FavoritesPage
+  const { data: favoriteIds = [], isLoading: favoritesLoading } = useFavorites();
+  const { mutate: removeFavorite, isPending: isRemovingFavorite } = useRemoveFavorite();
+  const { data: allProviders = [] } = useVerifiedProviders();
+  
+  // Filter providers to get only favorites
+  const favorites = allProviders.filter(p => favoriteIds.includes(p.id));
   
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -49,7 +58,6 @@ export default function CitizenProfilePage() {
     dateOfBirth: ''
   });
   const [appointments, setAppointments] = useState<AppointmentRecord[]>([]);
-  const [favorites, setFavorites] = useState<CityHealthProvider[]>([]);
   const [providerCache, setProviderCache] = useState<Record<string, CityHealthProvider | null>>({});
 
   // Redirect if not authenticated or is a provider
@@ -58,13 +66,14 @@ export default function CitizenProfilePage() {
       navigate('/auth');
       return;
     }
-    if (profile?.roles?.includes('provider')) {
+    // Use hasRole() for consistent role checking
+    if (hasRole('provider')) {
       navigate('/provider/dashboard');
       return;
     }
-  }, [isAuthenticated, profile, navigate]);
+  }, [isAuthenticated, hasRole, navigate]);
 
-  // Load data
+  // Load form data and appointments
   useEffect(() => {
     if (profile) {
       setFormData({
@@ -75,24 +84,6 @@ export default function CitizenProfilePage() {
       });
     }
     setAppointments(getAppointments());
-    
-    // Load favorites from Firestore via favoritesService
-    const loadFavorites = async () => {
-      if (profile?.id) {
-        try {
-          const favoriteIds = await favoritesService.getUserFavorites(profile.id);
-          const providers: CityHealthProvider[] = [];
-          for (const id of favoriteIds) {
-            const provider = await getProviderById(id);
-            if (provider) providers.push(provider);
-          }
-          setFavorites(providers);
-        } catch (error) {
-          console.error('Error loading favorites:', error);
-        }
-      }
-    };
-    loadFavorites();
   }, [profile]);
 
   // Load provider details for appointments
@@ -131,16 +122,15 @@ export default function CitizenProfilePage() {
     setIsEditing(false);
   };
 
-  const handleRemoveFavorite = async (providerId: string) => {
-    if (profile?.id) {
-      try {
-        await favoritesService.removeFavorite(profile.id, providerId);
-        setFavorites(prev => prev.filter(f => f.id !== providerId));
+  const handleRemoveFavorite = (providerId: string) => {
+    removeFavorite(providerId, {
+      onSuccess: () => {
         toast.success('Retiré des favoris');
-      } catch (error) {
+      },
+      onError: () => {
         toast.error('Erreur lors de la suppression');
       }
-    }
+    });
   };
 
   const handleCancelAppointment = (appointmentId: string) => {
