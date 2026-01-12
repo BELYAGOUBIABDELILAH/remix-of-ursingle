@@ -17,8 +17,9 @@ import {
   getPendingProviders,
   getProviderByUserId,
   updateProviderVerification,
+  updateProvider,
 } from '@/services/firestoreProviderService';
-import { ProviderType } from '@/data/providers';
+import { ProviderType, CityHealthProvider } from '@/data/providers';
 
 // Query keys for cache management
 export const providerKeys = {
@@ -166,6 +167,30 @@ export function useUpdateVerification() {
     }) => updateProviderVerification(providerId, status, isPublic),
     onSuccess: () => {
       // Invalidate all provider queries to refetch
+      queryClient.invalidateQueries({ queryKey: providerKeys.all });
+    },
+  });
+}
+
+/**
+ * Mutation: Update provider profile data
+ * Use for: provider dashboard profile updates
+ */
+export function useUpdateProvider() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      providerId,
+      updates,
+    }: {
+      providerId: string;
+      updates: Partial<CityHealthProvider>;
+    }) => updateProvider(providerId, updates),
+    onSuccess: (_, { providerId }) => {
+      // Invalidate specific provider and all lists
+      queryClient.invalidateQueries({ queryKey: providerKeys.detail(providerId) });
+      queryClient.invalidateQueries({ queryKey: providerKeys.verified() });
       queryClient.invalidateQueries({ queryKey: providerKeys.all });
     },
   });

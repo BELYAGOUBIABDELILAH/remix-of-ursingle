@@ -1,6 +1,6 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProviderByUserId } from '@/hooks/useProviders';
+import { useProviderByUserId, useUpdateProvider } from '@/hooks/useProviders';
 import { CityHealthProvider } from '@/data/providers';
 
 export type ProviderVerificationStatus = 'pending' | 'verified' | 'rejected';
@@ -22,6 +22,10 @@ export interface ProviderContextType {
   isRejected: boolean;
   isPublic: boolean;
   
+  // Update functions
+  updateProviderData: (updates: Partial<CityHealthProvider>) => Promise<void>;
+  isSaving: boolean;
+  
   // Refresh function
   refetch: () => void;
 }
@@ -29,7 +33,7 @@ export interface ProviderContextType {
 const ProviderContext = createContext<ProviderContextType | undefined>(undefined);
 
 export function ProviderProvider({ children }: { children: ReactNode }) {
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   
   // Fetch provider data using TanStack Query
   const { 
@@ -37,6 +41,9 @@ export function ProviderProvider({ children }: { children: ReactNode }) {
     isLoading: providerLoading, 
     refetch 
   } = useProviderByUserId(user?.uid);
+  
+  // Mutation for updating provider
+  const { mutateAsync: updateMutation, isPending: isSaving } = useUpdateProvider();
   
   // Derived state
   const isLoading = authLoading || providerLoading;
@@ -51,6 +58,14 @@ export function ProviderProvider({ children }: { children: ReactNode }) {
   const isRejected = verificationStatus === 'rejected';
   const isPublic = provider?.isPublic ?? false;
   
+  // Update function that syncs to Firestore
+  const updateProviderData = async (updates: Partial<CityHealthProvider>): Promise<void> => {
+    if (!provider?.id) {
+      throw new Error('No provider ID available');
+    }
+    await updateMutation({ providerId: provider.id, updates });
+  };
+  
   return (
     <ProviderContext.Provider
       value={{
@@ -64,6 +79,8 @@ export function ProviderProvider({ children }: { children: ReactNode }) {
         isPending,
         isRejected,
         isPublic,
+        updateProviderData,
+        isSaving,
         refetch,
       }}
     >
