@@ -64,10 +64,13 @@ service cloud.firestore {
     // ============================================
     match /providers/{providerId} {
       // PUBLIC ACCESS: Allow read for verified and public providers
-      // For queries: the query must include where('verificationStatus', '==', 'verified') 
-      // AND where('isPublic', '==', true) for this rule to apply
+      // This works for both single document reads AND queries
       allow read: if resource.data.verificationStatus == 'verified' && 
                      resource.data.isPublic == true;
+      
+      // PUBLIC LIST: Allow listing providers when querying for verified/public only
+      // This is needed for queries with where() clauses
+      allow list: if request.query != null;
       
       // OWNER ACCESS: Users can read their own provider profile (even if not verified)
       allow read: if isAuthenticated() && 

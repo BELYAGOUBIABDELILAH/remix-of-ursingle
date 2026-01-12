@@ -72,16 +72,24 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-// Initialize Firestore with mock data if empty
+// Initialize Firestore with reference providers automatically
 const FirestoreInit = () => {
   useEffect(() => {
-    migrateProvidersToFirestore(50).then(result => {
-      if (result.count > 0) {
-        console.log('Firestore initialized:', result.message);
-      }
-    }).catch(err => {
-      console.error('Firestore init error:', err);
-    });
+    // Use includeReference: true to load the 65+ realistic providers
+    migrateProvidersToFirestore(65, { includeReference: true, additionalCount: 0 })
+      .then(result => {
+        if (result.count > 0) {
+          console.log('✅ Firestore initialized with reference providers:', result.message);
+          if (result.breakdown) {
+            console.log('📊 Provider breakdown:', result.breakdown);
+          }
+        } else if (result.message.includes('already exist')) {
+          console.log('ℹ️ Providers already loaded in Firestore');
+        }
+      })
+      .catch(err => {
+        console.error('❌ Firestore init error:', err);
+      });
   }, []);
   return null;
 };

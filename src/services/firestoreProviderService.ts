@@ -1,5 +1,6 @@
 // Firestore Provider Service
 // Centralized service for reading/writing providers to Firestore
+// With fallback to reference data when Firestore is unavailable
 
 import { 
   collection, 
@@ -18,9 +19,23 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { CityHealthProvider, ProviderType, VerificationStatus, Lang } from '@/data/providers';
+import { REFERENCE_PROVIDERS } from '@/data/referenceProviders';
 import { logError, handleError } from '@/utils/errorHandling';
 
 const PROVIDERS_COLLECTION = 'providers';
+
+// Flag to track if Firestore is available
+let firestoreAvailable = true;
+let fallbackUsed = false;
+
+// Get fallback providers (reference data)
+function getFallbackProviders(): CityHealthProvider[] {
+  if (!fallbackUsed) {
+    console.log('📦 Using fallback reference providers (Firestore unavailable)');
+    fallbackUsed = true;
+  }
+  return REFERENCE_PROVIDERS.filter(p => p.verificationStatus === 'verified' && p.isPublic);
+}
 
 // Convert Firestore document to CityHealthProvider
 function docToProvider(docData: DocumentData, id: string): CityHealthProvider {
@@ -93,9 +108,14 @@ function providerToDoc(provider: CityHealthProvider & { userId?: string }): Docu
 
 /**
  * Get all verified and public providers (for public search/map)
+ * Falls back to reference data if Firestore is unavailable
  */
 export async function getVerifiedProviders(): Promise<CityHealthProvider[]> {
   try {
+    if (!firestoreAvailable) {
+      return getFallbackProviders();
+    }
+    
     const providersRef = collection(db, PROVIDERS_COLLECTION);
     const q = query(
       providersRef,
@@ -104,10 +124,25 @@ export async function getVerifiedProviders(): Promise<CityHealthProvider[]> {
     );
     
     const snapshot = await getDocs(q);
+    
+    // If no data in Firestore, use fallback
+    if (snapshot.empty) {
+      console.log('📦 Firestore empty, using reference providers');
+      return getFallbackProviders();
+    }
+    
     return snapshot.docs.map(doc => docToProvider(doc.data(), doc.id));
-  } catch (error) {
+  } catch (error: any) {
+    // Check if it's a permission error
+    if (error?.code === 'permission-denied') {
+      console.warn('⚠️ Firestore permission denied, using fallback providers');
+      firestoreAvailable = false;
+      return getFallbackProviders();
+    }
+    
     logError(error, 'getVerifiedProviders');
-    throw error;
+    // Return fallback on any error
+    return getFallbackProviders();
   }
 }
 
@@ -116,12 +151,24 @@ export async function getVerifiedProviders(): Promise<CityHealthProvider[]> {
  */
 export async function getAllProviders(): Promise<CityHealthProvider[]> {
   try {
+    if (!firestoreAvailable) {
+      return REFERENCE_PROVIDERS;
+    }
+    
     const providersRef = collection(db, PROVIDERS_COLLECTION);
     const snapshot = await getDocs(providersRef);
+    
+    if (snapshot.empty) {
+      return REFERENCE_PROVIDERS;
+    }
+    
     return snapshot.docs.map(doc => docToProvider(doc.data(), doc.id));
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === 'permission-denied') {
+      firestoreAvailable = false;
+    }
     logError(error, 'getAllProviders');
-    throw error;
+    return REFERENCE_PROVIDERS;
   }
 }
 
@@ -130,17 +177,26 @@ export async function getAllProviders(): Promise<CityHealthProvider[]> {
  */
 export async function getProviderById(id: string): Promise<CityHealthProvider | null> {
   try {
+    // Check fallback first
+    if (!firestoreAvailable) {
+      return REFERENCE_PROVIDERS.find(p => p.id === id) || null;
+    }
+    
     const docRef = doc(db, PROVIDERS_COLLECTION, id);
     const docSnap = await getDoc(docRef);
     
     if (!docSnap.exists()) {
-      return null;
+      // Try fallback
+      return REFERENCE_PROVIDERS.find(p => p.id === id) || null;
     }
     
     return docToProvider(docSnap.data(), docSnap.id);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === 'permission-denied') {
+      firestoreAvailable = false;
+    }
     logError(error, `getProviderById: ${id}`);
-    throw error;
+    return REFERENCE_PROVIDERS.find(p => p.id === id) || null;
   }
 }
 
@@ -148,48 +204,108 @@ export async function getProviderById(id: string): Promise<CityHealthProvider | 
  * Get providers by type
  */
 export async function getProvidersByType(type: ProviderType): Promise<CityHealthProvider[]> {
-  const providersRef = collection(db, PROVIDERS_COLLECTION);
-  const q = query(
-    providersRef,
-    where('type', '==', type),
-    where('verificationStatus', '==', 'verified'),
-    where('isPublic', '==', true)
-  );
-  
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => docToProvider(doc.data(), doc.id));
+  try {
+    if (!firestoreAvailable) {
+      return REFERENCE_PROVIDERS.filter(p => p.type === type && p.verificationStatus === 'verified' && p.isPublic);
+    }
+    
+    const providersRef = collection(db, PROVIDERS_COLLECTION);
+    const q = query(
+      providersRef,
+      where('type', '==', type),
+      where('verificationStatus', '==', 'verified'),
+      where('isPublic', '==', true)
+    );
+    
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) {
+      return REFERENCE_PROVIDERS.filter(p => p.type === type && p.verificationStatus === 'verified' && p.isPublic);
+    }
+    
+    return snapshot.docs.map(doc => docToProvider(doc.data(), doc.id));
+  } catch (error: any) {
+    if (error?.code === 'permission-denied') {
+      firestoreAvailable = false;
+    }
+    return REFERENCE_PROVIDERS.filter(p => p.type === type && p.verificationStatus === 'verified' && p.isPublic);
+  }
 }
 
 /**
  * Get emergency providers
  */
 export async function getEmergencyProviders(): Promise<CityHealthProvider[]> {
-  const providersRef = collection(db, PROVIDERS_COLLECTION);
-  const q = query(
-    providersRef,
-    where('emergency', '==', true),
-    where('verificationStatus', '==', 'verified'),
-    where('isPublic', '==', true)
-  );
-  
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => docToProvider(doc.data(), doc.id));
+  try {
+    if (!firestoreAvailable) {
+      return REFERENCE_PROVIDERS.filter(p => p.emergency && p.verificationStatus === 'verified' && p.isPublic);
+    }
+    
+    const providersRef = collection(db, PROVIDERS_COLLECTION);
+    const q = query(
+      providersRef,
+      where('emergency', '==', true),
+      where('verificationStatus', '==', 'verified'),
+      where('isPublic', '==', true)
+    );
+    
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) {
+      return REFERENCE_PROVIDERS.filter(p => p.emergency && p.verificationStatus === 'verified' && p.isPublic);
+    }
+    
+    return snapshot.docs.map(doc => docToProvider(doc.data(), doc.id));
+  } catch (error: any) {
+    if (error?.code === 'permission-denied') {
+      firestoreAvailable = false;
+    }
+    return REFERENCE_PROVIDERS.filter(p => p.emergency && p.verificationStatus === 'verified' && p.isPublic);
+  }
 }
 
 /**
  * Get blood donation centers
  */
 export async function getBloodCenters(): Promise<CityHealthProvider[]> {
-  const providersRef = collection(db, PROVIDERS_COLLECTION);
-  const q = query(
-    providersRef,
-    where('type', 'in', ['blood_cabin', 'hospital']),
-    where('verificationStatus', '==', 'verified'),
-    where('isPublic', '==', true)
-  );
-  
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => docToProvider(doc.data(), doc.id));
+  try {
+    if (!firestoreAvailable) {
+      return REFERENCE_PROVIDERS.filter(p => 
+        (p.type === 'blood_cabin' || p.type === 'hospital') && 
+        p.verificationStatus === 'verified' && 
+        p.isPublic
+      );
+    }
+    
+    const providersRef = collection(db, PROVIDERS_COLLECTION);
+    const q = query(
+      providersRef,
+      where('type', 'in', ['blood_cabin', 'hospital']),
+      where('verificationStatus', '==', 'verified'),
+      where('isPublic', '==', true)
+    );
+    
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) {
+      return REFERENCE_PROVIDERS.filter(p => 
+        (p.type === 'blood_cabin' || p.type === 'hospital') && 
+        p.verificationStatus === 'verified' && 
+        p.isPublic
+      );
+    }
+    
+    return snapshot.docs.map(doc => docToProvider(doc.data(), doc.id));
+  } catch (error: any) {
+    if (error?.code === 'permission-denied') {
+      firestoreAvailable = false;
+    }
+    return REFERENCE_PROVIDERS.filter(p => 
+      (p.type === 'blood_cabin' || p.type === 'hospital') && 
+      p.verificationStatus === 'verified' && 
+      p.isPublic
+    );
+  }
 }
 
 /**
