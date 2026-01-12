@@ -62,11 +62,22 @@ function docToProvider(docData: DocumentData, id: string): CityHealthProvider {
     description: docData.description || '',
     verificationStatus: (docData.verificationStatus || 'pending') as VerificationStatus,
     isPublic: docData.isPublic || false,
-    // Optional type-specific fields
+    // Type-specific fields
     bloodTypes: docData.bloodTypes,
     urgentNeed: docData.urgentNeed,
     stockStatus: docData.stockStatus,
     imagingTypes: docData.imagingTypes,
+    // Enhanced profile fields
+    gallery: docData.gallery || [],
+    schedule: docData.schedule || null,
+    reviews: docData.reviews || [],
+    // Additional profile fields
+    socialLinks: docData.socialLinks || null,
+    departments: docData.departments || [],
+    consultationFee: docData.consultationFee || null,
+    insuranceAccepted: docData.insuranceAccepted || [],
+    website: docData.website || null,
+    email: docData.email || null,
   };
 }
 
@@ -96,11 +107,22 @@ function providerToDoc(provider: CityHealthProvider & { userId?: string }): Docu
     isPublic: provider.isPublic,
     // User ID linking to Firebase Auth
     ...(provider.userId && { userId: provider.userId }),
-    // Optional type-specific fields
+    // Type-specific fields
     ...(provider.bloodTypes && { bloodTypes: provider.bloodTypes }),
     ...(provider.urgentNeed !== undefined && { urgentNeed: provider.urgentNeed }),
     ...(provider.stockStatus && { stockStatus: provider.stockStatus }),
     ...(provider.imagingTypes && { imagingTypes: provider.imagingTypes }),
+    // Enhanced profile fields
+    ...(provider.gallery && { gallery: provider.gallery }),
+    ...(provider.schedule && { schedule: provider.schedule }),
+    ...(provider.reviews && { reviews: provider.reviews }),
+    // Additional profile fields
+    ...(provider.socialLinks && { socialLinks: provider.socialLinks }),
+    ...(provider.departments && { departments: provider.departments }),
+    ...(provider.consultationFee && { consultationFee: provider.consultationFee }),
+    ...(provider.insuranceAccepted && { insuranceAccepted: provider.insuranceAccepted }),
+    ...(provider.website && { website: provider.website }),
+    ...(provider.email && { email: provider.email }),
     // Metadata
     updatedAt: Timestamp.now(),
   };
@@ -314,6 +336,30 @@ export async function getBloodCenters(): Promise<CityHealthProvider[]> {
 export async function saveProvider(provider: CityHealthProvider): Promise<void> {
   const docRef = doc(db, PROVIDERS_COLLECTION, provider.id);
   await setDoc(docRef, providerToDoc(provider));
+}
+
+/**
+ * Update an existing provider with partial data
+ * Used by providers to update their own profile
+ */
+export async function updateProvider(
+  providerId: string,
+  updates: Partial<CityHealthProvider>
+): Promise<void> {
+  const docRef = doc(db, PROVIDERS_COLLECTION, providerId);
+  
+  // Filter out undefined values and add metadata
+  const cleanUpdates: Record<string, any> = {};
+  Object.entries(updates).forEach(([key, value]) => {
+    if (value !== undefined) {
+      cleanUpdates[key] = value;
+    }
+  });
+  
+  await updateDoc(docRef, {
+    ...cleanUpdates,
+    updatedAt: Timestamp.now(),
+  });
 }
 
 /**

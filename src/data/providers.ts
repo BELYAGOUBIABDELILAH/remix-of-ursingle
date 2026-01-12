@@ -77,6 +77,18 @@ export interface CityHealthProvider {
   gallery?: string[];
   schedule?: WeeklySchedule;
   reviews?: ProviderReview[];
+  // Additional profile fields
+  socialLinks?: {
+    website?: string;
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+  } | null;
+  departments?: string[];
+  consultationFee?: number | null;
+  insuranceAccepted?: string[];
+  website?: string | null;
+  email?: string | null;
 }
 
 // Provider Type Labels (French/Arabic)

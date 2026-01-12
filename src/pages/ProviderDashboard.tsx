@@ -9,12 +9,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
 import { 
   Eye, Phone, MapPin, TrendingUp, Calendar, Star, 
   Upload, Settings, BarChart3, Clock, Megaphone, Shield,
   AlertTriangle, XCircle, CheckCircle2, Loader2, Lock,
-  Globe, Users, Search, Bell, RefreshCw
+  Globe, Users, Search, RefreshCw, Save
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
@@ -30,7 +29,7 @@ import { useUpcomingAppointmentsCount } from '@/hooks/useAppointments';
 export default function ProviderDashboard() {
   const { toast } = useToast();
   
-  // Use centralized ProviderContext - single source of truth
+  // Use centralized ProviderContext - single source of truth with update capability
   const { 
     provider: providerData, 
     isLoading, 
@@ -38,6 +37,8 @@ export default function ProviderDashboard() {
     isPending, 
     isRejected,
     verificationStatus: contextVerificationStatus,
+    updateProviderData,
+    isSaving,
     refetch 
   } = useProvider();
   
@@ -53,29 +54,26 @@ export default function ProviderDashboard() {
     reviewsCount: reviewStats?.totalReviews || 0,
   };
 
-  const [profile, setProfile] = useState({
-    id: '',
+  // Form state - initialized from provider data
+  const [formData, setFormData] = useState({
     name: '',
-    type: 'doctor',
     specialty: '',
-    email: '',
     phone: '',
     address: '',
     description: '',
     schedule: '',
-    license: '',
-    photos: [] as string[],
-    languages: ['Français', 'Arabe'],
     accessible: true,
     emergency: false,
     lat: 35.1975,
     lng: -0.6300,
+    photos: [] as string[],
   });
 
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('pending');
   const [previousStatus, setPreviousStatus] = useState<VerificationStatus | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Update local state when provider data loads and detect status changes
+  // Sync form data when provider data loads
   useEffect(() => {
     if (providerData) {
       const newStatus = 
@@ -101,17 +99,21 @@ export default function ProviderDashboard() {
       setPreviousStatus(verificationStatus);
       setVerificationStatus(newStatus);
       
-      setProfile(prev => ({
-        ...prev,
-        id: providerData.id,
-        name: providerData.name,
+      // Update form data from provider
+      setFormData({
+        name: providerData.name || '',
         specialty: providerData.specialty || '',
-        phone: providerData.phone,
-        address: providerData.address,
+        phone: providerData.phone || '',
+        address: providerData.address || '',
         description: providerData.description || '',
-        lat: providerData.lat,
-        lng: providerData.lng,
-      }));
+        schedule: '', // Keep as text for now
+        accessible: providerData.accessible ?? true,
+        emergency: providerData.emergency ?? false,
+        lat: providerData.lat || 35.1975,
+        lng: providerData.lng || -0.6300,
+        photos: providerData.gallery || [],
+      });
+      setHasUnsavedChanges(false);
     }
   }, [providerData]);
 
@@ -121,15 +123,79 @@ export default function ProviderDashboard() {
     { type: 'appointment', date: '2025-01-08', count: 0 },
   ]);
 
-  const profileFields = calculateProfileCompletion(profile);
+  // Calculate profile completion based on form data
+  const profileFields = calculateProfileCompletion({
+    name: formData.name,
+    type: providerData?.type || 'doctor',
+    specialty: formData.specialty,
+    email: providerData?.email || '',
+    phone: formData.phone,
+    address: formData.address,
+    description: formData.description,
+    schedule: formData.schedule,
+    license: '',
+    photos: formData.photos,
+    languages: providerData?.languages || ['fr', 'ar'],
+    accessible: formData.accessible,
+    emergency: formData.emergency,
+  });
   const isProfileComplete = profileFields.filter(f => f.required && !f.completed).length === 0;
 
-  const handleProfileUpdate = (e: React.FormEvent) => {
+  // Handle form field changes
+  const handleFormChange = (field: keyof typeof formData, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setHasUnsavedChanges(true);
+  };
+
+  // Save profile changes to Firestore
+  const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Profil mis à jour",
-      description: "Vos modifications ont été enregistrées avec succès.",
-    });
+    
+    try {
+      await updateProviderData({
+        name: formData.name,
+        specialty: formData.specialty,
+        phone: formData.phone,
+        address: formData.address,
+        description: formData.description,
+        accessible: formData.accessible,
+        emergency: formData.emergency,
+      });
+      
+      setHasUnsavedChanges(false);
+      toast({
+        title: "Profil mis à jour",
+        description: "Vos modifications ont été enregistrées avec succès.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de sauvegarder les modifications.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Save location changes
+  const handleLocationUpdate = async () => {
+    try {
+      await updateProviderData({
+        lat: formData.lat,
+        lng: formData.lng,
+      });
+      
+      setHasUnsavedChanges(false);
+      toast({
+        title: "Localisation mise à jour",
+        description: "Votre position a été enregistrée.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de sauvegarder la localisation.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleRefresh = () => {
@@ -222,11 +288,11 @@ export default function ProviderDashboard() {
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16">
                 <AvatarImage src="/placeholder.svg" />
-                <AvatarFallback>{profile.name?.substring(0, 2).toUpperCase() || 'PR'}</AvatarFallback>
+                <AvatarFallback>{formData.name?.substring(0, 2).toUpperCase() || 'PR'}</AvatarFallback>
               </Avatar>
               <div>
-                <h1 className="text-3xl font-bold">{profile.name || 'Nouveau Professionnel'}</h1>
-                <p className="text-muted-foreground">{profile.specialty || 'Spécialité non définie'}</p>
+                <h1 className="text-3xl font-bold">{formData.name || 'Nouveau Professionnel'}</h1>
+                <p className="text-muted-foreground">{formData.specialty || 'Spécialité non définie'}</p>
                 {isVerified ? (
                   <Badge className="mt-1 bg-green-500 hover:bg-green-600">
                     <Shield className="h-3 w-3 mr-1" />
@@ -434,16 +500,16 @@ export default function ProviderDashboard() {
                       <Label htmlFor="name">Nom de l'établissement</Label>
                       <Input
                         id="name"
-                        value={profile.name}
-                        onChange={(e) => setProfile({...profile, name: e.target.value})}
+                        value={formData.name}
+                        onChange={(e) => handleFormChange('name', e.target.value)}
                       />
                     </div>
                     <div>
                       <Label htmlFor="specialty">Spécialité</Label>
                       <Input
                         id="specialty"
-                        value={profile.specialty}
-                        onChange={(e) => setProfile({...profile, specialty: e.target.value})}
+                        value={formData.specialty}
+                        onChange={(e) => handleFormChange('specialty', e.target.value)}
                       />
                     </div>
                   </div>
@@ -453,16 +519,16 @@ export default function ProviderDashboard() {
                       <Label htmlFor="phone">Téléphone</Label>
                       <Input
                         id="phone"
-                        value={profile.phone}
-                        onChange={(e) => setProfile({...profile, phone: e.target.value})}
+                        value={formData.phone}
+                        onChange={(e) => handleFormChange('phone', e.target.value)}
                       />
                     </div>
                     <div>
                       <Label htmlFor="address">Adresse</Label>
                       <Input
                         id="address"
-                        value={profile.address}
-                        onChange={(e) => setProfile({...profile, address: e.target.value})}
+                        value={formData.address}
+                        onChange={(e) => handleFormChange('address', e.target.value)}
                       />
                     </div>
                   </div>
@@ -472,8 +538,8 @@ export default function ProviderDashboard() {
                     <Textarea
                       id="description"
                       rows={4}
-                      value={profile.description}
-                      onChange={(e) => setProfile({...profile, description: e.target.value})}
+                      value={formData.description}
+                      onChange={(e) => handleFormChange('description', e.target.value)}
                       placeholder="Décrivez votre établissement, vos services, votre expérience..."
                     />
                   </div>
@@ -483,8 +549,8 @@ export default function ProviderDashboard() {
                     <Textarea
                       id="schedule"
                       rows={3}
-                      value={profile.schedule}
-                      onChange={(e) => setProfile({...profile, schedule: e.target.value})}
+                      value={formData.schedule}
+                      onChange={(e) => handleFormChange('schedule', e.target.value)}
                       placeholder="Lun-Ven: 9h-17h&#10;Sam: 9h-13h"
                     />
                   </div>
@@ -493,16 +559,16 @@ export default function ProviderDashboard() {
                     <div className="flex items-center space-x-2">
                       <Checkbox
                         id="accessible"
-                        checked={profile.accessible}
-                        onCheckedChange={(checked) => setProfile({...profile, accessible: !!checked})}
+                        checked={formData.accessible}
+                        onCheckedChange={(checked) => handleFormChange('accessible', !!checked)}
                       />
                       <Label htmlFor="accessible" className="font-normal">Accès PMR</Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Checkbox
                         id="emergency"
-                        checked={profile.emergency}
-                        onCheckedChange={(checked) => setProfile({...profile, emergency: !!checked})}
+                        checked={formData.emergency}
+                        onCheckedChange={(checked) => handleFormChange('emergency', !!checked)}
                       />
                       <Label htmlFor="emergency" className="font-normal">Service d'urgence 24/7</Label>
                     </div>
@@ -520,23 +586,31 @@ export default function ProviderDashboard() {
                         id="photos"
                         onChange={(e) => {
                           const files = Array.from(e.target.files || []);
-                          setProfile({
-                            ...profile, 
-                            photos: files.map(f => URL.createObjectURL(f))
-                          });
+                          handleFormChange('photos', files.map(f => URL.createObjectURL(f)));
                         }}
                       />
                       <Label htmlFor="photos" className="cursor-pointer">
-                        {profile.photos.length > 0 
-                          ? `${profile.photos.length} photo(s) sélectionnée(s)`
+                        {formData.photos.length > 0 
+                          ? `${formData.photos.length} photo(s) sélectionnée(s)`
                           : 'Cliquez pour ajouter des photos'
                         }
                       </Label>
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full">
-                    Enregistrer les modifications
+                  <Button type="submit" className="w-full" disabled={isSaving}>
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Enregistrement...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Enregistrer les modifications
+                        {hasUnsavedChanges && <span className="ml-2 text-xs">●</span>}
+                      </>
+                    )}
                   </Button>
                 </form>
               </CardContent>
@@ -559,15 +633,15 @@ export default function ProviderDashboard() {
                     <div>
                       <Label>Latitude</Label>
                       <Input 
-                        value={profile.lat} 
-                        onChange={(e) => setProfile({...profile, lat: parseFloat(e.target.value) || 0})}
+                        value={formData.lat} 
+                        onChange={(e) => handleFormChange('lat', parseFloat(e.target.value) || 0)}
                       />
                     </div>
                     <div>
                       <Label>Longitude</Label>
                       <Input 
-                        value={profile.lng}
-                        onChange={(e) => setProfile({...profile, lng: parseFloat(e.target.value) || 0})}
+                        value={formData.lng}
+                        onChange={(e) => handleFormChange('lng', parseFloat(e.target.value) || 0)}
                       />
                     </div>
                   </div>
@@ -584,14 +658,27 @@ export default function ProviderDashboard() {
                       </div>
                     )}
                     <LocationPicker 
-                      lat={profile.lat} 
-                      lng={profile.lng} 
-                      onLocationChange={(lat, lng) => setProfile({ ...profile, lat, lng })}
+                      lat={formData.lat} 
+                      lng={formData.lng} 
+                      onLocationChange={(lat, lng) => {
+                        handleFormChange('lat', lat);
+                        handleFormChange('lng', lng);
+                      }}
                     />
                   </div>
 
-                  <Button type="button" className="w-full">
-                    Mettre à jour la localisation
+                  <Button type="button" className="w-full" onClick={handleLocationUpdate} disabled={isSaving}>
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Enregistrement...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Mettre à jour la localisation
+                      </>
+                    )}
                   </Button>
                 </div>
               </CardContent>
@@ -601,8 +688,8 @@ export default function ProviderDashboard() {
           {/* Verification Tab */}
           <TabsContent value="verification">
             <VerificationRequest
-              providerId={profile.id}
-              providerName={profile.name}
+              providerId={providerData?.id || ''}
+              providerName={formData.name}
               currentStatus={verificationStatus}
               profileComplete={isProfileComplete}
               onStatusChange={setVerificationStatus}
@@ -612,8 +699,8 @@ export default function ProviderDashboard() {
           {/* Medical Ads Tab */}
           <TabsContent value="ads">
             <MedicalAdsManager
-              providerId={profile.id}
-              providerName={profile.name}
+              providerId={providerData?.id || ''}
+              providerName={formData.name}
               isVerified={isVerified}
             />
           </TabsContent>
