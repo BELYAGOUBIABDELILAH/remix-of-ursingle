@@ -161,6 +161,7 @@ export default function ProviderDashboard() {
         phone: formData.phone,
         address: formData.address,
         description: formData.description,
+        schedule: formData.schedule, // Now saving the interactive schedule
         accessible: formData.accessible,
         emergency: formData.emergency,
       });
