@@ -22,6 +22,8 @@ import { VerificationRequest, type VerificationStatus } from '@/components/provi
 import { MedicalAdsManager } from '@/components/provider/MedicalAdsManager';
 import { useProvider } from '@/contexts/ProviderContext';
 import { LocationPicker } from '@/components/provider/LocationPicker';
+import { ScheduleEditor } from '@/components/provider/ScheduleEditor';
+import type { WeeklySchedule } from '@/data/providers';
 import { cn } from '@/lib/utils';
 import { useReviewStats } from '@/hooks/useReviews';
 import { useUpcomingAppointmentsCount } from '@/hooks/useAppointments';
@@ -61,7 +63,7 @@ export default function ProviderDashboard() {
     phone: '',
     address: '',
     description: '',
-    schedule: '',
+    schedule: null as WeeklySchedule | null,
     accessible: true,
     emergency: false,
     lat: 35.1975,
@@ -106,7 +108,7 @@ export default function ProviderDashboard() {
         phone: providerData.phone || '',
         address: providerData.address || '',
         description: providerData.description || '',
-        schedule: '', // Keep as text for now
+        schedule: providerData.schedule || null,
         accessible: providerData.accessible ?? true,
         emergency: providerData.emergency ?? false,
         lat: providerData.lat || 35.1975,
@@ -124,6 +126,7 @@ export default function ProviderDashboard() {
   ]);
 
   // Calculate profile completion based on form data
+  const hasSchedule = formData.schedule && Object.keys(formData.schedule).length > 0;
   const profileFields = calculateProfileCompletion({
     name: formData.name,
     type: providerData?.type || 'doctor',
@@ -132,7 +135,7 @@ export default function ProviderDashboard() {
     phone: formData.phone,
     address: formData.address,
     description: formData.description,
-    schedule: formData.schedule,
+    schedule: hasSchedule ? 'configured' : '',
     license: '',
     photos: formData.photos,
     languages: providerData?.languages || ['fr', 'ar'],
@@ -544,16 +547,11 @@ export default function ProviderDashboard() {
                     />
                   </div>
 
-                  <div>
-                    <Label htmlFor="schedule">Horaires</Label>
-                    <Textarea
-                      id="schedule"
-                      rows={3}
-                      value={formData.schedule}
-                      onChange={(e) => handleFormChange('schedule', e.target.value)}
-                      placeholder="Lun-Ven: 9h-17h&#10;Sam: 9h-13h"
-                    />
-                  </div>
+                  <ScheduleEditor
+                    value={formData.schedule}
+                    onChange={(schedule) => handleFormChange('schedule', schedule)}
+                    isEmergency={formData.emergency}
+                  />
 
                   <div className="flex gap-6">
                     <div className="flex items-center space-x-2">
