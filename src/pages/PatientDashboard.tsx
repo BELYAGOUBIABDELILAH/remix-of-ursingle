@@ -7,8 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, MapPin, Star, MessageSquare, CheckCircle, XCircle, AlertCircle, Download, FileText } from 'lucide-react';
-import { getAppointmentsByPatient, updateAppointmentStatus } from '@/utils/appointmentStorage';
+import { Calendar, Clock, Star, MessageSquare, CheckCircle, XCircle, AlertCircle, Download, FileText, Loader2 } from 'lucide-react';
+import { usePatientAppointments, useCancelAppointment } from '@/hooks/useAppointments';
 import { getReviews } from '@/utils/reviewStorage';
 import { Appointment } from '@/types/appointments';
 import { Review } from '@/types/reviews';
@@ -20,32 +20,32 @@ import jsPDF from 'jspdf';
 const PatientDashboard = () => {
   const { profile, isAuthenticated } = useAuth();
   const { t, language } = useLanguage();
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
+
+  // Firestore appointments via TanStack Query
+  const { data: appointments = [], isLoading: appointmentsLoading } = usePatientAppointments();
+  const { mutate: cancelAppointmentMutation, isPending: isCancelling } = useCancelAppointment();
 
   const locales = { fr, ar, en: enUS };
 
+  // Load reviews (still local for now)
   useEffect(() => {
-    if (profile?.email) {
-      loadData();
-    }
-  }, [profile]);
-
-  const loadData = () => {
-    if (profile?.email) {
-      const userAppointments = getAppointmentsByPatient(profile.email);
-      setAppointments(userAppointments);
-      
+    if (profile?.id) {
       const allReviews = getReviews();
       const userReviews = allReviews.filter(r => r.patientId === profile.id);
       setReviews(userReviews);
     }
-  };
+  }, [profile]);
 
-  const cancelAppointment = (id: string) => {
-    updateAppointmentStatus(id, 'cancelled');
-    toast.success('Rendez-vous annulé');
-    loadData();
+  const handleCancelAppointment = (id: string) => {
+    cancelAppointmentMutation(id, {
+      onSuccess: () => {
+        toast.success('Rendez-vous annulé');
+      },
+      onError: () => {
+        toast.error('Erreur lors de l\'annulation');
+      }
+    });
   };
 
   // Export appointments to PDF
@@ -280,9 +280,10 @@ const PatientDashboard = () => {
                           <Button 
                             variant="destructive" 
                             size="sm"
-                            onClick={() => cancelAppointment(apt.id)}
+                            onClick={() => handleCancelAppointment(apt.id)}
+                            disabled={isCancelling}
                           >
-                            Annuler
+                            {isCancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Annuler'}
                           </Button>
                         )}
                       </div>

@@ -19,10 +19,12 @@ import {
   Trash2, Star, Navigation, ExternalLink
 } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
-import { getAppointments, AppointmentRecord, CityHealthProvider, PROVIDER_TYPE_LABELS } from '@/data/providers';
+import { CityHealthProvider, PROVIDER_TYPE_LABELS } from '@/data/providers';
 import { getProviderById } from '@/services/firestoreProviderService';
 import { useFavorites, useRemoveFavorite } from '@/hooks/useFavorites';
 import { useVerifiedProviders } from '@/hooks/useProviders';
+import { usePatientAppointments, useCancelAppointment } from '@/hooks/useAppointments';
+import { Appointment } from '@/types/appointments';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -50,6 +52,10 @@ export default function CitizenProfilePage() {
   // Filter providers to get only favorites
   const favorites = allProviders.filter(p => favoriteIds.includes(p.id));
   
+  // TanStack Query hooks for appointments - using Firestore
+  const { data: appointments = [], isLoading: appointmentsLoading } = usePatientAppointments();
+  const { mutate: cancelAppointmentMutation, isPending: isCancellingAppointment } = useCancelAppointment();
+  
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '',
@@ -57,7 +63,6 @@ export default function CitizenProfilePage() {
     address: '',
     dateOfBirth: ''
   });
-  const [appointments, setAppointments] = useState<AppointmentRecord[]>([]);
   const [providerCache, setProviderCache] = useState<Record<string, CityHealthProvider | null>>({});
 
   // Redirect if not authenticated or is a provider
@@ -73,7 +78,7 @@ export default function CitizenProfilePage() {
     }
   }, [isAuthenticated, hasRole, navigate]);
 
-  // Load form data and appointments
+  // Load form data
   useEffect(() => {
     if (profile) {
       setFormData({
@@ -83,7 +88,6 @@ export default function CitizenProfilePage() {
         dateOfBirth: (profile as any).dateOfBirth || ''
       });
     }
-    setAppointments(getAppointments());
   }, [profile]);
 
   // Load provider details for appointments
@@ -134,13 +138,24 @@ export default function CitizenProfilePage() {
   };
 
   const handleCancelAppointment = (appointmentId: string) => {
-    // In a real app, this would update the backend
-    toast.success('Rendez-vous annulé');
-    setAppointments(prev => prev.filter(a => a.id !== appointmentId));
+    cancelAppointmentMutation(appointmentId, {
+      onSuccess: () => {
+        toast.success('Rendez-vous annulé');
+      },
+      onError: () => {
+        toast.error('Erreur lors de l\'annulation');
+      }
+    });
   };
 
-  const upcomingAppointments = appointments.filter(a => new Date(a.when) > new Date());
-  const pastAppointments = appointments.filter(a => new Date(a.when) <= new Date());
+  // Filter appointments by date for upcoming vs past
+  const now = new Date();
+  const upcomingAppointments = appointments.filter(a => 
+    new Date(a.dateTime) > now && a.status !== 'cancelled' && a.status !== 'completed'
+  );
+  const pastAppointments = appointments.filter(a => 
+    new Date(a.dateTime) <= now || a.status === 'cancelled' || a.status === 'completed'
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -343,9 +358,9 @@ export default function CitizenProfilePage() {
                             <CardContent className="p-4">
                               <div className="flex items-start justify-between">
                                 <div>
-                                  <h4 className="font-semibold">{provider?.name || 'Prestataire'}</h4>
+                                  <h4 className="font-semibold">{apt.providerName || provider?.name || 'Prestataire'}</h4>
                                   <p className="text-sm text-muted-foreground">
-                                    {new Date(apt.when).toLocaleDateString('fr-FR', {
+                                    {new Date(apt.dateTime).toLocaleDateString('fr-FR', {
                                       weekday: 'long',
                                       day: 'numeric',
                                       month: 'long',
@@ -393,12 +408,14 @@ export default function CitizenProfilePage() {
                         return (
                           <div key={apt.id} className="flex items-center justify-between py-2 border-b last:border-0">
                             <div>
-                              <p className="font-medium text-sm">{provider?.name || 'Prestataire'}</p>
+                              <p className="font-medium text-sm">{apt.providerName || provider?.name || 'Prestataire'}</p>
                               <p className="text-xs text-muted-foreground">
-                                {new Date(apt.when).toLocaleDateString('fr-FR')}
+                                {new Date(apt.dateTime).toLocaleDateString('fr-FR')}
                               </p>
                             </div>
-                            <Badge variant="secondary">Terminé</Badge>
+                            <Badge variant={apt.status === 'cancelled' ? 'destructive' : 'secondary'}>
+                              {apt.status === 'cancelled' ? 'Annulé' : 'Terminé'}
+                            </Badge>
                           </div>
                         );
                       })}
