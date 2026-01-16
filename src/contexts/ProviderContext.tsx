@@ -1,5 +1,5 @@
 import { createContext, useContext, ReactNode } from 'react';
-import { useAuth, DEV_BYPASS_AUTH } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useProviderByUserId, useUpdateProvider } from '@/hooks/useProviders';
 import { CityHealthProvider } from '@/data/providers';
 
@@ -32,35 +32,6 @@ export interface ProviderContextType {
 
 const ProviderContext = createContext<ProviderContextType | undefined>(undefined);
 
-// ========== DEV MODE: MOCK PROVIDER ==========
-const MOCK_PROVIDER: CityHealthProvider = {
-  id: 'dev-provider-mock',
-  name: 'Cabinet Médical Dev',
-  type: 'doctor',
-  specialty: 'Médecine Générale',
-  rating: 4.8,
-  reviewsCount: 42,
-  distance: 0,
-  verified: true,
-  emergency: false,
-  accessible: true,
-  isOpen: true,
-  address: '123 Rue de Test, Alger',
-  city: 'Alger',
-  area: 'Centre',
-  phone: '+213 555 123 456',
-  image: '/placeholder.svg',
-  lat: 36.7538,
-  lng: 3.0588,
-  languages: ['fr', 'ar'],
-  description: 'Cabinet de développement pour tests',
-  verificationStatus: 'verified',
-  isPublic: true,
-  gallery: [],
-  
-};
-// ============================================
-
 export function ProviderProvider({ children }: { children: ReactNode }) {
   const { user, isLoading: authLoading } = useAuth();
   
@@ -73,34 +44,6 @@ export function ProviderProvider({ children }: { children: ReactNode }) {
   
   // Mutation for updating provider
   const { mutateAsync: updateMutation, isPending: isSaving } = useUpdateProvider();
-
-  // DEV MODE: Return mock provider context
-  if (DEV_BYPASS_AUTH) {
-    console.warn('🔓 DEV MODE: Provider context bypassed - Mock provider active');
-    return (
-      <ProviderContext.Provider
-        value={{
-          provider: MOCK_PROVIDER,
-          providerId: 'dev-provider-mock',
-          isLoading: false,
-          isProviderLoaded: true,
-          hasProviderAccount: true,
-          verificationStatus: 'verified',
-          isVerified: true,
-          isPending: false,
-          isRejected: false,
-          isPublic: true,
-          updateProviderData: async (updates) => {
-            console.warn('🔓 DEV MODE: Provider update bypassed', updates);
-          },
-          isSaving: false,
-          refetch: () => console.warn('🔓 DEV MODE: Provider refetch bypassed'),
-        }}
-      >
-        {children}
-      </ProviderContext.Provider>
-    );
-  }
   
   // Derived state
   const isLoading = authLoading || providerLoading;
