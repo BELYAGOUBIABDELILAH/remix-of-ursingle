@@ -140,7 +140,6 @@ export const AREAS = [
 const STORAGE_KEYS = {
   providers: 'ch_providers_v1',
   favorites: 'ch_favorites_v1',
-  appointments: 'ch_appointments_v1',
 }
 
 function randomFrom<T>(arr: T[], i: number) {
@@ -309,34 +308,6 @@ export function toggleFavorite(id: string): boolean {
 export function getFavoriteProviders(): CityHealthProvider[] {
   const ids = new Set(getFavoriteIds())
   return getProviders().filter((p) => ids.has(p.id))
-}
-
-export interface AppointmentRecord {
-  id: string // appointment id
-  providerId: string
-  when: string // ISO string
-  name: string // patient name (mock)
-  phone: string
-  email?: string
-}
-
-export function saveAppointment(a: AppointmentRecord) {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.appointments)
-    const list: AppointmentRecord[] = raw ? JSON.parse(raw) : []
-    list.push(a)
-    localStorage.setItem(STORAGE_KEYS.appointments, JSON.stringify(list))
-  } catch {
-    // ignore
-  }
-}
-
-export function getAppointments(): AppointmentRecord[] {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.appointments) || '[]') as AppointmentRecord[]
-  } catch {
-    return []
-  }
 }
 
 // Legacy export for backward compatibility
