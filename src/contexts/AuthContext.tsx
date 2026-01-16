@@ -23,6 +23,39 @@ import { auth, db, googleProvider } from '@/lib/firebase';
 import { toast } from 'sonner';
 import { getErrorMessage, logError } from '@/utils/errorHandling';
 
+// ========== DEV MODE: BYPASS AUTH ==========
+// Set to false to re-enable authentication
+export const DEV_BYPASS_AUTH = true;
+
+const MOCK_USER = {
+  uid: 'dev-user-all-roles',
+  email: 'dev@cityhealth.dz',
+  displayName: 'Dev User (All Roles)',
+  emailVerified: true,
+  photoURL: null,
+  metadata: {},
+  providerData: [],
+  refreshToken: '',
+  tenantId: null,
+  delete: async () => {},
+  getIdToken: async () => 'mock-token',
+  getIdTokenResult: async () => ({ token: 'mock-token', claims: {}, expirationTime: '', issuedAtTime: '', signInProvider: null, signInSecondFactor: null, authTime: '' }),
+  reload: async () => {},
+  toJSON: () => ({}),
+  isAnonymous: false,
+  phoneNumber: null,
+  providerId: 'firebase',
+} as User;
+
+const MOCK_PROFILE: UserProfile = {
+  id: 'dev-user-all-roles',
+  email: 'dev@cityhealth.dz',
+  full_name: 'Dev User (Admin + Provider + Patient)',
+  avatar_url: null,
+  roles: ['admin', 'provider', 'patient'], // All roles enabled
+};
+// ============================================
+
 export type UserRole = 'patient' | 'provider' | 'admin';
 
 export interface UserProfile {
@@ -106,6 +139,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    // DEV MODE: Bypass Firebase Auth completely
+    if (DEV_BYPASS_AUTH) {
+      setUser(MOCK_USER);
+      setProfile(MOCK_PROFILE);
+      setIsLoading(false);
+      console.warn('🔓 DEV MODE: Auth bypassed - All roles enabled (admin, provider, patient)');
+      return;
+    }
+
     // Set up Firebase auth state listener
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
@@ -126,6 +168,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
+    if (DEV_BYPASS_AUTH) {
+      console.warn('🔓 DEV MODE: Login bypassed');
+      toast.success('DEV MODE: Connexion simulée');
+      return;
+    }
+
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
@@ -141,6 +189,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signup = async (email: string, password: string, fullName: string) => {
+    if (DEV_BYPASS_AUTH) {
+      console.warn('🔓 DEV MODE: Signup bypassed');
+      toast.success('DEV MODE: Inscription simulée');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { user: newUser } = await createUserWithEmailAndPassword(auth, email, password);
@@ -179,6 +233,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const loginWithGoogle = async () => {
+    if (DEV_BYPASS_AUTH) {
+      console.warn('🔓 DEV MODE: Google login bypassed');
+      toast.success('DEV MODE: Connexion Google simulée');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const result = await signInWithPopup(auth, googleProvider);
@@ -217,6 +277,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
+    if (DEV_BYPASS_AUTH) {
+      console.warn('🔓 DEV MODE: Logout bypassed');
+      toast.info('DEV MODE: Déconnexion simulée (toujours connecté)');
+      return;
+    }
+
     try {
       await firebaseSignOut(auth);
       setUser(null);
@@ -231,6 +297,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateProfile = async (updates: { full_name?: string; avatar_url?: string }) => {
+    if (DEV_BYPASS_AUTH) {
+      console.warn('🔓 DEV MODE: Profile update bypassed');
+      toast.success('DEV MODE: Profil mis à jour (simulé)');
+      return;
+    }
+
     if (!user) return;
 
     try {
@@ -262,6 +334,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const hasRole = (role: UserRole): boolean => {
+    if (DEV_BYPASS_AUTH) return true; // Always grant access in dev mode
     return profile?.roles.includes(role) ?? false;
   };
 
