@@ -161,7 +161,6 @@ export function Step1AccountCreation({ formData, updateFormData, onNext }: Step1
       // Auto-advance to next step
       onNext();
     } catch (error: any) {
-      console.error('Google sign-in error:', error);
       toast({
         title: "Erreur de connexion",
         description: error.message || "Impossible de se connecter avec Google",

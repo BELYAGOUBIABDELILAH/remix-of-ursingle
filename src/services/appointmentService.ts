@@ -73,8 +73,7 @@ export const getAppointmentsByPatient = async (patientId: string): Promise<Appoi
     
     const snapshot = await getDocs(q);
     return snapshot.docs.map(docToAppointment);
-  } catch (error) {
-    console.error('Error fetching patient appointments:', error);
+  } catch {
     return [];
   }
 };
@@ -90,8 +89,7 @@ export const getAppointmentsByProvider = async (providerId: string): Promise<App
     
     const snapshot = await getDocs(q);
     return snapshot.docs.map(docToAppointment);
-  } catch (error) {
-    console.error('Error fetching provider appointments:', error);
+  } catch {
     return [];
   }
 };
@@ -174,8 +172,7 @@ export const getAllAppointmentsCount = async (): Promise<number> => {
   try {
     const snapshot = await getDocs(collection(db, APPOINTMENTS_COLLECTION));
     return snapshot.size;
-  } catch (error) {
-    console.error('Error counting appointments:', error);
+  } catch {
     return 0;
   }
 };

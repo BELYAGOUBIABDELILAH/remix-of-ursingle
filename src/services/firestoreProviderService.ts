@@ -30,10 +30,7 @@ let fallbackUsed = false;
 
 // Get fallback providers (reference data)
 function getFallbackProviders(): CityHealthProvider[] {
-  if (!fallbackUsed) {
-    console.log('📦 Using fallback reference providers (Firestore unavailable)');
-    fallbackUsed = true;
-  }
+  fallbackUsed = true;
   return REFERENCE_PROVIDERS.filter(p => p.verificationStatus === 'verified' && p.isPublic);
 }
 
@@ -149,15 +146,13 @@ export async function getVerifiedProviders(): Promise<CityHealthProvider[]> {
     
     // If no data in Firestore, use fallback
     if (snapshot.empty) {
-      console.log('📦 Firestore empty, using reference providers');
       return getFallbackProviders();
     }
     
     return snapshot.docs.map(doc => docToProvider(doc.data(), doc.id));
   } catch (error: any) {
-    // Check if it's a permission error
+    // Check if it's a permission error - silently use fallback
     if (error?.code === 'permission-denied') {
-      console.warn('⚠️ Firestore permission denied, using fallback providers');
       firestoreAvailable = false;
       return getFallbackProviders();
     }

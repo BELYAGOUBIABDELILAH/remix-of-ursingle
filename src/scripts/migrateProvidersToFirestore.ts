@@ -40,7 +40,6 @@ export async function migrateProvidersToFirestore(
     
     // Add reference providers if requested
     if (options.includeReference) {
-      console.log(`Adding ${getTotalReferenceProviders()} reference providers...`);
       allProviders = [...REFERENCE_PROVIDERS];
     }
     
@@ -49,7 +48,6 @@ export async function migrateProvidersToFirestore(
     
     if (remainingCount > 0 || options.additionalCount > 0) {
       const mockCount = options.additionalCount || remainingCount;
-      console.log(`Generating ${mockCount} additional mock providers...`);
       const mockProviders = generateMockProviders(mockCount);
       
       // Adjust IDs to avoid conflicts
@@ -62,7 +60,6 @@ export async function migrateProvidersToFirestore(
     }
     
     // Upload to Firestore
-    console.log(`Uploading ${allProviders.length} providers to Firestore...`);
     const uploadedCount = await batchSaveProviders(allProviders);
     
     // Calculate breakdown by type
@@ -71,20 +68,16 @@ export async function migrateProvidersToFirestore(
       breakdown[provider.type] = (breakdown[provider.type] || 0) + 1;
     }
     
-    console.log(`Successfully migrated ${uploadedCount} providers to Firestore`);
-    console.log('Breakdown by type:', breakdown);
-    
     return {
       success: true,
       message: `Successfully migrated ${uploadedCount} providers to Firestore`,
       count: uploadedCount,
       breakdown,
     };
-  } catch (error) {
-    console.error('Migration failed:', error);
+  } catch {
     return {
       success: false,
-      message: `Migration failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      message: 'Migration failed',
       count: 0,
     };
   }
@@ -104,8 +97,6 @@ export async function forceMigrateProviders(
   breakdown?: Record<string, number>;
 }> {
   try {
-    console.log(`Force migrating providers...`);
-    
     let allProviders = [];
     
     // Add reference providers if requested
@@ -139,11 +130,10 @@ export async function forceMigrateProviders(
       count: uploadedCount,
       breakdown,
     };
-  } catch (error) {
-    console.error('Force migration failed:', error);
+  } catch {
     return {
       success: false,
-      message: `Force migration failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      message: 'Force migration failed',
       count: 0,
     };
   }

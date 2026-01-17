@@ -51,8 +51,7 @@ export const getReviewsByProvider = async (providerId: string): Promise<Review[]
     
     const snapshot = await getDocs(q);
     return snapshot.docs.map(docToReview);
-  } catch (error) {
-    console.error('Error fetching reviews:', error);
+  } catch {
     return [];
   }
 };
@@ -69,8 +68,7 @@ export const getReviewsByPatient = async (patientId: string): Promise<Review[]> 
     
     const snapshot = await getDocs(q);
     return snapshot.docs.map(docToReview);
-  } catch (error) {
-    console.error('Error fetching patient reviews:', error);
+  } catch {
     return [];
   }
 };
@@ -172,8 +170,7 @@ export const getAllReviewsCount = async (): Promise<number> => {
     );
     const snapshot = await getDocs(q);
     return snapshot.size;
-  } catch (error) {
-    console.error('Error counting reviews:', error);
+  } catch {
     return 0;
   }
 };

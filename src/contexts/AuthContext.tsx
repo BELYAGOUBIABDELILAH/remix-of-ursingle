@@ -107,8 +107,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         date_of_birth: profileData.date_of_birth,
         verification_status: profileData.verification_status,
       });
-    } catch (error) {
-      console.error('Error fetching profile:', error);
+    } catch {
       setProfile(null);
     }
   };

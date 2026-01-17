@@ -72,18 +72,8 @@ const FirestoreInit = () => {
   useEffect(() => {
     // Use includeReference: true to load the 65+ realistic providers
     migrateProvidersToFirestore(65, { includeReference: true, additionalCount: 0 })
-      .then(result => {
-        if (result.count > 0) {
-          console.log('✅ Firestore initialized with reference providers:', result.message);
-          if (result.breakdown) {
-            console.log('📊 Provider breakdown:', result.breakdown);
-          }
-        } else if (result.message.includes('already exist')) {
-          console.log('ℹ️ Providers already loaded in Firestore');
-        }
-      })
-      .catch(err => {
-        console.error('❌ Firestore init error:', err);
+      .catch(() => {
+        // Silently fail - fallback providers will be used
       });
   }, []);
   return null;

@@ -76,7 +76,6 @@ export function Step6MirrorPreview({ formData, profileScore, resetForm, onPrev, 
       navigate('/provider/dashboard');
       
     } catch (error: any) {
-      console.error('Registration error:', error);
       toast({
         title: "Erreur",
         description: error.message || "Une erreur est survenue lors de la création du compte.",

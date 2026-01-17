@@ -61,9 +61,8 @@ export const ReviewSystem: React.FC<ReviewSystemProps> = ({
           setPatientName('');
           setShowForm(false);
         },
-        onError: (error) => {
+        onError: () => {
           toast.error('Erreur lors de la publication de l\'avis');
-          console.error('Review submission error:', error);
         }
       }
     );
