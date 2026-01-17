@@ -45,8 +45,7 @@ export default function AdminMigratePage() {
     try {
       const exists = await hasProviders();
       setExistingData(exists);
-    } catch (error) {
-      console.error('Failed to check existing providers:', error);
+    } catch {
       setExistingData(null);
     } finally {
       setIsChecking(false);

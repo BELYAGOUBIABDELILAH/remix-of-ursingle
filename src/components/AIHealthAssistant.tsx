@@ -97,9 +97,8 @@ export const AIHealthAssistant = () => {
           setIsLoading(false);
         },
       });
-    } catch (error) {
+    } catch {
       toast.error('Erreur lors de l\'envoi du message');
-      console.error('Chat error:', error);
       setIsLoading(false);
     }
   };

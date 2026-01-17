@@ -96,8 +96,7 @@ export default function AdminDashboard() {
         title: "Profil approuvé",
         description: "Le professionnel est maintenant visible dans les recherches.",
       });
-    } catch (error) {
-      console.error('Error approving provider:', error);
+    } catch {
       toast({
         title: "Erreur",
         description: "Impossible d'approuver ce profil.",
@@ -128,8 +127,7 @@ export default function AdminDashboard() {
         description: "Le professionnel ne sera pas visible dans les recherches.",
         variant: "destructive",
       });
-    } catch (error) {
-      console.error('Error rejecting provider:', error);
+    } catch {
       toast({
         title: "Erreur",
         description: "Impossible de rejeter ce profil.",

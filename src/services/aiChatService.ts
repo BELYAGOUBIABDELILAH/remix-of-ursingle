@@ -95,7 +95,6 @@ export async function streamChat({
 
     onDone();
   } catch (error) {
-    console.error('Chat streaming error:', error);
     onError?.(error instanceof Error ? error : new Error('Unknown error'));
     throw error;
   }

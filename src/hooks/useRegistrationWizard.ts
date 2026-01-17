@@ -108,8 +108,8 @@ export function useRegistrationWizard(): UseRegistrationWizardReturn {
         if (parsed.lastSaved) {
           setLastSaved(new Date(parsed.lastSaved));
         }
-      } catch (e) {
-        console.warn('Failed to parse saved registration data');
+      } catch {
+        // Failed to parse saved data, continue with defaults
       }
     }
   }, []);

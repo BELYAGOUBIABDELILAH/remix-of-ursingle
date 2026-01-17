@@ -180,7 +180,6 @@ export function Step1EliteIdentity({ formData, updateFormData, onNext }: Step1Pr
 
       onNext();
     } catch (error: any) {
-      console.error('Google sign-in error:', error);
       toast({
         title: "Erreur de connexion",
         description: error.message || "Impossible de se connecter avec Google",

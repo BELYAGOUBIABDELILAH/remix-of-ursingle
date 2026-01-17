@@ -21,7 +21,6 @@ class NotificationService {
   private readonly apiEndpoint = '/api/notifications'; // Would be Firebase function URL
 
   async sendBookingConfirmation(data: BookingNotification): Promise<boolean> {
-    console.log('📧 Sending booking confirmation:', data);
     
     // Store notification in localStorage for demo
     this.storeNotification({
@@ -46,7 +45,6 @@ class NotificationService {
   }
 
   async sendVerificationNotification(data: VerificationNotification): Promise<boolean> {
-    console.log('📧 Sending verification notification:', data);
     
     this.storeNotification({
       id: Date.now().toString(),

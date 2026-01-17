@@ -61,8 +61,8 @@ class AnalyticsService {
           timestamp: serverTimestamp()
         });
       }
-    } catch (error) {
-      console.error('Analytics error:', error);
+    } catch {
+      // Silently fail analytics
     }
   }
 

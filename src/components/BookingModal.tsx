@@ -160,8 +160,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ open, onOpenChange, 
           setNotes('');
           onOpenChange(false);
         },
-        onError: (error) => {
-          console.error('Booking error:', error);
+        onError: () => {
           toast.error('Erreur lors de la réservation. Veuillez réessayer.');
         }
       }
