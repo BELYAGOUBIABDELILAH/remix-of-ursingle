@@ -95,10 +95,9 @@ const VerificationGuard = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   
   // Check if user is a provider with pending verification
-  // Note: verificationStatus would be added to profile when backend is connected
   const isPendingProvider = isAuthenticated && 
     profile?.roles?.includes('provider') && 
-    (profile as any)?.verificationStatus === 'pending';
+    profile?.verification_status === 'pending';
   
   // Allowed paths for pending providers
   const allowedPaths = ['/registration-status', '/provider/register', '/settings', '/auth', '/'];
@@ -179,7 +178,9 @@ const AppRoutes = () => {
           path="/favorites" 
           element={
             <PageTransition>
-              <FavoritesPage />
+              <ProtectedRoute>
+                <FavoritesPage />
+              </ProtectedRoute>
             </PageTransition>
           } 
         />
@@ -300,7 +301,9 @@ const AppRoutes = () => {
           path="/admin/migrate" 
           element={
             <PageTransition>
-              <AdminMigratePage />
+              <ProtectedRoute requireRole="admin">
+                <AdminMigratePage />
+              </ProtectedRoute>
             </PageTransition>
           } 
         />

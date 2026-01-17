@@ -31,6 +31,10 @@ export interface UserProfile {
   full_name: string | null;
   avatar_url: string | null;
   roles: UserRole[];
+  phone?: string;
+  address?: string;
+  date_of_birth?: string;
+  verification_status?: 'pending' | 'approved' | 'rejected';
 }
 
 interface AuthContextType {
@@ -43,7 +47,7 @@ interface AuthContextType {
   signup: (email: string, password: string, fullName: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
-  updateProfile: (updates: { full_name?: string; avatar_url?: string }) => Promise<void>;
+  updateProfile: (updates: { full_name?: string; avatar_url?: string; phone?: string; address?: string; date_of_birth?: string }) => Promise<void>;
   hasRole: (role: UserRole) => boolean;
 }
 
@@ -98,6 +102,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         full_name: profileData.full_name,
         avatar_url: profileData.avatar_url,
         roles,
+        phone: profileData.phone,
+        address: profileData.address,
+        date_of_birth: profileData.date_of_birth,
+        verification_status: profileData.verification_status,
       });
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -230,7 +238,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const updateProfile = async (updates: { full_name?: string; avatar_url?: string }) => {
+  const updateProfile = async (updates: { full_name?: string; avatar_url?: string; phone?: string; address?: string; date_of_birth?: string }) => {
     if (!user) return;
 
     try {

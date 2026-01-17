@@ -49,22 +49,28 @@ export default function AdminDashboard() {
 
   // Calculate stats from real data
   const stats = {
-    totalUsers: allProviders.length * 10, // Approximate based on providers
+    totalUsers: allProviders.length, // Real count from providers
     totalProviders: allProviders.length,
     pendingApprovals: pendingProviders.length,
-    pendingVerifications: 0,
+    pendingVerifications: pendingProviders.length,
     pendingAds: 0,
-    monthlyGrowth: 12,
-    activeUsers: Math.floor(allProviders.length * 5),
+    monthlyGrowth: 0, // Would need historical data to calculate
+    activeUsers: allProviders.filter(p => p.isPublic).length,
     verifiedProviders: allProviders.filter(p => p.verificationStatus === 'verified').length,
   };
 
-  const [recentActivity] = useState([
-    { type: 'registration', user: 'Dr. Ahmed B.', action: 'Nouvelle inscription', time: 'Il y a 2h' },
-    { type: 'approval', user: 'Admin', action: 'Profil approuvé: Pharmacie Centrale', time: 'Il y a 3h' },
-    { type: 'report', user: 'Patient #4521', action: 'Signalement: Avis inapproprié', time: 'Il y a 5h' },
-    { type: 'update', user: 'Dr. Sara M.', action: 'Mise à jour du profil', time: 'Il y a 6h' },
-  ]);
+  // Recent activity from pending providers (real data)
+  const recentActivity: Array<{ type: 'registration' | 'approval' | 'report' | 'update'; user: string; action: string; time: string }> = 
+    pendingProviders.length > 0 
+      ? pendingProviders.slice(0, 4).map(p => ({
+          type: 'registration' as const,
+          user: p.name,
+          action: 'Nouvelle inscription',
+          time: 'En attente'
+        }))
+      : [
+          { type: 'registration', user: 'Aucune activité', action: 'Aucune nouvelle inscription', time: '-' }
+        ];
 
   useEffect(() => {
     setSentNotifications(notificationService.getSentNotifications());
