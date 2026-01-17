@@ -144,7 +144,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ open, onOpenChange, 
               <CheckCircle className="h-5 w-5 text-green-500" />
               <div>
                 <p className="font-semibold">Rendez-vous confirmé!</p>
-                <p className="text-sm">Confirmation envoyée par SMS{email ? ' et email' : ''}</p>
+                <p className="text-sm">Vous recevrez une confirmation{email ? ' par email' : ''}</p>
               </div>
             </div>
           );
@@ -355,7 +355,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ open, onOpenChange, 
 
             <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
               <p className="text-sm text-blue-900 dark:text-blue-100">
-                📱 Vous recevrez une confirmation par SMS{email ? ' et email' : ''} avec un rappel 24h avant le rendez-vous.
+                📧 Vous recevrez une confirmation{email ? ' par email' : ''} avec un rappel 24h avant le rendez-vous.
               </p>
             </div>
           </div>

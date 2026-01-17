@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   getReviewsByProvider, 
+  getReviewsByPatient,
   getReviewStats, 
   createReview, 
   updateReview as updateReviewService,
@@ -14,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export const reviewKeys = {
   all: ['reviews'] as const,
   byProvider: (providerId: string) => [...reviewKeys.all, 'provider', providerId] as const,
+  byPatient: (patientId: string) => [...reviewKeys.all, 'patient', patientId] as const,
   stats: (providerId: string) => [...reviewKeys.all, 'stats', providerId] as const,
 };
 
@@ -24,6 +26,16 @@ export const useProviderReviews = (providerId: string) => {
     queryFn: () => getReviewsByProvider(providerId),
     enabled: !!providerId,
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+// Hook to fetch reviews by a patient (using their userId)
+export const usePatientReviews = (patientId: string | undefined) => {
+  return useQuery({
+    queryKey: reviewKeys.byPatient(patientId || ''),
+    queryFn: () => getReviewsByPatient(patientId!),
+    enabled: !!patientId,
+    staleTime: 5 * 60 * 1000,
   });
 };
 

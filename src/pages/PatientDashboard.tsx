@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Header } from '@/components/layout/Header';
@@ -9,33 +8,25 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar, Clock, Star, MessageSquare, CheckCircle, XCircle, AlertCircle, Download, FileText, Loader2 } from 'lucide-react';
 import { usePatientAppointments, useCancelAppointment } from '@/hooks/useAppointments';
-import { getReviews } from '@/utils/reviewStorage';
+import { usePatientReviews } from '@/hooks/useReviews';
 import { Appointment } from '@/types/appointments';
-import { Review } from '@/types/reviews';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fr, ar, enUS } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 
 const PatientDashboard = () => {
-  const { profile, isAuthenticated } = useAuth();
+  const { profile, isAuthenticated, user } = useAuth();
   const { t, language } = useLanguage();
-  const [reviews, setReviews] = useState<Review[]>([]);
 
   // Firestore appointments via TanStack Query
   const { data: appointments = [], isLoading: appointmentsLoading } = usePatientAppointments();
   const { mutate: cancelAppointmentMutation, isPending: isCancelling } = useCancelAppointment();
+  
+  // Firestore reviews via TanStack Query (using user.uid for query)
+  const { data: reviews = [], isLoading: reviewsLoading } = usePatientReviews(user?.uid);
 
   const locales = { fr, ar, en: enUS };
-
-  // Load reviews (still local for now)
-  useEffect(() => {
-    if (profile?.id) {
-      const allReviews = getReviews();
-      const userReviews = allReviews.filter(r => r.patientId === profile.id);
-      setReviews(userReviews);
-    }
-  }, [profile]);
 
   const handleCancelAppointment = (id: string) => {
     cancelAppointmentMutation(id, {
