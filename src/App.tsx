@@ -23,16 +23,11 @@ import LoadingSpinner from "./components/LoadingSpinner";
 
 // Lazy-loaded pages for code splitting
 const AuthPage = lazy(() => import("./pages/AuthPage"));
-const WhyPage = lazy(() => import("./pages/WhyPage"));
-const HowPage = lazy(() => import("./pages/HowPage"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
 const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
-const Import = lazy(() => import("./pages/Import"));
 const SearchPage = lazy(() => import("./pages/SearchPage"));
 const ProvidersPage = lazy(() => import("./pages/ProvidersPage"));
-const Settings = lazy(() => import("./pages/Settings"));
-const ManagePage = lazy(() => import("./pages/ManagePage"));
 const EmergencyPage = lazy(() => import("./pages/EmergencyPage"));
 const ProviderProfilePage = lazy(() => import("./pages/ProviderProfilePage"));
 const ProviderRegister = lazy(() => import("./pages/ProviderRegister"));
@@ -146,22 +141,6 @@ const AppRoutes = () => {
           element={<Navigate to="/docs/getting-started/how-it-works" replace />}
         />
         <Route 
-          path="/manage" 
-          element={
-            <PageTransition>
-              <ManagePage />
-            </PageTransition>
-          } 
-        />
-        <Route 
-          path="/import" 
-          element={
-            <PageTransition>
-              <Import />
-            </PageTransition>
-          } 
-        />
-        <Route 
           path="/search" 
           element={
             <VerificationGuard>
@@ -176,14 +155,6 @@ const AppRoutes = () => {
           element={
             <PageTransition>
               <ProvidersPage />
-            </PageTransition>
-          } 
-        />
-        <Route 
-          path="/settings" 
-          element={
-            <PageTransition>
-              <Settings />
             </PageTransition>
           } 
         />

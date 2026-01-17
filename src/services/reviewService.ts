@@ -57,6 +57,24 @@ export const getReviewsByProvider = async (providerId: string): Promise<Review[]
   }
 };
 
+// Get all reviews by a patient (using patientId or userId)
+export const getReviewsByPatient = async (patientId: string): Promise<Review[]> => {
+  try {
+    // Query by userId (Firebase auth ID) which is the reliable field
+    const q = query(
+      collection(db, REVIEWS_COLLECTION),
+      where('userId', '==', patientId),
+      orderBy('createdAt', 'desc')
+    );
+    
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(docToReview);
+  } catch (error) {
+    console.error('Error fetching patient reviews:', error);
+    return [];
+  }
+};
+
 // Create a new review
 export const createReview = async (
   review: Omit<Review, 'id' | 'createdAt' | 'updatedAt'>
