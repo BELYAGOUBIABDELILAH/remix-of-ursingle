@@ -204,7 +204,7 @@ In Firestore Console, create document:
 
 ```
 Collection: user_roles
-Document ID: {user_uid}
+Document ID: {user_uid}_admin
 Fields:
   - user_id: {user_uid}
   - role: "admin"
@@ -215,7 +215,7 @@ Or via Firebase Admin SDK:
 
 ```javascript
 const admin = require('firebase-admin');
-admin.firestore().collection('user_roles').doc(userId).set({
+admin.firestore().collection('user_roles').doc(`${userId}_admin`).set({
   user_id: userId,
   role: 'admin',
   created_at: admin.firestore.FieldValue.serverTimestamp()

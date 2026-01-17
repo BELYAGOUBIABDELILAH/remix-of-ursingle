@@ -83,9 +83,9 @@ export default function CitizenProfilePage() {
     if (profile) {
       setFormData({
         full_name: profile.full_name || '',
-        phone: (profile as any).phone || '',
-        address: (profile as any).address || '',
-        dateOfBirth: (profile as any).dateOfBirth || ''
+        phone: profile.phone || '',
+        address: profile.address || '',
+        dateOfBirth: profile.date_of_birth || ''
       });
     }
   }, [profile]);
@@ -120,8 +120,12 @@ export default function CitizenProfilePage() {
     .slice(0, 2) || 'U';
 
   const handleSave = async () => {
-    await updateProfile({ full_name: formData.full_name });
-    // In a real app, save phone, address, dateOfBirth to backend
+    await updateProfile({ 
+      full_name: formData.full_name,
+      phone: formData.phone,
+      address: formData.address,
+      date_of_birth: formData.dateOfBirth,
+    });
     toast.success('Profil mis à jour');
     setIsEditing(false);
   };

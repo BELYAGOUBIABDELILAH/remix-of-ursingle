@@ -102,15 +102,43 @@ export function ProviderRouteGuard({ children, requireVerified = false }: Provid
     return <Navigate to="/auth" replace />;
   }
 
-  // Check if user has provider role
+  // Check role FIRST and RETURN early if no provider role
   if (!hasRole('provider')) {
-    // If no provider role, check if they have a provider account (maybe role wasn't assigned)
-    if (!hasProviderAccount) {
-      return <NoProviderAccount />;
-    }
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center">
+              <ShieldX className="h-8 w-8 text-destructive" />
+            </div>
+            <CardTitle className="text-2xl">Accès refusé</CardTitle>
+            <CardDescription>
+              Vous n'avez pas les permissions nécessaires pour accéder à cette page.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground text-center">
+              Cette page est réservée aux prestataires de santé enregistrés.
+            </p>
+            <div className="flex flex-col gap-2">
+              <Button asChild>
+                <a href="/provider/register">
+                  <Building2 className="h-4 w-4 mr-2" />
+                  Devenir prestataire
+                </a>
+              </Button>
+              <Button variant="outline" onClick={() => window.history.back()}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Retour
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
-  // Check if provider document exists
+  // Then check if provider account exists in Firestore
   if (!hasProviderAccount) {
     return <NoProviderAccount />;
   }
