@@ -18,7 +18,7 @@ import EmergencyMapChild from "./components/map/children/EmergencyMapChild";
 import BloodMapChild from "./components/map/children/BloodMapChild";
 import { AIChatbot } from "./components/AIChatbot";
 import FloatingSidebar from "./components/FloatingSidebar";
-import { migrateProvidersToFirestore } from "@/scripts/migrateProvidersToFirestore";
+
 import LoadingSpinner from "./components/LoadingSpinner";
 
 // Lazy-loaded pages for code splitting
@@ -67,17 +67,6 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-// Initialize Firestore with reference providers automatically
-const FirestoreInit = () => {
-  useEffect(() => {
-    // Use includeReference: true to load the 65+ realistic providers
-    migrateProvidersToFirestore(65, { includeReference: true, additionalCount: 0 })
-      .catch(() => {
-        // Silently fail - fallback providers will be used
-      });
-  }, []);
-  return null;
-};
 
 // Verification redirect wrapper for providers
 const VerificationGuard = ({ children }: { children: React.ReactNode }) => {
@@ -340,7 +329,7 @@ const App = () => (
                 <Toaster />
                 <Sonner />
                 <BrowserRouter>
-                  <FirestoreInit />
+                  
                   <div className="min-h-screen bg-background text-foreground">
                     <FloatingSidebar />
                     <AIChatbot />

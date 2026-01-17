@@ -1,7 +1,5 @@
-// Note: This will need a Firebase Cloud Function deployed to handle AI chat
-// For now, using a placeholder URL - update this after deploying your Firebase function
-
-const CHAT_FUNCTION_URL = 'https://us-central1-cityhealth-ec7e7.cloudfunctions.net/aiChat';
+// AI Chat Function URL from environment variable
+const CHAT_FUNCTION_URL = import.meta.env.VITE_AI_CHAT_FUNCTION_URL || '';
 
 type Message = { role: "user" | "assistant"; content: string };
 
