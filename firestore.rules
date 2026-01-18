@@ -23,6 +23,13 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/user_roles/$(request.auth.uid + '_admin'));
     }
     
+    // Check if user is a provider (checks user_roles collection)
+    // Document ID format: {userId}_provider
+    function isProvider() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/user_roles/$(request.auth.uid + '_provider'));
+    }
+    
     // ============================================
     // PROFILES - Users can only read/write their own
     // ============================================
@@ -41,8 +48,12 @@ service cloud.firestore {
         docId.matches(request.auth.uid + '_.*');
       // Allow admins to read all roles
       allow read: if isAdmin();
-      // Only admins can write roles
-      allow write: if isAdmin();
+      // Only admins can write roles (except for initial provider role assignment)
+      allow create: if isAuthenticated() && 
+        docId == (request.auth.uid + '_provider') &&
+        request.resource.data.role == 'provider';
+      // Only admins can update/delete roles
+      allow update, delete: if isAdmin();
     }
     
     // ============================================
@@ -79,6 +90,7 @@ service cloud.firestore {
       allow list: if request.query != null;
       
       // OWNER ACCESS: Users can read their own provider profile (even if not verified)
+      // Provider ID format: provider_{userId}
       allow read: if isAuthenticated() && 
                      resource.data.userId == request.auth.uid;
       
@@ -86,7 +98,9 @@ service cloud.firestore {
       allow read: if isAdmin();
       
       // CREATE: Authenticated users can create providers (for registration)
-      allow create: if isAuthenticated();
+      // Must create with their own userId
+      allow create: if isAuthenticated() && 
+                       request.resource.data.userId == request.auth.uid;
       
       // UPDATE: Owner can update their own profile (but NOT verification status fields)
       allow update: if isAuthenticated() && 
@@ -104,26 +118,61 @@ service cloud.firestore {
     // PROVIDER DRAFTS - For registration flow
     // ============================================
     match /providerDrafts/{draftId} {
-      allow read, write: if isAuthenticated() && 
+      // Read: Check existing doc's userId
+      allow read: if isAuthenticated() && 
         resource.data.userId == request.auth.uid;
+      // Create: Check incoming data's userId
       allow create: if isAuthenticated() && 
         request.resource.data.userId == request.auth.uid;
+      // Update/Delete: Check existing doc's userId
+      allow update, delete: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
     }
     
     // ============================================
     // APPOINTMENTS - Users can access their own
+    // Provider access via userId field in provider document
     // ============================================
     match /appointments/{appointmentId} {
+      // Patient can read their own appointments
       allow read: if isAuthenticated() && 
-        (resource.data.patientId == request.auth.uid || 
-         resource.data.providerId == request.auth.uid);
+        resource.data.patientId == request.auth.uid;
+      
+      // Provider can read appointments for their provider profile
+      // Provider document ID is provider_{userId}, so we check providerUserId field
+      allow read: if isAuthenticated() && 
+        resource.data.providerUserId == request.auth.uid;
+      
+      // Patient can create appointments (must set their patientId)
       allow create: if isAuthenticated() && 
         request.resource.data.patientId == request.auth.uid;
+      
+      // Patient or provider can update appointments
       allow update: if isAuthenticated() && 
         (resource.data.patientId == request.auth.uid || 
-         resource.data.providerId == request.auth.uid);
+         resource.data.providerUserId == request.auth.uid);
+      
+      // Only patient can delete their appointments
       allow delete: if isAuthenticated() && 
         resource.data.patientId == request.auth.uid;
+    }
+    
+    // ============================================
+    // VERIFICATION REQUESTS - For admin verification queue
+    // ============================================
+    match /verification_requests/{requestId} {
+      // Providers can read their own requests
+      allow read: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+      // Providers can create their own requests
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      // Admins can read all requests
+      allow read: if isAdmin();
+      // Admins can update requests (approve/reject)
+      allow update: if isAdmin();
+      // Admins can delete requests
+      allow delete: if isAdmin();
     }
     
     // ============================================
@@ -141,10 +190,15 @@ service cloud.firestore {
     // CHAT SESSIONS - Users can only access their own
     // ============================================
     match /chat_sessions/{sessionId} {
-      allow read, write: if isAuthenticated() && 
+      // Read: Check existing doc's userId
+      allow read: if isAuthenticated() && 
         resource.data.userId == request.auth.uid;
+      // Create: Check incoming data's userId (FIXED: was checking resource.data)
       allow create: if isAuthenticated() && 
         request.resource.data.userId == request.auth.uid;
+      // Update/Delete: Check existing doc's userId
+      allow update, delete: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
     }
   }
 }

@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ProviderFormData, getInitialFormData } from '@/components/provider/registration/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ProfileScore {
   total: number;
@@ -33,7 +34,9 @@ interface UseRegistrationWizardReturn {
   isSaving: boolean;
 }
 
-const STORAGE_KEY = 'ch_provider_registration_draft';
+// Storage key is user-specific to prevent draft sharing between users
+const getStorageKey = (userId: string | undefined) => 
+  userId ? `ch_provider_registration_draft_${userId}` : 'ch_provider_registration_draft_anonymous';
 const AUTO_SAVE_INTERVAL = 30000;
 
 // Calculate profile completion score
@@ -85,6 +88,7 @@ function calculateProfileScore(formData: ProviderFormData): ProfileScore {
 }
 
 export function useRegistrationWizard(): UseRegistrationWizardReturn {
+  const { user } = useAuth();
   const [formData, setFormData] = useState<ProviderFormData>(getInitialFormData);
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
@@ -93,10 +97,11 @@ export function useRegistrationWizard(): UseRegistrationWizardReturn {
   const [profileScore, setProfileScore] = useState<ProfileScore>(calculateProfileScore(getInitialFormData()));
   
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const storageKey = getStorageKey(user?.uid);
 
-  // Restore from localStorage on mount
+  // Restore from localStorage on mount or when user changes
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = localStorage.getItem(storageKey);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -111,8 +116,14 @@ export function useRegistrationWizard(): UseRegistrationWizardReturn {
       } catch {
         // Failed to parse saved data, continue with defaults
       }
+    } else {
+      // Reset form when user changes and no saved data exists
+      setFormData(getInitialFormData());
+      setCurrentStep(1);
+      setCompletedSteps([]);
+      setProfileScore(calculateProfileScore(getInitialFormData()));
     }
-  }, []);
+  }, [storageKey]);
 
   // Save to localStorage
   const saveToStorage = useCallback(() => {
@@ -123,10 +134,10 @@ export function useRegistrationWizard(): UseRegistrationWizardReturn {
       completedSteps,
       lastSaved: new Date().toISOString(),
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+    localStorage.setItem(storageKey, JSON.stringify(saveData));
     setLastSaved(new Date());
     setIsSaving(false);
-  }, [formData, currentStep, completedSteps]);
+  }, [formData, currentStep, completedSteps, storageKey]);
 
   // Auto-save every 30 seconds
   useEffect(() => {
@@ -174,14 +185,14 @@ export function useRegistrationWizard(): UseRegistrationWizardReturn {
 
   const prevStep = () => goToStep(Math.max(currentStep - 1, 1));
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setFormData(getInitialFormData());
     setCurrentStep(1);
     setCompletedSteps([]);
     setLastSaved(null);
     setProfileScore(calculateProfileScore(getInitialFormData()));
-    localStorage.removeItem(STORAGE_KEY);
-  };
+    localStorage.removeItem(storageKey);
+  }, [storageKey]);
 
   return {
     formData,

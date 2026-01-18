@@ -24,41 +24,18 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useToast } from '@/hooks/use-toast';
 import { 
   CheckCircle, XCircle, Eye, FileText, Download, Search, User,
-  FileSearch, CheckCircle2, AlertCircle, ChevronDown, Sparkles
+  FileSearch, CheckCircle2, AlertCircle, ChevronDown, Sparkles, Loader2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-
-interface OCRFieldResult {
-  found: boolean;
-  similarity: number;
-  expectedValue: string;
-  matchedWord?: string;
-}
-
-interface OCRResult {
-  success: boolean;
-  score: number;
-  fields: Record<string, OCRFieldResult>;
-}
-
-interface VerificationRequest {
-  id: string;
-  providerId: string;
-  providerName: string;
-  status: 'pending' | 'approved' | 'rejected';
-  submittedAt: string;
-  documents: {
-    license?: string;
-    licenseOCR?: OCRResult;
-    id?: string;
-    idOCR?: OCRResult;
-    additionalNotes?: string;
-  };
-  reviewedAt?: string;
-  reviewNotes?: string;
-}
+import {
+  VerificationRequest,
+  OCRResult,
+  subscribeToVerificationRequests,
+  approveVerificationRequest,
+  rejectVerificationRequest
+} from '@/services/verificationService';
 
 // OCR Badge Component
 function OCRBadge({ ocr, compact = false }: { ocr: OCRResult | null | undefined; compact?: boolean }) {
@@ -198,29 +175,43 @@ function OCRDetailsPanel({ ocr, title }: { ocr: OCRResult; title: string }) {
 export function VerificationQueue() {
   const { toast } = useToast();
   const [requests, setRequests] = useState<VerificationRequest[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRequest, setSelectedRequest] = useState<VerificationRequest | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
+  // Subscribe to real-time updates from Firestore
   useEffect(() => {
-    loadRequests();
+    const unsubscribe = subscribeToVerificationRequests((data) => {
+      setRequests(data);
+      setLoading(false);
+    });
+    
+    return () => unsubscribe();
   }, []);
 
-  const loadRequests = () => {
-    const stored = JSON.parse(localStorage.getItem('ch_verification_requests') || '[]');
-    setRequests(stored);
+  const handleApprove = async (request: VerificationRequest) => {
+    setIsProcessing(true);
+    try {
+      await approveVerificationRequest(request.id, request.providerId);
+      toast({
+        title: "Profil approuvé",
+        description: `${request.providerName} a été vérifié avec succès.`,
+      });
+      setSelectedRequest(null);
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible d'approuver le profil. Veuillez réessayer.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const handleApprove = (request: VerificationRequest) => {
-    updateRequestStatus(request.id, 'approved');
-    toast({
-      title: "Profil approuvé",
-      description: `${request.providerName} a été vérifié avec succès.`,
-    });
-    setSelectedRequest(null);
-  };
-
-  const handleReject = (request: VerificationRequest) => {
+  const handleReject = async (request: VerificationRequest) => {
     if (!reviewNotes) {
       toast({
         title: "Notes requises",
@@ -229,33 +220,25 @@ export function VerificationQueue() {
       });
       return;
     }
-    updateRequestStatus(request.id, 'rejected', reviewNotes);
-    toast({
-      title: "Profil rejeté",
-      description: `${request.providerName} a été notifié du rejet.`,
-      variant: "destructive"
-    });
-    setSelectedRequest(null);
-    setReviewNotes('');
-  };
-
-  const updateRequestStatus = (requestId: string, status: 'approved' | 'rejected', notes?: string) => {
-    const updated = requests.map(r => 
-      r.id === requestId 
-        ? { ...r, status, reviewedAt: new Date().toISOString(), reviewNotes: notes } 
-        : r
-    );
-    setRequests(updated);
-    localStorage.setItem('ch_verification_requests', JSON.stringify(updated));
-
-    // Also update the provider's verification status
-    const registrations = JSON.parse(localStorage.getItem('ch_pending_registrations') || '[]');
-    const request = requests.find(r => r.id === requestId);
-    if (request) {
-      const updatedRegs = registrations.map((r: any) => 
-        r.id === request.providerId ? { ...r, verificationStatus: status, verified: status === 'approved' } : r
-      );
-      localStorage.setItem('ch_pending_registrations', JSON.stringify(updatedRegs));
+    
+    setIsProcessing(true);
+    try {
+      await rejectVerificationRequest(request.id, request.providerId, reviewNotes);
+      toast({
+        title: "Profil rejeté",
+        description: `${request.providerName} a été notifié du rejet.`,
+        variant: "destructive"
+      });
+      setSelectedRequest(null);
+      setReviewNotes('');
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de rejeter le profil. Veuillez réessayer.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -271,6 +254,16 @@ export function VerificationQueue() {
   // Check if a request has any OCR data
   const hasOCRData = (request: VerificationRequest) => 
     request.documents.licenseOCR || request.documents.idOCR;
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <>
@@ -393,6 +386,7 @@ export function VerificationQueue() {
                               size="sm" 
                               variant="default"
                               onClick={() => handleApprove(request)}
+                              disabled={isProcessing}
                               className={cn(
                                 request.documents.licenseOCR?.success && 
                                 "bg-green-600 hover:bg-green-700"
@@ -404,6 +398,7 @@ export function VerificationQueue() {
                               size="sm" 
                               variant="destructive"
                               onClick={() => setSelectedRequest(request)}
+                              disabled={isProcessing}
                             >
                               <XCircle className="h-4 w-4" />
                             </Button>
@@ -542,8 +537,13 @@ export function VerificationQueue() {
                       "bg-green-600 hover:bg-green-700"
                     )}
                     onClick={() => handleApprove(selectedRequest)}
+                    disabled={isProcessing}
                   >
-                    <CheckCircle className="h-4 w-4 mr-2" />
+                    {isProcessing ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                    )}
                     {selectedRequest.documents.licenseOCR?.success 
                       ? 'Approuver (Recommandé)' 
                       : 'Approuver'}
@@ -552,8 +552,13 @@ export function VerificationQueue() {
                     variant="destructive"
                     className="flex-1"
                     onClick={() => handleReject(selectedRequest)}
+                    disabled={isProcessing}
                   >
-                    <XCircle className="h-4 w-4 mr-2" />
+                    {isProcessing ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <XCircle className="h-4 w-4 mr-2" />
+                    )}
                     Rejeter
                   </Button>
                 </div>
