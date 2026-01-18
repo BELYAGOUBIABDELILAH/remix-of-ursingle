@@ -8,7 +8,9 @@ import {
   where, 
   orderBy,
   Timestamp,
-  arrayUnion
+  arrayUnion,
+  increment,
+  getDoc
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Review, ReviewStats } from '@/types/reviews';
@@ -103,17 +105,23 @@ export const updateReview = async (
   });
 };
 
-// Vote on a review
+// Vote on a review (atomic operation)
 export const voteReview = async (reviewId: string, userId: string): Promise<void> => {
   const docRef = doc(db, REVIEWS_COLLECTION, reviewId);
   
-  // Use arrayUnion to atomically add the userId and increment votes
+  // First check if user already voted
+  const reviewSnap = await getDoc(docRef);
+  if (reviewSnap.exists()) {
+    const data = reviewSnap.data();
+    if (data.votedBy?.includes(userId)) {
+      throw new Error('User has already voted on this review');
+    }
+  }
+  
+  // Use atomic increment() instead of read-then-write pattern
   await updateDoc(docRef, {
     votedBy: arrayUnion(userId),
-    helpfulVotes: (await getDocs(query(
-      collection(db, REVIEWS_COLLECTION),
-      where('__name__', '==', reviewId)
-    ))).docs[0]?.data()?.helpfulVotes + 1 || 1,
+    helpfulVotes: increment(1),
     updatedAt: Timestamp.now()
   });
 };

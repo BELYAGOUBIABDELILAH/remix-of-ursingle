@@ -4,7 +4,7 @@ import { fr } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon, Clock, Mail, Phone as PhoneIcon, User, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import { useCreateAppointment } from '@/hooks/useAppointments';

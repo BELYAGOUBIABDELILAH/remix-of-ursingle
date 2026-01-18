@@ -51,8 +51,13 @@ export const createAppointment = async (
     throw new Error('Cannot book appointments on Sundays');
   }
   
+  // Extract user ID from provider ID (format: provider_{userId})
+  const providerUserId = appointment.providerId.replace(/^provider_/, '');
+  
   const docRef = await addDoc(collection(db, APPOINTMENTS_COLLECTION), {
     ...appointment,
+    // Store the provider's user ID for RLS queries
+    providerUserId,
     dateTime: Timestamp.fromDate(appointmentDate),
     status: 'pending',
     createdAt: now,

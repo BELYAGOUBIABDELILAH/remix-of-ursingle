@@ -280,23 +280,3 @@ export async function getExistingProvider(userId: string): Promise<string | null
   }
 }
 
-/**
- * Login existing user during registration (if email already exists)
- */
-export async function loginDuringRegistration(
-  email: string, 
-  password: string
-): Promise<{ success: boolean; userId?: string; error?: string }> {
-  try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    return {
-      success: true,
-      userId: userCredential.user.uid
-    };
-  } catch (error: any) {
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-}
