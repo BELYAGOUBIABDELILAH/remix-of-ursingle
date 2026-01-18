@@ -23,18 +23,21 @@ import { auth, db, googleProvider } from '@/lib/firebase';
 import { toast } from 'sonner';
 import { getErrorMessage, logError } from '@/utils/errorHandling';
 
-export type UserRole = 'patient' | 'provider' | 'admin';
+export type UserType = 'citizen' | 'provider' | 'admin';
+export type UserRole = 'patient' | 'provider' | 'admin'; // Legacy role system
 
 export interface UserProfile {
   id: string;
   email: string;
   full_name: string | null;
   avatar_url: string | null;
+  userType: UserType;
   roles: UserRole[];
   phone?: string;
   address?: string;
   date_of_birth?: string;
-  verification_status?: 'pending' | 'approved' | 'rejected';
+  verification_status?: 'pending' | 'approved' | 'rejected' | 'verified' | 'under_review';
+  verificationStatus?: 'pending' | 'approved' | 'rejected' | 'verified' | 'under_review';
 }
 
 interface AuthContextType {
@@ -43,12 +46,18 @@ interface AuthContextType {
   session: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  // Legacy methods (for backward compatibility)
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, fullName: string) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
+  loginWithGoogle: (userType?: UserType) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (updates: { full_name?: string; avatar_url?: string; phone?: string; address?: string; date_of_birth?: string }) => Promise<void>;
   hasRole: (role: UserRole) => boolean;
+  // New type-specific methods
+  loginAsCitizen: (email: string, password: string) => Promise<void>;
+  signupAsCitizen: (email: string, password: string, fullName: string, phone?: string) => Promise<void>;
+  loginAsProvider: (email: string, password: string) => Promise<void>;
+  loginAsAdmin: (email: string, password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -61,7 +70,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Fetch user profile and roles from Firestore
   const fetchUserProfile = async (userId: string, userEmail: string) => {
     try {
-      // Fetch profile
+      // First check the users collection for userType
+      const userRef = doc(db, 'users', userId);
+      const userSnap = await getDoc(userRef);
+      let userType: UserType = 'citizen'; // Default
+      
+      if (userSnap.exists()) {
+        userType = userSnap.data().userType || 'citizen';
+      }
+
+      // Fetch profile from profiles collection
       const profileRef = doc(db, 'profiles', userId);
       const profileSnap = await getDoc(profileRef);
 
@@ -81,6 +99,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           email: userEmail,
           full_name: null,
           avatar_url: null,
+          userType,
           roles: []
         });
         return;
@@ -88,7 +107,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const profileData = profileSnap.data();
 
-      // Fetch roles
+      // Fetch roles from user_roles collection
       const rolesQuery = query(
         collection(db, 'user_roles'),
         where('user_id', '==', userId)
@@ -96,18 +115,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const rolesSnap = await getDocs(rolesQuery);
       const roles = rolesSnap.docs.map(doc => doc.data().role as UserRole);
 
+      // Also check type-specific collection for verification status
+      let verificationStatus = profileData.verification_status;
+      if (userType === 'provider') {
+        const providerQuery = query(
+          collection(db, 'providers'),
+          where('userId', '==', userId)
+        );
+        const providerSnap = await getDocs(providerQuery);
+        if (!providerSnap.empty) {
+          verificationStatus = providerSnap.docs[0].data().verificationStatus;
+        }
+      }
+
       setProfile({
         id: profileData.id,
         email: userEmail,
         full_name: profileData.full_name,
         avatar_url: profileData.avatar_url,
+        userType,
         roles,
         phone: profileData.phone,
         address: profileData.address,
         date_of_birth: profileData.date_of_birth,
-        verification_status: profileData.verification_status,
+        verification_status: verificationStatus,
+        verificationStatus: verificationStatus,
       });
-    } catch {
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
       setProfile(null);
     }
   };
@@ -132,6 +167,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
+  // Helper function to create user document with type
+  const createUserDocument = async (userId: string, email: string, userType: UserType) => {
+    await setDoc(doc(db, 'users', userId), {
+      email,
+      userType,
+      createdAt: serverTimestamp()
+    });
+  };
+
+  // Helper function to create type-specific document
+  const createTypeDocument = async (
+    userId: string, 
+    userType: UserType, 
+    additionalData: Record<string, any> = {}
+  ) => {
+    const collectionName = userType === 'citizen' ? 'citizens' : 
+                          userType === 'admin' ? 'admins' : 'providers';
+    
+    // Only create for citizens and admins here (providers are handled separately)
+    if (userType === 'citizen' || userType === 'admin') {
+      await setDoc(doc(db, collectionName, userId), {
+        ...additionalData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+    }
+  };
+
+  // Legacy login (defaults to citizen)
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
@@ -147,6 +211,88 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Login as Citizen with type verification
+  const loginAsCitizen = async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      const { user: loggedInUser } = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Verify user type
+      const userDoc = await getDoc(doc(db, 'users', loggedInUser.uid));
+      if (userDoc.exists() && userDoc.data().userType !== 'citizen') {
+        await firebaseSignOut(auth);
+        toast.error('Ce compte n\'est pas un compte citoyen. Utilisez la bonne page de connexion.');
+        throw new Error('Invalid user type');
+      }
+      
+      toast.success('Bienvenue sur CityHealth!');
+    } catch (error: any) {
+      logError(error, 'loginAsCitizen');
+      if (error.message !== 'Invalid user type') {
+        const message = getErrorMessage(error, 'fr');
+        toast.error(message);
+      }
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Login as Provider with type verification
+  const loginAsProvider = async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      const { user: loggedInUser } = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Verify user type
+      const userDoc = await getDoc(doc(db, 'users', loggedInUser.uid));
+      if (userDoc.exists() && userDoc.data().userType !== 'provider') {
+        await firebaseSignOut(auth);
+        toast.error('Ce compte n\'est pas un compte prestataire. Utilisez la bonne page de connexion.');
+        throw new Error('Invalid user type');
+      }
+      
+      toast.success('Bienvenue sur votre espace prestataire!');
+    } catch (error: any) {
+      logError(error, 'loginAsProvider');
+      if (error.message !== 'Invalid user type') {
+        const message = getErrorMessage(error, 'fr');
+        toast.error(message);
+      }
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Login as Admin with type verification
+  const loginAsAdmin = async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      const { user: loggedInUser } = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Verify user type
+      const userDoc = await getDoc(doc(db, 'users', loggedInUser.uid));
+      if (!userDoc.exists() || userDoc.data().userType !== 'admin') {
+        await firebaseSignOut(auth);
+        toast.error('Accès refusé. Ce compte n\'est pas administrateur.');
+        throw new Error('Invalid user type');
+      }
+      
+      toast.success('Bienvenue Administrateur!');
+    } catch (error: any) {
+      logError(error, 'loginAsAdmin');
+      if (error.message !== 'Invalid user type') {
+        const message = getErrorMessage(error, 'fr');
+        toast.error(message);
+      }
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Legacy signup (defaults to citizen/patient)
   const signup = async (email: string, password: string, fullName: string) => {
     setIsLoading(true);
     try {
@@ -156,6 +302,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await firebaseUpdateProfile(newUser, {
         displayName: fullName
       });
+
+      // Create user document with type
+      await createUserDocument(newUser.uid, email, 'citizen');
 
       // Create Firestore profile
       await setDoc(doc(db, 'profiles', newUser.uid), {
@@ -167,7 +316,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         updated_at: serverTimestamp()
       });
 
-      // Assign default 'patient' role
+      // Create citizen document
+      await createTypeDocument(newUser.uid, 'citizen', {
+        name: fullName,
+        email: newUser.email
+      });
+
+      // Assign default 'patient' role for legacy compatibility
       await setDoc(doc(db, 'user_roles', `${newUser.uid}_patient`), {
         user_id: newUser.uid,
         role: 'patient',
@@ -185,17 +340,74 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const loginWithGoogle = async () => {
+  // Signup as Citizen
+  const signupAsCitizen = async (email: string, password: string, fullName: string, phone?: string) => {
+    setIsLoading(true);
+    try {
+      const { user: newUser } = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Update Firebase Auth profile
+      await firebaseUpdateProfile(newUser, {
+        displayName: fullName
+      });
+
+      // Create user document with type
+      await createUserDocument(newUser.uid, email, 'citizen');
+
+      // Create Firestore profile
+      await setDoc(doc(db, 'profiles', newUser.uid), {
+        id: newUser.uid,
+        email: newUser.email,
+        full_name: fullName,
+        avatar_url: null,
+        phone: phone || null,
+        created_at: serverTimestamp(),
+        updated_at: serverTimestamp()
+      });
+
+      // Create citizen document
+      await createTypeDocument(newUser.uid, 'citizen', {
+        name: fullName,
+        email: newUser.email,
+        phone: phone || null,
+        preferences: {
+          language: 'fr',
+          theme: 'system'
+        }
+      });
+
+      // Assign 'patient' role for legacy compatibility
+      await setDoc(doc(db, 'user_roles', `${newUser.uid}_patient`), {
+        user_id: newUser.uid,
+        role: 'patient',
+        created_at: serverTimestamp()
+      });
+
+      toast.success('Compte citoyen créé avec succès!');
+    } catch (error: any) {
+      logError(error, 'signupAsCitizen');
+      const message = getErrorMessage(error, 'fr');
+      toast.error(message);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loginWithGoogle = async (userType: UserType = 'citizen') => {
     setIsLoading(true);
     try {
       const result = await signInWithPopup(auth, googleProvider);
       
-      // Check if profile exists, create if not
-      const profileRef = doc(db, 'profiles', result.user.uid);
-      const profileSnap = await getDoc(profileRef);
+      // Check if user document exists
+      const userRef = doc(db, 'users', result.user.uid);
+      const userSnap = await getDoc(userRef);
       
-      if (!profileSnap.exists()) {
-        await setDoc(profileRef, {
+      if (!userSnap.exists()) {
+        // New user - create all documents
+        await createUserDocument(result.user.uid, result.user.email || '', userType);
+        
+        await setDoc(doc(db, 'profiles', result.user.uid), {
           id: result.user.uid,
           email: result.user.email,
           full_name: result.user.displayName,
@@ -204,12 +416,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           updated_at: serverTimestamp()
         });
 
-        // Assign default 'patient' role
-        await setDoc(doc(db, 'user_roles', `${result.user.uid}_patient`), {
+        await createTypeDocument(result.user.uid, userType, {
+          name: result.user.displayName,
+          email: result.user.email
+        });
+
+        // Assign role based on userType
+        const role = userType === 'citizen' ? 'patient' : userType;
+        await setDoc(doc(db, 'user_roles', `${result.user.uid}_${role}`), {
           user_id: result.user.uid,
-          role: 'patient',
+          role,
           created_at: serverTimestamp()
         });
+      } else {
+        // Existing user - verify type matches
+        const existingType = userSnap.data().userType;
+        if (existingType !== userType) {
+          toast.warning(`Vous êtes connecté en tant que ${existingType}. Redirection...`);
+        }
       }
 
       toast.success('Connexion réussie!');
@@ -286,6 +510,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         logout,
         updateProfile,
         hasRole,
+        loginAsCitizen,
+        signupAsCitizen,
+        loginAsProvider,
+        loginAsAdmin,
       }}
     >
       {children}

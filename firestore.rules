@@ -31,6 +31,39 @@ service cloud.firestore {
     }
     
     // ============================================
+    // USERS - Core user document with userType
+    // ============================================
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isOwner(userId);
+    }
+    
+    // ============================================
+    // CITIZENS - Citizen-specific data
+    // ============================================
+    match /citizens/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId);
+    }
+    
+    // ============================================
+    // ADMINS - Admin-specific data
+    // ============================================
+    match /admins/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isAdmin();
+    }
+    
+    // ============================================
+    // AUDIT LOG - Admin actions log
+    // ============================================
+    match /audit_log/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+    }
+    
+    // ============================================
     // PROFILES - Users can only read/write their own
     // ============================================
     match /profiles/{userId} {

@@ -23,6 +23,10 @@ import LoadingSpinner from "./components/LoadingSpinner";
 
 // Lazy-loaded pages for code splitting
 const AuthPage = lazy(() => import("./pages/AuthPage"));
+const CitizenLoginPage = lazy(() => import("./pages/CitizenLoginPage"));
+const CitizenRegisterPage = lazy(() => import("./pages/CitizenRegisterPage"));
+const ProviderLoginPage = lazy(() => import("./pages/ProviderLoginPage"));
+const AdminLoginPage = lazy(() => import("./pages/AdminLoginPage"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
 const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -101,14 +105,15 @@ const AppRoutes = () => {
             </PageTransition>
           } 
         />
-        <Route 
-          path="/auth" 
-          element={
-            <PageTransition>
-              <AuthPage />
-            </PageTransition>
-          } 
-        />
+        <Route path="/auth" element={<PageTransition><AuthPage /></PageTransition>} />
+        {/* Citizen Routes */}
+        <Route path="/citizen/login" element={<PageTransition><CitizenLoginPage /></PageTransition>} />
+        <Route path="/citizen/register" element={<PageTransition><CitizenRegisterPage /></PageTransition>} />
+        <Route path="/citizen/dashboard" element={<PageTransition><ProtectedRoute requireRole="patient"><PatientDashboard /></ProtectedRoute></PageTransition>} />
+        {/* Provider Routes */}
+        <Route path="/provider/login" element={<PageTransition><ProviderLoginPage /></PageTransition>} />
+        {/* Admin Routes */}
+        <Route path="/admin/login" element={<PageTransition><AdminLoginPage /></PageTransition>} />
         {/* Redirect /why and /how to documentation */}
         <Route 
           path="/why" 
