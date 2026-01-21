@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/contexts/AuthContext';
+import { Header } from '@/components/layout/Header';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 import SkeletonCard from '@/components/SkeletonCard';
 import { useFavorites, useRemoveFavorite } from '@/hooks/useFavorites';
@@ -18,7 +18,7 @@ const FavoritesPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   
-  const { isAuthenticated } = useAuth();
+  // Note: Authentication is now handled by CitizenGuard in App.tsx
   const headerRef = useScrollReveal();
 
   // Use TanStack Query for favorites and providers
@@ -71,27 +71,11 @@ const FavoritesPage = () => {
     });
   }, [favoriteProviders, searchQuery, selectedCategory]);
 
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 flex items-center justify-center">
-        <Card className="glass-card max-w-md w-full mx-4">
-          <CardContent className="p-8 text-center">
-            <Heart className="mx-auto mb-4 text-muted-foreground" size={48} />
-            <h2 className="text-2xl font-bold mb-4">Connectez-vous</h2>
-            <p className="text-muted-foreground mb-6">
-              Vous devez être connecté pour voir vos prestataires favoris.
-            </p>
-            <Button className="w-full" onClick={() => navigate('/auth')}>
-              Se connecter
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // Note: Authentication check removed - CitizenGuard handles this in App.tsx
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+      <Header />
       {/* Header */}
       <section ref={headerRef} className="py-20 px-6">
         <div className="max-w-6xl mx-auto">

@@ -148,24 +148,7 @@ const PatientDashboard = () => {
     );
   };
 
-  if (!isAuthenticated) {
-    return (
-      <>
-        <Header />
-        <div className="min-h-screen flex items-center justify-center">
-          <Card className="max-w-md">
-            <CardHeader>
-              <CardTitle>Connexion requise</CardTitle>
-              <CardDescription>
-                Veuillez vous connecter pour accéder à votre tableau de bord
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
-        <Footer />
-      </>
-    );
-  }
+  // Note: Authentication check removed - CitizenGuard handles this in App.tsx
 
   return (
     <>

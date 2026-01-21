@@ -221,12 +221,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { user: loggedInUser } = await signInWithEmailAndPassword(auth, email, password);
       
-      // Verify user type
+      // Verify user type - allow if document doesn't exist (new user) or is citizen
       const userDoc = await getDoc(doc(db, 'users', loggedInUser.uid));
-      if (userDoc.exists() && userDoc.data().userType !== 'citizen') {
-        await firebaseSignOut(auth);
-        toast.error('Ce compte n\'est pas un compte citoyen. Utilisez la bonne page de connexion.');
-        throw new Error('Invalid user type');
+      if (userDoc.exists()) {
+        const userType = userDoc.data().userType;
+        if (userType !== 'citizen') {
+          await firebaseSignOut(auth);
+          toast.error('Ce compte n\'est pas un compte citoyen. Utilisez la bonne page de connexion.');
+          throw new Error('Invalid user type');
+        }
+      } else {
+        // Create user document if it doesn't exist (legacy user or first login)
+        await createUserDocument(loggedInUser.uid, email, 'citizen');
       }
       
       toast.success('Bienvenue sur CityHealth!');
@@ -248,9 +254,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { user: loggedInUser } = await signInWithEmailAndPassword(auth, email, password);
       
-      // Verify user type
+      // Verify user type - must exist and be provider
       const userDoc = await getDoc(doc(db, 'users', loggedInUser.uid));
-      if (userDoc.exists() && userDoc.data().userType !== 'provider') {
+      if (!userDoc.exists()) {
+        await firebaseSignOut(auth);
+        toast.error('Compte non trouvé. Veuillez vous inscrire en tant que prestataire.');
+        throw new Error('User not found');
+      }
+      if (userDoc.data().userType !== 'provider') {
         await firebaseSignOut(auth);
         toast.error('Ce compte n\'est pas un compte prestataire. Utilisez la bonne page de connexion.');
         throw new Error('Invalid user type');
@@ -259,7 +270,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast.success('Bienvenue sur votre espace prestataire!');
     } catch (error: any) {
       logError(error, 'loginAsProvider');
-      if (error.message !== 'Invalid user type') {
+      if (error.message !== 'Invalid user type' && error.message !== 'User not found') {
         const message = getErrorMessage(error, 'fr');
         toast.error(message);
       }
