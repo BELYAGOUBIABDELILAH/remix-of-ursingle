@@ -19,53 +19,107 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
-  CheckCircle, XCircle, Eye, Image as ImageIcon, Search, Calendar, User 
+  CheckCircle, XCircle, Eye, Image as ImageIcon, Search, Calendar, User, Loader2 
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import type { MedicalAd } from '@/components/provider/MedicalAdsManager';
+import { 
+  subscribeToAllAds, 
+  approveAd, 
+  rejectAd, 
+  type MedicalAd 
+} from '@/services/medicalAdsService';
+import { logAdminAction } from '@/services/auditLogService';
 
 export function MedicalAdsModeration() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [ads, setAds] = useState<MedicalAd[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAd, setSelectedAd] = useState<MedicalAd | null>(null);
+  const [processing, setProcessing] = useState<string | null>(null);
 
   useEffect(() => {
-    loadAds();
+    // Subscribe to real-time ads updates
+    const unsubscribe = subscribeToAllAds((fetchedAds) => {
+      setAds(fetchedAds);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const loadAds = () => {
-    const stored = JSON.parse(localStorage.getItem('ch_medical_ads') || '[]');
-    setAds(stored);
+  const handleApprove = async (ad: MedicalAd) => {
+    if (!user) return;
+    
+    setProcessing(ad.id);
+    try {
+      await approveAd(ad.id);
+      
+      // Log admin action
+      await logAdminAction(
+        user.uid,
+        user.email || 'unknown',
+        'ad_approved',
+        ad.id,
+        'ad',
+        { title: ad.title, providerId: ad.providerId }
+      );
+      
+      toast({
+        title: "Annonce approuvée",
+        description: `L'annonce "${ad.title}" est maintenant visible.`,
+      });
+      setSelectedAd(null);
+    } catch (error) {
+      console.error('Error approving ad:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'approuver l'annonce.",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessing(null);
+    }
   };
 
-  const handleApprove = (ad: MedicalAd) => {
-    updateAdStatus(ad.id, 'approved');
-    toast({
-      title: "Annonce approuvée",
-      description: `L'annonce "${ad.title}" est maintenant visible.`,
-    });
-    setSelectedAd(null);
-  };
-
-  const handleReject = (ad: MedicalAd) => {
-    updateAdStatus(ad.id, 'rejected');
-    toast({
-      title: "Annonce rejetée",
-      description: `L'annonce "${ad.title}" a été rejetée.`,
-      variant: "destructive"
-    });
-    setSelectedAd(null);
-  };
-
-  const updateAdStatus = (adId: string, status: 'approved' | 'rejected') => {
-    const updated = ads.map(a => 
-      a.id === adId ? { ...a, status } : a
-    );
-    setAds(updated);
-    localStorage.setItem('ch_medical_ads', JSON.stringify(updated));
+  const handleReject = async (ad: MedicalAd) => {
+    if (!user) return;
+    
+    setProcessing(ad.id);
+    try {
+      await rejectAd(ad.id, 'Non conforme aux règles de la plateforme');
+      
+      // Log admin action
+      await logAdminAction(
+        user.uid,
+        user.email || 'unknown',
+        'ad_rejected',
+        ad.id,
+        'ad',
+        { title: ad.title, providerId: ad.providerId },
+        'Non conforme aux règles de la plateforme'
+      );
+      
+      toast({
+        title: "Annonce rejetée",
+        description: `L'annonce "${ad.title}" a été rejetée.`,
+        variant: "destructive"
+      });
+      setSelectedAd(null);
+    } catch (error) {
+      console.error('Error rejecting ad:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de rejeter l'annonce.",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessing(null);
+    }
   };
 
   const filteredAds = ads.filter(a => 
@@ -74,6 +128,16 @@ export function MedicalAdsModeration() {
   );
 
   const pendingCount = ads.filter(a => a.status === 'pending').length;
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <>
@@ -147,7 +211,7 @@ export function MedicalAdsModeration() {
                     <TableCell>
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <Calendar className="h-3 w-3" />
-                        {format(new Date(ad.createdAt), 'dd MMM', { locale: fr })}
+                        {format(ad.createdAt, 'dd MMM', { locale: fr })}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -176,15 +240,25 @@ export function MedicalAdsModeration() {
                               size="sm" 
                               variant="default"
                               onClick={() => handleApprove(ad)}
+                              disabled={processing === ad.id}
                             >
-                              <CheckCircle className="h-4 w-4" />
+                              {processing === ad.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <CheckCircle className="h-4 w-4" />
+                              )}
                             </Button>
                             <Button 
                               size="sm" 
                               variant="destructive"
                               onClick={() => handleReject(ad)}
+                              disabled={processing === ad.id}
                             >
-                              <XCircle className="h-4 w-4" />
+                              {processing === ad.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <XCircle className="h-4 w-4" />
+                              )}
                             </Button>
                           </>
                         )}
@@ -221,8 +295,8 @@ export function MedicalAdsModeration() {
                 <p className="text-muted-foreground mt-2">{selectedAd.content}</p>
               </div>
               <div className="flex items-center justify-between text-sm text-muted-foreground pt-4 border-t">
-                <span>Créée le {format(new Date(selectedAd.createdAt), 'dd MMMM yyyy', { locale: fr })}</span>
-                <span>Expire le {format(new Date(selectedAd.expiresAt), 'dd MMM yyyy', { locale: fr })}</span>
+                <span>Créée le {format(selectedAd.createdAt, 'dd MMMM yyyy', { locale: fr })}</span>
+                <span>Expire le {format(selectedAd.expiresAt, 'dd MMM yyyy', { locale: fr })}</span>
               </div>
 
               {selectedAd.status === 'pending' && (
@@ -230,16 +304,26 @@ export function MedicalAdsModeration() {
                   <Button 
                     className="flex-1"
                     onClick={() => handleApprove(selectedAd)}
+                    disabled={processing === selectedAd.id}
                   >
-                    <CheckCircle className="h-4 w-4 mr-2" />
+                    {processing === selectedAd.id ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                    )}
                     Approuver
                   </Button>
                   <Button 
                     variant="destructive"
                     className="flex-1"
                     onClick={() => handleReject(selectedAd)}
+                    disabled={processing === selectedAd.id}
                   >
-                    <XCircle className="h-4 w-4 mr-2" />
+                    {processing === selectedAd.id ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <XCircle className="h-4 w-4 mr-2" />
+                    )}
                     Rejeter
                   </Button>
                 </div>

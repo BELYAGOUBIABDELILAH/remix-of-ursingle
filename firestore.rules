@@ -52,6 +52,7 @@ service cloud.firestore {
     // ============================================
     match /admins/{userId} {
       allow read: if isOwner(userId) || isAdmin();
+      // Only existing admins can create/update admin accounts
       allow write: if isAdmin();
     }
     
@@ -61,6 +62,25 @@ service cloud.firestore {
     match /audit_log/{logId} {
       allow read: if isAdmin();
       allow create: if isAdmin();
+    }
+    
+    // ============================================
+    // MEDICAL ADS - Provider ads with admin moderation
+    // ============================================
+    match /ads/{adId} {
+      // Public can read approved ads
+      allow read: if resource.data.status == 'approved';
+      // Providers can read their own ads
+      allow read: if isAuthenticated() && resource.data.providerId == request.auth.uid;
+      // Admins can read all ads
+      allow read: if isAdmin();
+      // Providers can create ads for themselves
+      allow create: if isProvider() && 
+                       request.resource.data.providerId == request.auth.uid;
+      // Providers can delete their own ads
+      allow delete: if isAuthenticated() && resource.data.providerId == request.auth.uid;
+      // Only admins can update ads (for approve/reject)
+      allow update: if isAdmin();
     }
     
     // ============================================
