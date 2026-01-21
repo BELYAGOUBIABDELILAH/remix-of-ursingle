@@ -111,13 +111,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const profileData = profileSnap.data();
 
-      // Fetch roles from user_roles collection
-      const rolesQuery = query(
-        collection(db, 'user_roles'),
-        where('user_id', '==', userId)
-      );
-      const rolesSnap = await getDocs(rolesQuery);
-      const roles = rolesSnap.docs.map(doc => doc.data().role as UserRole);
+      // Fetch roles from user_roles collection using direct document reads
+      // This avoids permission issues with where() queries on document ID patterns
+      let roles: UserRole[] = [];
+      try {
+        const possibleRoles: UserRole[] = ['patient', 'provider', 'admin'];
+        const rolePromises = possibleRoles.map(async (role) => {
+          const roleDoc = await getDoc(doc(db, 'user_roles', `${userId}_${role}`));
+          return roleDoc.exists() ? role : null;
+        });
+        const roleResults = await Promise.all(rolePromises);
+        roles = roleResults.filter((role): role is UserRole => role !== null);
+      } catch (roleError) {
+        console.warn('Could not fetch roles, using empty array:', roleError);
+        // Continue with empty roles - userType is the primary check now
+      }
 
       // Also check type-specific collection for verification status
       let verificationStatus = profileData.verification_status;
