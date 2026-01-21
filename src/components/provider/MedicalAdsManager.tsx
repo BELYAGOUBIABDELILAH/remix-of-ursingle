@@ -15,23 +15,16 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { 
-  Plus, Image as ImageIcon, Calendar, Eye, Trash2, Clock, CheckCircle, XCircle 
+  Plus, Image as ImageIcon, Calendar, Eye, Trash2, Clock, CheckCircle, XCircle, Loader2 
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-
-export interface MedicalAd {
-  id: string;
-  providerId: string;
-  providerName: string;
-  title: string;
-  content: string;
-  imageUrl?: string;
-  status: 'pending' | 'approved' | 'rejected';
-  createdAt: string;
-  expiresAt: string;
-  views: number;
-}
+import { 
+  createAd, 
+  deleteAd, 
+  subscribeToProviderAds,
+  type MedicalAd 
+} from '@/services/medicalAdsService';
 
 interface MedicalAdsManagerProps {
   providerId: string;
@@ -42,7 +35,10 @@ interface MedicalAdsManagerProps {
 export function MedicalAdsManager({ providerId, providerName, isVerified }: MedicalAdsManagerProps) {
   const { toast } = useToast();
   const [ads, setAds] = useState<MedicalAd[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [newAd, setNewAd] = useState({
     title: '',
     content: '',
@@ -50,12 +46,16 @@ export function MedicalAdsManager({ providerId, providerName, isVerified }: Medi
   });
 
   useEffect(() => {
-    // Load ads from localStorage
-    const allAds = JSON.parse(localStorage.getItem('ch_medical_ads') || '[]') as MedicalAd[];
-    setAds(allAds.filter(ad => ad.providerId === providerId));
+    // Subscribe to real-time updates for provider's ads
+    const unsubscribe = subscribeToProviderAds(providerId, (fetchedAds) => {
+      setAds(fetchedAds);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, [providerId]);
 
-  const handleCreateAd = () => {
+  const handleCreateAd = async () => {
     if (!newAd.title || !newAd.content) {
       toast({
         title: "Champs requis",
@@ -65,43 +65,60 @@ export function MedicalAdsManager({ providerId, providerName, isVerified }: Medi
       return;
     }
 
-    const ad: MedicalAd = {
-      id: Date.now().toString(),
-      providerId,
-      providerName,
-      title: newAd.title,
-      content: newAd.content,
-      imageUrl: newAd.image ? URL.createObjectURL(newAd.image) : undefined,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
-      views: 0
-    };
+    setIsSubmitting(true);
+    try {
+      // TODO: Handle image upload to Firebase Storage
+      let imageUrl: string | undefined;
+      if (newAd.image) {
+        // For now, create object URL (in production, upload to Storage)
+        imageUrl = URL.createObjectURL(newAd.image);
+      }
 
-    const allAds = JSON.parse(localStorage.getItem('ch_medical_ads') || '[]') as MedicalAd[];
-    allAds.push(ad);
-    localStorage.setItem('ch_medical_ads', JSON.stringify(allAds));
+      await createAd({
+        providerId,
+        providerName,
+        title: newAd.title,
+        content: newAd.content,
+        imageUrl
+      });
 
-    setAds([...ads, ad]);
-    setNewAd({ title: '', content: '', image: null });
-    setIsDialogOpen(false);
+      setNewAd({ title: '', content: '', image: null });
+      setIsDialogOpen(false);
 
-    toast({
-      title: "Annonce créée !",
-      description: "Votre annonce est en attente de modération.",
-    });
+      toast({
+        title: "Annonce créée !",
+        description: "Votre annonce est en attente de modération.",
+      });
+    } catch (error) {
+      console.error('Error creating ad:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de créer l'annonce.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDeleteAd = (adId: string) => {
-    const allAds = JSON.parse(localStorage.getItem('ch_medical_ads') || '[]') as MedicalAd[];
-    const filtered = allAds.filter(ad => ad.id !== adId);
-    localStorage.setItem('ch_medical_ads', JSON.stringify(filtered));
-    setAds(ads.filter(ad => ad.id !== adId));
-
-    toast({
-      title: "Annonce supprimée",
-      description: "L'annonce a été supprimée avec succès.",
-    });
+  const handleDeleteAd = async (adId: string) => {
+    setDeletingId(adId);
+    try {
+      await deleteAd(adId);
+      toast({
+        title: "Annonce supprimée",
+        description: "L'annonce a été supprimée avec succès.",
+      });
+    } catch (error) {
+      console.error('Error deleting ad:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer l'annonce.",
+        variant: "destructive"
+      });
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const statusConfig = {
@@ -125,6 +142,20 @@ export function MedicalAdsManager({ providerId, providerName, isVerified }: Medi
               Vous devez faire vérifier votre profil avant de pouvoir créer des annonces.
             </p>
           </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Mes Annonces Médicales</CardTitle>
+          <CardDescription>Gérez vos annonces promotionnelles</CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </CardContent>
       </Card>
     );
@@ -188,8 +219,19 @@ export function MedicalAdsManager({ providerId, providerName, isVerified }: Medi
                     </Label>
                   </div>
                 </div>
-                <Button onClick={handleCreateAd} className="w-full">
-                  Soumettre l'annonce
+                <Button 
+                  onClick={handleCreateAd} 
+                  className="w-full"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Création...
+                    </>
+                  ) : (
+                    'Soumettre l\'annonce'
+                  )}
                 </Button>
               </div>
             </DialogContent>
@@ -221,6 +263,11 @@ export function MedicalAdsManager({ providerId, providerName, isVerified }: Medi
                       <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                         {ad.content}
                       </p>
+                      {ad.status === 'rejected' && ad.rejectionReason && (
+                        <p className="text-sm text-destructive mt-2">
+                          Raison: {ad.rejectionReason}
+                        </p>
+                      )}
                     </div>
                     {ad.imageUrl && (
                       <img 
@@ -234,7 +281,7 @@ export function MedicalAdsManager({ providerId, providerName, isVerified }: Medi
                     <div className="flex items-center gap-4">
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        {format(new Date(ad.createdAt), 'dd MMM yyyy', { locale: fr })}
+                        {format(ad.createdAt, 'dd MMM yyyy', { locale: fr })}
                       </span>
                       {ad.status === 'approved' && (
                         <span className="flex items-center gap-1">
@@ -248,8 +295,13 @@ export function MedicalAdsManager({ providerId, providerName, isVerified }: Medi
                       variant="ghost" 
                       className="text-destructive hover:text-destructive"
                       onClick={() => handleDeleteAd(ad.id)}
+                      disabled={deletingId === ad.id}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      {deletingId === ad.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -261,3 +313,6 @@ export function MedicalAdsManager({ providerId, providerName, isVerified }: Medi
     </Card>
   );
 }
+
+// Re-export the type for backward compatibility
+export type { MedicalAd } from '@/services/medicalAdsService';

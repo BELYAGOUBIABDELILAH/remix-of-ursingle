@@ -46,6 +46,10 @@ interface AuthContextType {
   session: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  // Type check helpers
+  isCitizen: boolean;
+  isProvider: boolean;
+  isAdmin: boolean;
   // Legacy methods (for backward compatibility)
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, fullName: string) => Promise<void>;
@@ -493,8 +497,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const hasRole = (role: UserRole): boolean => {
+    // Map citizen to patient for legacy compatibility
+    if (role === 'patient' && profile?.userType === 'citizen') {
+      return true;
+    }
     return profile?.roles.includes(role) ?? false;
   };
+
+  // Type check helpers
+  const isCitizen = profile?.userType === 'citizen';
+  const isProvider = profile?.userType === 'provider';
+  const isAdmin = profile?.userType === 'admin';
 
   return (
     <AuthContext.Provider
@@ -504,6 +517,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         session: user,
         isAuthenticated: !!user,
         isLoading,
+        isCitizen,
+        isProvider,
+        isAdmin,
         login,
         signup,
         loginWithGoogle,

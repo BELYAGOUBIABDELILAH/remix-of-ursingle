@@ -10,7 +10,8 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ProviderProvider } from "@/contexts/ProviderContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ProviderRouteGuard } from "@/components/ProviderRouteGuard";
-import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AdminGuard } from "@/components/guards/AdminGuard";
+import { CitizenGuard } from "@/components/guards/CitizenGuard";
 import AntigravityIndex from "./pages/AntigravityIndex";
 import MapMother from "./components/map/MapMother";
 import ProvidersMapChild from "./components/map/children/ProvidersMapChild";
@@ -22,7 +23,6 @@ import FloatingSidebar from "./components/FloatingSidebar";
 import LoadingSpinner from "./components/LoadingSpinner";
 
 // Lazy-loaded pages for code splitting
-const AuthPage = lazy(() => import("./pages/AuthPage"));
 const CitizenLoginPage = lazy(() => import("./pages/CitizenLoginPage"));
 const CitizenRegisterPage = lazy(() => import("./pages/CitizenRegisterPage"));
 const ProviderLoginPage = lazy(() => import("./pages/ProviderLoginPage"));
@@ -79,11 +79,11 @@ const VerificationGuard = ({ children }: { children: React.ReactNode }) => {
   
   // Check if user is a provider with pending verification
   const isPendingProvider = isAuthenticated && 
-    profile?.roles?.includes('provider') && 
+    profile?.userType === 'provider' && 
     profile?.verification_status === 'pending';
   
   // Allowed paths for pending providers
-  const allowedPaths = ['/registration-status', '/provider/register', '/settings', '/auth', '/'];
+  const allowedPaths = ['/registration-status', '/provider/register', '/settings', '/provider/login', '/citizen/login', '/admin/login', '/'];
   const isAllowedPath = allowedPaths.some(path => location.pathname.startsWith(path));
   
   if (isPendingProvider && !isAllowedPath) {
@@ -91,6 +91,11 @@ const VerificationGuard = ({ children }: { children: React.ReactNode }) => {
   }
   
   return <>{children}</>;
+};
+
+// Auth redirect - redirects /auth to appropriate login page
+const AuthRedirect = () => {
+  return <Navigate to="/citizen/login" replace />;
 };
 
 const AppRoutes = () => {
@@ -105,24 +110,117 @@ const AppRoutes = () => {
             </PageTransition>
           } 
         />
-        <Route path="/auth" element={<PageTransition><AuthPage /></PageTransition>} />
-        {/* Citizen Routes */}
+        
+        {/* Legacy /auth redirects to citizen login */}
+        <Route path="/auth" element={<AuthRedirect />} />
+        
+        {/* ============================================ */}
+        {/* CITIZEN ROUTES */}
+        {/* ============================================ */}
         <Route path="/citizen/login" element={<PageTransition><CitizenLoginPage /></PageTransition>} />
         <Route path="/citizen/register" element={<PageTransition><CitizenRegisterPage /></PageTransition>} />
-        <Route path="/citizen/dashboard" element={<PageTransition><ProtectedRoute requireRole="patient"><PatientDashboard /></ProtectedRoute></PageTransition>} />
-        {/* Provider Routes */}
+        <Route 
+          path="/citizen/dashboard" 
+          element={
+            <PageTransition>
+              <CitizenGuard>
+                <PatientDashboard />
+              </CitizenGuard>
+            </PageTransition>
+          } 
+        />
+        <Route 
+          path="/profile" 
+          element={
+            <PageTransition>
+              <CitizenGuard>
+                <CitizenProfilePage />
+              </CitizenGuard>
+            </PageTransition>
+          } 
+        />
+        <Route 
+          path="/favorites" 
+          element={
+            <PageTransition>
+              <CitizenGuard>
+                <FavoritesPage />
+              </CitizenGuard>
+            </PageTransition>
+          } 
+        />
+        {/* Legacy /dashboard redirects to citizen dashboard */}
+        <Route path="/dashboard" element={<Navigate to="/citizen/dashboard" replace />} />
+        
+        {/* ============================================ */}
+        {/* PROVIDER ROUTES */}
+        {/* ============================================ */}
         <Route path="/provider/login" element={<PageTransition><ProviderLoginPage /></PageTransition>} />
-        {/* Admin Routes */}
+        <Route 
+          path="/provider/register/*" 
+          element={
+            <PageTransition>
+              <ProviderRegister />
+            </PageTransition>
+          } 
+        />
+        <Route 
+          path="/provider/dashboard" 
+          element={
+            <PageTransition>
+              <ProviderRouteGuard>
+                <ProviderDashboard />
+              </ProviderRouteGuard>
+            </PageTransition>
+          } 
+        />
+        <Route path="/provider" element={<Navigate to="/provider/dashboard" replace />} />
+        <Route 
+          path="/registration-status" 
+          element={
+            <PageTransition>
+              <RegistrationStatus />
+            </PageTransition>
+          } 
+        />
+        <Route 
+          path="/registration-thank-you" 
+          element={
+            <PageTransition>
+              <RegistrationThankYou />
+            </PageTransition>
+          } 
+        />
+        
+        {/* ============================================ */}
+        {/* ADMIN ROUTES */}
+        {/* ============================================ */}
         <Route path="/admin/login" element={<PageTransition><AdminLoginPage /></PageTransition>} />
-        {/* Redirect /why and /how to documentation */}
         <Route 
-          path="/why" 
-          element={<Navigate to="/docs/getting-started/why-cityhealth" replace />}
+          path="/admin/dashboard" 
+          element={
+            <PageTransition>
+              <AdminGuard>
+                <AdminDashboard />
+              </AdminGuard>
+            </PageTransition>
+          } 
         />
         <Route 
-          path="/how" 
-          element={<Navigate to="/docs/getting-started/how-it-works" replace />}
+          path="/admin/migrate" 
+          element={
+            <PageTransition>
+              <AdminGuard>
+                <AdminMigratePage />
+              </AdminGuard>
+            </PageTransition>
+          } 
         />
+        <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+        
+        {/* ============================================ */}
+        {/* PUBLIC ROUTES */}
+        {/* ============================================ */}
         <Route 
           path="/search" 
           element={
@@ -141,30 +239,19 @@ const AppRoutes = () => {
             </PageTransition>
           } 
         />
-        {/* Unified Map Routes - MapMother with nested children */}
-        <Route path="/map" element={<MapMother />}>
-          <Route index element={<Navigate to="/map/providers" replace />} />
-          <Route path="providers" element={<ProvidersMapChild />} />
-          <Route path="emergency" element={<EmergencyMapChild />} />
-          <Route path="blood" element={<BloodMapChild />} />
-        </Route>
-        {/* Legacy /carte redirects to new map */}
-        <Route path="/carte" element={<Navigate to="/map/providers" replace />} />
+        <Route 
+          path="/provider/:id" 
+          element={
+            <PageTransition>
+              <ProviderProfilePage />
+            </PageTransition>
+          } 
+        />
         <Route 
           path="/contact" 
           element={
             <PageTransition>
               <ContactPage />
-            </PageTransition>
-          } 
-        />
-        <Route 
-          path="/favorites" 
-          element={
-            <PageTransition>
-              <ProtectedRoute>
-                <FavoritesPage />
-              </ProtectedRoute>
             </PageTransition>
           } 
         />
@@ -177,81 +264,10 @@ const AppRoutes = () => {
           } 
         />
         <Route 
-          path="/provider/:id" 
+          path="/blood-donation" 
           element={
             <PageTransition>
-              <ProviderProfilePage />
-            </PageTransition>
-          } 
-        />
-        {/* New Registration Flow - uses local hook instead of context */}
-        <Route 
-          path="/provider/register/*" 
-          element={
-            <PageTransition>
-              <ProviderRegister />
-            </PageTransition>
-          } 
-        />
-        <Route 
-          path="/registration-status" 
-          element={
-            <PageTransition>
-              <RegistrationStatus />
-            </PageTransition>
-          } 
-        />
-        <Route 
-          path="/registration-thank-you" 
-          element={
-            <PageTransition>
-              <RegistrationThankYou />
-            </PageTransition>
-          } 
-        />
-        {/* Provider Dashboard - uses ProviderRouteGuard for enhanced security */}
-        <Route 
-          path="/provider/dashboard" 
-          element={
-            <PageTransition>
-              <ProviderRouteGuard>
-                <ProviderDashboard />
-              </ProviderRouteGuard>
-            </PageTransition>
-          } 
-        />
-        {/* /provider alias redirects to dashboard */}
-        <Route 
-          path="/provider" 
-          element={<Navigate to="/provider/dashboard" replace />}
-        />
-        <Route 
-          path="/admin/dashboard" 
-          element={
-            <PageTransition>
-              <ProtectedRoute requireRole="admin">
-                <AdminDashboard />
-              </ProtectedRoute>
-            </PageTransition>
-          } 
-        />
-        <Route 
-          path="/profile" 
-          element={
-            <PageTransition>
-              <ProtectedRoute>
-                <CitizenProfilePage />
-              </ProtectedRoute>
-            </PageTransition>
-          } 
-        />
-        <Route 
-          path="/dashboard" 
-          element={
-            <PageTransition>
-              <ProtectedRoute requireRole="patient">
-                <PatientDashboard />
-              </ProtectedRoute>
+              <BloodDonationPage />
             </PageTransition>
           } 
         />
@@ -263,8 +279,6 @@ const AppRoutes = () => {
             </PageTransition>
           } 
         />
-        {/* Legacy /providers-map redirects to new map */}
-        <Route path="/providers-map" element={<Navigate to="/map/providers" replace />} />
         <Route 
           path="/medical-assistant" 
           element={
@@ -273,25 +287,20 @@ const AppRoutes = () => {
             </PageTransition>
           } 
         />
-        <Route 
-          path="/blood-donation" 
-          element={
-            <PageTransition>
-              <BloodDonationPage />
-            </PageTransition>
-          } 
-        />
-        <Route 
-          path="/admin/migrate" 
-          element={
-            <PageTransition>
-              <ProtectedRoute requireRole="admin">
-                <AdminMigratePage />
-              </ProtectedRoute>
-            </PageTransition>
-          } 
-        />
-        {/* Documentation Routes */}
+        
+        {/* ============================================ */}
+        {/* MAP ROUTES */}
+        {/* ============================================ */}
+        <Route path="/map" element={<MapMother />}>
+          <Route index element={<Navigate to="/map/providers" replace />} />
+          <Route path="providers" element={<ProvidersMapChild />} />
+          <Route path="emergency" element={<EmergencyMapChild />} />
+          <Route path="blood" element={<BloodMapChild />} />
+        </Route>
+        
+        {/* ============================================ */}
+        {/* DOCUMENTATION ROUTES */}
+        {/* ============================================ */}
         <Route 
           path="/docs" 
           element={
@@ -308,8 +317,19 @@ const AppRoutes = () => {
             </PageTransition>
           } 
         />
-        {/* Redirect routes for backwards compatibility */}
+        
+        {/* ============================================ */}
+        {/* LEGACY REDIRECTS */}
+        {/* ============================================ */}
+        <Route path="/why" element={<Navigate to="/docs/getting-started/why-cityhealth" replace />} />
+        <Route path="/how" element={<Navigate to="/docs/getting-started/how-it-works" replace />} />
+        <Route path="/carte" element={<Navigate to="/map/providers" replace />} />
+        <Route path="/providers-map" element={<Navigate to="/map/providers" replace />} />
         <Route path="/urgences" element={<Navigate to="/map/emergency" replace />} />
+        
+        {/* ============================================ */}
+        {/* 404 */}
+        {/* ============================================ */}
         <Route 
           path="*" 
           element={
