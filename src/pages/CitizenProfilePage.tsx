@@ -65,18 +65,8 @@ export default function CitizenProfilePage() {
   });
   const [providerCache, setProviderCache] = useState<Record<string, CityHealthProvider | null>>({});
 
-  // Redirect if not authenticated or is a provider
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/auth');
-      return;
-    }
-    // Use hasRole() for consistent role checking
-    if (hasRole('provider')) {
-      navigate('/provider/dashboard');
-      return;
-    }
-  }, [isAuthenticated, hasRole, navigate]);
+  // Note: Authentication is now handled by CitizenGuard in App.tsx
+  // This useEffect is kept only for provider redirection (wrong user type)
 
   // Load form data
   useEffect(() => {

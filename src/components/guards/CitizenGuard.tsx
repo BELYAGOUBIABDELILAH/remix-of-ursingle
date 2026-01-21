@@ -37,8 +37,11 @@ export function CitizenGuard({ children }: CitizenGuardProps) {
   }
 
   // Check userType is citizen (primary check)
-  // Also allow legacy 'patient' role via hasRole for backward compatibility
-  if (profile.userType !== 'citizen') {
+  // Also allow legacy 'patient' role for backward compatibility
+  const isCitizen = profile.userType === 'citizen';
+  const hasLegacyPatientRole = profile.roles?.includes('patient');
+  
+  if (!isCitizen && !hasLegacyPatientRole) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="max-w-md w-full">
