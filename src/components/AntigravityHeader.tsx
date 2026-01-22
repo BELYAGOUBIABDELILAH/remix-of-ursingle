@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Stethoscope, ChevronDown, Menu, X } from 'lucide-react';
+import { Stethoscope, ChevronDown, Menu, X, Shield, Heart, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,7 +18,7 @@ export const AntigravityHeader = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const { language, setLanguage } = useLanguage();
-  const { user, logout } = useAuth();
+  const { user, logout, profile, isProvider, isAdmin, isCitizen } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -201,19 +201,71 @@ export const AntigravityHeader = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 bg-popover/95 backdrop-blur-lg">
+                  {/* User info header */}
+                  <div className="px-2 py-1.5 border-b border-border/50 mb-1">
+                    <p className="text-sm font-medium truncate">{profile?.full_name || user.email}</p>
+                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                    {isProvider && (
+                      <span className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full mt-1">
+                        <Stethoscope className="h-3 w-3" />
+                        Praticien
+                      </span>
+                    )}
+                    {isAdmin && (
+                      <span className="inline-flex items-center gap-1 text-xs bg-destructive/10 text-destructive px-2 py-0.5 rounded-full mt-1">
+                        <Shield className="h-3 w-3" />
+                        Administrateur
+                      </span>
+                    )}
+                  </div>
+                  
+                  {/* Common link */}
                   <DropdownMenuItem asChild>
                     <Link to="/profile" className="cursor-pointer">Mon profil</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/favorites" className="cursor-pointer">Mes favoris</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/dashboard" className="cursor-pointer">Tableau de bord</Link>
-                  </DropdownMenuItem>
+                  
+                  {/* Provider-specific links */}
+                  {isProvider && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/provider/dashboard" className="cursor-pointer flex items-center gap-2">
+                        <Stethoscope className="h-4 w-4" />
+                        Espace Praticien
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  
+                  {/* Admin-specific links */}
+                  {isAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/dashboard" className="cursor-pointer flex items-center gap-2">
+                        <Shield className="h-4 w-4" />
+                        Administration
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  
+                  {/* Citizen-specific links */}
+                  {isCitizen && (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link to="/favorites" className="cursor-pointer flex items-center gap-2">
+                          <Heart className="h-4 w-4" />
+                          Mes favoris
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/citizen/dashboard" className="cursor-pointer flex items-center gap-2">
+                          <LayoutDashboard className="h-4 w-4" />
+                          Tableau de bord
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={logout}
-                    className="cursor-pointer text-red-600"
+                    className="cursor-pointer text-destructive"
                   >
                     Déconnexion
                   </DropdownMenuItem>
