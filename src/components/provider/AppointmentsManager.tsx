@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { format, isToday, isTomorrow, isPast, parseISO } from 'date-fns';
+import { useState, useMemo } from 'react';
+import { format, isToday, isTomorrow, isPast, parseISO, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
+import { Calendar } from '@/components/ui/calendar';
 import {
   Dialog,
   DialogContent,
@@ -16,7 +17,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  Calendar,
+  Calendar as CalendarIcon,
   Clock,
   Phone,
   Mail,
@@ -27,6 +28,8 @@ import {
   Loader2,
   FileText,
   CalendarDays,
+  List,
+  Grid3X3,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -50,24 +53,28 @@ const statusConfig = {
     variant: 'secondary' as const,
     icon: AlertCircle,
     color: 'text-amber-500',
+    bg: 'bg-amber-500',
   },
   confirmed: {
     label: 'Confirmé',
     variant: 'default' as const,
     icon: CheckCircle2,
     color: 'text-green-500',
+    bg: 'bg-green-500',
   },
   cancelled: {
     label: 'Annulé',
     variant: 'destructive' as const,
     icon: XCircle,
     color: 'text-red-500',
+    bg: 'bg-red-500',
   },
   completed: {
     label: 'Terminé',
     variant: 'outline' as const,
     icon: CheckCircle2,
     color: 'text-blue-500',
+    bg: 'bg-blue-500',
   },
 };
 
@@ -92,6 +99,8 @@ export function AppointmentsManager({ providerId, providerName, isVerified }: Ap
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   // Filter appointments by status
   const pendingAppointments = appointments.filter(apt => apt.status === 'pending');
@@ -103,6 +112,38 @@ export function AppointmentsManager({ providerId, providerName, isVerified }: Ap
   const upcomingAppointments = [...pendingAppointments, ...confirmedAppointments]
     .filter(apt => !isPast(parseISO(apt.dateTime)))
     .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
+
+  // Get dates with appointments for calendar highlighting
+  const datesWithAppointments = useMemo(() => {
+    const dateMap = new Map<string, number>();
+    appointments.forEach(apt => {
+      if (apt.status !== 'cancelled') {
+        const dateKey = apt.dateTime.split('T')[0];
+        dateMap.set(dateKey, (dateMap.get(dateKey) || 0) + 1);
+      }
+    });
+    return dateMap;
+  }, [appointments]);
+
+  // Filter appointments by selected date
+  const filteredByDate = useMemo(() => {
+    if (!selectedDate) return upcomingAppointments;
+    return appointments.filter(apt => {
+      try {
+        return isSameDay(parseISO(apt.dateTime), selectedDate);
+      } catch {
+        return false;
+      }
+    });
+  }, [appointments, selectedDate, upcomingAppointments]);
+
+  // Stats for header
+  const stats = useMemo(() => ({
+    total: appointments.length,
+    pending: pendingAppointments.length,
+    confirmed: confirmedAppointments.length,
+    completed: completedAppointments.length,
+  }), [appointments, pendingAppointments, confirmedAppointments, completedAppointments]);
 
   const handleConfirm = async (appointmentId: string) => {
     setActionLoading(appointmentId);
@@ -266,95 +307,216 @@ export function AppointmentsManager({ providerId, providerName, isVerified }: Ap
 
   return (
     <>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        <Card>
+          <CardContent className="pt-4">
+            <div className="text-center">
+              <p className="text-3xl font-bold">{stats.total}</p>
+              <p className="text-sm text-muted-foreground">Total</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-amber-500/30">
+          <CardContent className="pt-4">
+            <div className="text-center">
+              <p className="text-3xl font-bold text-amber-500">{stats.pending}</p>
+              <p className="text-sm text-muted-foreground">En attente</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-green-500/30">
+          <CardContent className="pt-4">
+            <div className="text-center">
+              <p className="text-3xl font-bold text-green-500">{stats.confirmed}</p>
+              <p className="text-sm text-muted-foreground">Confirmés</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-blue-500/30">
+          <CardContent className="pt-4">
+            <div className="text-center">
+              <p className="text-3xl font-bold text-blue-500">{stats.completed}</p>
+              <p className="text-sm text-muted-foreground">Terminés</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
+                <CalendarIcon className="h-5 w-5" />
                 Gestion des rendez-vous
               </CardTitle>
               <CardDescription>
-                {appointments.length} rendez-vous au total • {upcomingAppointments.length} à venir
+                {selectedDate 
+                  ? `${filteredByDate.length} rendez-vous le ${format(selectedDate, 'd MMMM', { locale: fr })}`
+                  : `${appointments.length} rendez-vous au total • ${upcomingAppointments.length} à venir`
+                }
               </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              {selectedDate && (
+                <Button variant="ghost" size="sm" onClick={() => setSelectedDate(undefined)}>
+                  Tous les RDV
+                </Button>
+              )}
+              <div className="flex border rounded-lg">
+                <Button 
+                  variant={viewMode === 'list' ? 'secondary' : 'ghost'} 
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant={viewMode === 'calendar' ? 'secondary' : 'ghost'} 
+                  size="sm"
+                  onClick={() => setViewMode('calendar')}
+                >
+                  <Grid3X3 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="upcoming" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="upcoming" className="relative">
-                À venir
-                {upcomingAppointments.length > 0 && (
-                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
-                    {upcomingAppointments.length}
-                  </Badge>
+          {viewMode === 'calendar' ? (
+            <div className="flex gap-6">
+              {/* Calendar View */}
+              <div className="shrink-0">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  locale={fr}
+                  className="rounded-md border pointer-events-auto"
+                  modifiers={{
+                    hasAppointments: (date) => {
+                      const dateKey = format(date, 'yyyy-MM-dd');
+                      return datesWithAppointments.has(dateKey);
+                    },
+                  }}
+                  modifiersStyles={{
+                    hasAppointments: {
+                      fontWeight: 'bold',
+                    },
+                  }}
+                  components={{
+                    DayContent: ({ date }) => {
+                      const dateKey = format(date, 'yyyy-MM-dd');
+                      const count = datesWithAppointments.get(dateKey);
+                      return (
+                        <div className="relative w-full h-full flex items-center justify-center">
+                          {date.getDate()}
+                          {count && count > 0 && (
+                            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary" />
+                          )}
+                        </div>
+                      );
+                    },
+                  }}
+                />
+              </div>
+              
+              {/* Appointments List for selected date */}
+              <div className="flex-1 space-y-3 max-h-[400px] overflow-y-auto">
+                {filteredByDate.length > 0 ? (
+                  filteredByDate.map(apt => (
+                    <AppointmentCard key={apt.id} appointment={apt} />
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <CalendarIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>
+                      {selectedDate 
+                        ? 'Aucun rendez-vous ce jour' 
+                        : 'Aucun rendez-vous à venir'
+                      }
+                    </p>
+                  </div>
                 )}
-              </TabsTrigger>
-              <TabsTrigger value="pending" className="relative">
-                En attente
-                {pendingAppointments.length > 0 && (
-                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs bg-amber-500/20 text-amber-600">
-                    {pendingAppointments.length}
-                  </Badge>
+              </div>
+            </div>
+          ) : (
+            <Tabs defaultValue="upcoming" className="space-y-4">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="upcoming" className="relative">
+                  À venir
+                  {upcomingAppointments.length > 0 && (
+                    <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                      {upcomingAppointments.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="pending" className="relative">
+                  En attente
+                  {pendingAppointments.length > 0 && (
+                    <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs bg-amber-500/20 text-amber-600">
+                      {pendingAppointments.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="completed">Terminés</TabsTrigger>
+                <TabsTrigger value="cancelled">Annulés</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="upcoming" className="space-y-3">
+                {upcomingAppointments.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <CalendarIcon className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Aucun rendez-vous à venir</p>
+                  </div>
+                ) : (
+                  upcomingAppointments.map(apt => (
+                    <AppointmentCard key={apt.id} appointment={apt} />
+                  ))
                 )}
-              </TabsTrigger>
-              <TabsTrigger value="completed">Terminés</TabsTrigger>
-              <TabsTrigger value="cancelled">Annulés</TabsTrigger>
-            </TabsList>
+              </TabsContent>
 
-            <TabsContent value="upcoming" className="space-y-3">
-              {upcomingAppointments.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>Aucun rendez-vous à venir</p>
-                </div>
-              ) : (
-                upcomingAppointments.map(apt => (
-                  <AppointmentCard key={apt.id} appointment={apt} />
-                ))
-              )}
-            </TabsContent>
+              <TabsContent value="pending" className="space-y-3">
+                {pendingAppointments.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <AlertCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Aucun rendez-vous en attente de confirmation</p>
+                  </div>
+                ) : (
+                  pendingAppointments.map(apt => (
+                    <AppointmentCard key={apt.id} appointment={apt} />
+                  ))
+                )}
+              </TabsContent>
 
-            <TabsContent value="pending" className="space-y-3">
-              {pendingAppointments.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <AlertCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>Aucun rendez-vous en attente de confirmation</p>
-                </div>
-              ) : (
-                pendingAppointments.map(apt => (
-                  <AppointmentCard key={apt.id} appointment={apt} />
-                ))
-              )}
-            </TabsContent>
+              <TabsContent value="completed" className="space-y-3">
+                {completedAppointments.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <CheckCircle2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Aucun rendez-vous terminé</p>
+                  </div>
+                ) : (
+                  completedAppointments.map(apt => (
+                    <AppointmentCard key={apt.id} appointment={apt} />
+                  ))
+                )}
+              </TabsContent>
 
-            <TabsContent value="completed" className="space-y-3">
-              {completedAppointments.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <CheckCircle2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>Aucun rendez-vous terminé</p>
-                </div>
-              ) : (
-                completedAppointments.map(apt => (
-                  <AppointmentCard key={apt.id} appointment={apt} />
-                ))
-              )}
-            </TabsContent>
-
-            <TabsContent value="cancelled" className="space-y-3">
-              {cancelledAppointments.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <XCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>Aucun rendez-vous annulé</p>
-                </div>
-              ) : (
-                cancelledAppointments.map(apt => (
-                  <AppointmentCard key={apt.id} appointment={apt} />
-                ))
-              )}
-            </TabsContent>
-          </Tabs>
+              <TabsContent value="cancelled" className="space-y-3">
+                {cancelledAppointments.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <XCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Aucun rendez-vous annulé</p>
+                  </div>
+                ) : (
+                  cancelledAppointments.map(apt => (
+                    <AppointmentCard key={apt.id} appointment={apt} />
+                  ))
+                )}
+              </TabsContent>
+            </Tabs>
+          )}
         </CardContent>
       </Card>
 
