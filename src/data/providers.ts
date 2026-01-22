@@ -89,6 +89,11 @@ export interface CityHealthProvider {
   insuranceAccepted?: string[];
   website?: string | null;
   email?: string | null;
+  // Services and features
+  services?: string[];
+  specialties?: string[];
+  insurances?: string[];
+  accessibilityFeatures?: string[];
 }
 
 // Provider Type Labels (French/Arabic)
