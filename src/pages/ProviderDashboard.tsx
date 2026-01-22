@@ -20,6 +20,7 @@ import { toast as sonnerToast } from 'sonner';
 import { ProfileProgressBar, calculateProfileCompletion } from '@/components/provider/ProfileProgressBar';
 import { VerificationRequest, type VerificationStatus } from '@/components/provider/VerificationRequest';
 import { MedicalAdsManager } from '@/components/provider/MedicalAdsManager';
+import { AppointmentsManager } from '@/components/provider/AppointmentsManager';
 import { useProvider } from '@/contexts/ProviderContext';
 import { LocationPicker } from '@/components/provider/LocationPicker';
 import { ScheduleEditor } from '@/components/provider/ScheduleEditor';
@@ -469,11 +470,16 @@ export default function ProviderDashboard() {
 
         {/* Main Content */}
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="profile">Mon Profil</TabsTrigger>
             <TabsTrigger value="location">
               <MapPin className="h-4 w-4 mr-1" />
               Localisation
+            </TabsTrigger>
+            <TabsTrigger value="appointments" disabled={isPending}>
+              <Calendar className="h-4 w-4 mr-1" />
+              Rendez-vous
+              {isPending && <Lock className="h-3 w-3 ml-1" />}
             </TabsTrigger>
             <TabsTrigger value="verification">
               <Shield className="h-4 w-4 mr-1" />
@@ -684,6 +690,15 @@ export default function ProviderDashboard() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Appointments Tab */}
+          <TabsContent value="appointments">
+            <AppointmentsManager
+              providerId={providerData?.id || ''}
+              providerName={formData.name}
+              isVerified={isVerified}
+            />
           </TabsContent>
 
           {/* Verification Tab */}
