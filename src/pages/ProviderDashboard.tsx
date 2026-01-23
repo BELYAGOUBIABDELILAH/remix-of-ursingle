@@ -1,21 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   Eye, Phone, MapPin, TrendingUp, Calendar, Star, 
   Settings, BarChart3, Clock, Megaphone, Shield,
   AlertTriangle, XCircle, CheckCircle2, Loader2, Lock,
   Globe, Users, Search, RefreshCw, Save, LayoutDashboard,
-  Image, ChevronDown
+  Image
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
@@ -24,16 +19,22 @@ import { ProfileProgressBar, calculateProfileCompletion } from '@/components/pro
 import { EnhancedVerificationCenter, type VerificationStatus } from '@/components/provider/EnhancedVerificationCenter';
 import { MedicalAdsManager } from '@/components/provider/MedicalAdsManager';
 import { AppointmentsManager } from '@/components/provider/AppointmentsManager';
-import { PhotoGalleryManager } from '@/components/provider/PhotoGalleryManager';
 import { AnalyticsCharts } from '@/components/provider/AnalyticsCharts';
+import { SensitiveFieldsEditor } from '@/components/provider/SensitiveFieldsEditor';
+import { NonSensitiveFieldsEditor } from '@/components/provider/NonSensitiveFieldsEditor';
+import { VerificationRevokedBanner } from '@/components/provider/VerificationRevokedBanner';
 import { useProvider } from '@/contexts/ProviderContext';
-import { LocationPicker } from '@/components/provider/LocationPicker';
-import { ScheduleEditor } from '@/components/provider/ScheduleEditor';
-import { ProfileServicesEditor } from '@/components/provider/ProfileServicesEditor';
-import type { WeeklySchedule } from '@/data/providers';
+import { useUpdateProviderWithVerification } from '@/hooks/useProviders';
+import type { WeeklySchedule, CityHealthProvider } from '@/data/providers';
 import { cn } from '@/lib/utils';
 import { useReviewStats } from '@/hooks/useReviews';
 import { useUpcomingAppointmentsCount } from '@/hooks/useAppointments';
+
+// Extended provider type with revocation fields
+interface ExtendedProvider extends CityHealthProvider {
+  verificationRevokedAt?: Date | string;
+  verificationRevokedReason?: string;
+}
 
 export default function ProviderDashboard() {
   const { toast } = useToast();
@@ -50,6 +51,8 @@ export default function ProviderDashboard() {
     refetch 
   } = useProvider();
   
+  const { mutateAsync: updateWithVerification, isPending: isVerificationSaving } = useUpdateProviderWithVerification();
+  
   const { data: reviewStats } = useReviewStats(providerData?.id);
   const { data: appointmentsCount = 0 } = useUpcomingAppointmentsCount(providerData?.id);
   
@@ -61,17 +64,32 @@ export default function ProviderDashboard() {
     reviewsCount: reviewStats?.totalReviews || 0,
   };
 
-  const [formData, setFormData] = useState({
+  // Sensitive fields state (legal/identity)
+  const [sensitiveData, setSensitiveData] = useState({
     name: '',
-    specialty: '',
     phone: '',
+    email: '',
     address: '',
+    city: '',
+    area: '',
+    postalCode: '',
+    lat: 35.1975,
+    lng: -0.6300,
+    legalRegistrationNumber: '',
+    contactPersonName: '',
+    contactPersonRole: '',
+  });
+  
+  // Original sensitive data for comparison
+  const [originalSensitiveData, setOriginalSensitiveData] = useState(sensitiveData);
+
+  // Non-sensitive fields state (profile/customization)
+  const [nonSensitiveData, setNonSensitiveData] = useState({
     description: '',
+    specialty: '',
     schedule: null as WeeklySchedule | null,
     accessible: true,
     emergency: false,
-    lat: 35.1975,
-    lng: -0.6300,
     photos: [] as string[],
     services: [] as string[],
     specialties: [] as string[],
@@ -79,11 +97,17 @@ export default function ProviderDashboard() {
     accessibility: [] as string[],
   });
   
-  const [servicesExpanded, setServicesExpanded] = useState(false);
+  const [originalNonSensitiveData, setOriginalNonSensitiveData] = useState(nonSensitiveData);
 
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('pending');
   const [previousStatus, setPreviousStatus] = useState<VerificationStatus | null>(null);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  
+  // Track if verification was revoked
+  const extendedProvider = providerData as ExtendedProvider | null;
+  const wasVerificationRevoked = !!extendedProvider?.verificationRevokedReason && isPending;
+
+  // Ref to the tabs for programmatic navigation
+  const tabsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (providerData) {
@@ -109,76 +133,145 @@ export default function ProviderDashboard() {
       setPreviousStatus(verificationStatus);
       setVerificationStatus(newStatus);
       
-      setFormData({
+      // Populate sensitive fields
+      const newSensitiveData = {
         name: providerData.name || '',
-        specialty: providerData.specialty || '',
         phone: providerData.phone || '',
+        email: providerData.email || '',
         address: providerData.address || '',
+        city: providerData.city || '',
+        area: providerData.area || '',
+        postalCode: providerData.postalCode || '',
+        lat: providerData.lat || 35.1975,
+        lng: providerData.lng || -0.6300,
+        legalRegistrationNumber: providerData.legalRegistrationNumber || '',
+        contactPersonName: providerData.contactPersonName || '',
+        contactPersonRole: providerData.contactPersonRole || '',
+      };
+      setSensitiveData(newSensitiveData);
+      setOriginalSensitiveData(newSensitiveData);
+      
+      // Populate non-sensitive fields
+      const newNonSensitiveData = {
         description: providerData.description || '',
+        specialty: providerData.specialty || '',
         schedule: providerData.schedule || null,
         accessible: providerData.accessible ?? true,
         emergency: providerData.emergency ?? false,
-        lat: providerData.lat || 35.1975,
-        lng: providerData.lng || -0.6300,
         photos: providerData.gallery || [],
         services: providerData.services || [],
         specialties: providerData.specialties || [],
         insurances: providerData.insurances || [],
         accessibility: providerData.accessibilityFeatures || [],
-      });
-      setHasUnsavedChanges(false);
+      };
+      setNonSensitiveData(newNonSensitiveData);
+      setOriginalNonSensitiveData(newNonSensitiveData);
     }
   }, [providerData]);
 
-  const hasSchedule = formData.schedule && Object.keys(formData.schedule).length > 0;
+  // Calculate profile completion
+  const hasSchedule = nonSensitiveData.schedule && Object.keys(nonSensitiveData.schedule).length > 0;
   const profileFields = calculateProfileCompletion({
-    name: formData.name,
+    name: sensitiveData.name,
     type: providerData?.type || 'doctor',
-    specialty: formData.specialty,
-    email: providerData?.email || '',
-    phone: formData.phone,
-    address: formData.address,
-    description: formData.description,
+    specialty: nonSensitiveData.specialty,
+    email: sensitiveData.email,
+    phone: sensitiveData.phone,
+    address: sensitiveData.address,
+    description: nonSensitiveData.description,
     schedule: hasSchedule ? 'configured' : '',
-    license: '',
-    photos: formData.photos,
+    license: sensitiveData.legalRegistrationNumber,
+    photos: nonSensitiveData.photos,
     languages: providerData?.languages || ['fr', 'ar'],
-    accessible: formData.accessible,
-    emergency: formData.emergency,
+    accessible: nonSensitiveData.accessible,
+    emergency: nonSensitiveData.emergency,
   });
   const isProfileComplete = profileFields.filter(f => f.required && !f.completed).length === 0;
   const profileProgress = profileFields.length > 0 
     ? (profileFields.filter(f => f.completed).length / profileFields.length) * 100 
     : 0;
 
-  const handleFormChange = (field: keyof typeof formData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    setHasUnsavedChanges(true);
+  // Check for unsaved changes in non-sensitive data
+  const hasNonSensitiveChanges = JSON.stringify(nonSensitiveData) !== JSON.stringify(originalNonSensitiveData);
+
+  // Handler for sensitive field changes
+  const handleSensitiveChange = (field: keyof typeof sensitiveData, value: string | number) => {
+    setSensitiveData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleProfileUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Handler for non-sensitive field changes
+  const handleNonSensitiveChange = <K extends keyof typeof nonSensitiveData>(
+    field: K, 
+    value: typeof nonSensitiveData[K]
+  ) => {
+    setNonSensitiveData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Save sensitive fields with verification check
+  const handleSaveSensitive = async () => {
+    if (!providerData?.id) return;
     
     try {
-      await updateProviderData({
-        name: formData.name,
-        specialty: formData.specialty,
-        phone: formData.phone,
-        address: formData.address,
-        description: formData.description,
-        schedule: formData.schedule,
-        accessible: formData.accessible,
-        emergency: formData.emergency,
-        lat: formData.lat,
-        lng: formData.lng,
-        gallery: formData.photos,
-        services: formData.services,
-        specialties: formData.specialties,
-        insurances: formData.insurances,
-        accessibilityFeatures: formData.accessibility,
+      const result = await updateWithVerification({
+        providerId: providerData.id,
+        updates: {
+          name: sensitiveData.name,
+          phone: sensitiveData.phone,
+          email: sensitiveData.email,
+          address: sensitiveData.address,
+          city: sensitiveData.city,
+          area: sensitiveData.area,
+          postalCode: sensitiveData.postalCode,
+          lat: sensitiveData.lat,
+          lng: sensitiveData.lng,
+          legalRegistrationNumber: sensitiveData.legalRegistrationNumber,
+          contactPersonName: sensitiveData.contactPersonName,
+          contactPersonRole: sensitiveData.contactPersonRole,
+        },
+        currentVerificationStatus: providerData.verificationStatus as 'pending' | 'verified' | 'rejected',
       });
       
-      setHasUnsavedChanges(false);
+      if (result.verificationRevoked) {
+        sonnerToast.warning('Vérification révoquée', {
+          description: `Votre statut vérifié a été révoqué suite à la modification de: ${result.modifiedSensitiveFields.join(', ')}`,
+          duration: 10000,
+        });
+      } else {
+        toast({
+          title: "Informations légales mises à jour",
+          description: "Vos modifications ont été enregistrées.",
+        });
+      }
+      
+      // Update original data to reflect saved state
+      setOriginalSensitiveData(sensitiveData);
+      refetch();
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de sauvegarder les modifications.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Save non-sensitive fields (no verification impact)
+  const handleSaveNonSensitive = async () => {
+    try {
+      await updateProviderData({
+        description: nonSensitiveData.description,
+        specialty: nonSensitiveData.specialty,
+        schedule: nonSensitiveData.schedule,
+        accessible: nonSensitiveData.accessible,
+        emergency: nonSensitiveData.emergency,
+        gallery: nonSensitiveData.photos,
+        services: nonSensitiveData.services,
+        specialties: nonSensitiveData.specialties,
+        insurances: nonSensitiveData.insurances,
+        accessibilityFeatures: nonSensitiveData.accessibility,
+      });
+      
+      setOriginalNonSensitiveData(nonSensitiveData);
       toast({
         title: "Profil mis à jour",
         description: "Vos modifications ont été enregistrées avec succès.",
@@ -192,33 +285,18 @@ export default function ProviderDashboard() {
     }
   };
 
-  const handleLocationUpdate = async () => {
-    try {
-      await updateProviderData({
-        lat: formData.lat,
-        lng: formData.lng,
-      });
-      
-      setHasUnsavedChanges(false);
-      toast({
-        title: "Localisation mise à jour",
-        description: "Votre position a été enregistrée.",
-      });
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de sauvegarder la localisation.",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleRefresh = () => {
     refetch();
     toast({
       title: "Actualisation",
       description: "Données actualisées.",
     });
+  };
+
+  const navigateToVerificationTab = () => {
+    const tabsList = document.querySelector('[role="tablist"]');
+    const verificationTab = tabsList?.querySelector('[value="verification"]') as HTMLButtonElement;
+    verificationTab?.click();
   };
 
   if (isLoading) {
@@ -232,8 +310,17 @@ export default function ProviderDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20 py-8 px-4">
       <div className="max-w-7xl mx-auto">
-        {/* Pending Verification Banner */}
-        {isPending && (
+        {/* Verification Revoked Banner */}
+        {wasVerificationRevoked && (
+          <VerificationRevokedBanner
+            revokedReason={extendedProvider?.verificationRevokedReason}
+            revokedAt={extendedProvider?.verificationRevokedAt}
+            onGoToVerification={navigateToVerificationTab}
+          />
+        )}
+
+        {/* Pending Verification Banner (only if not revoked) */}
+        {isPending && !wasVerificationRevoked && (
           <Alert className="mb-6 border-amber-500/50 bg-amber-500/10">
             <AlertTriangle className="h-5 w-5 text-amber-500" />
             <AlertTitle className="text-amber-600 text-lg">
@@ -300,12 +387,12 @@ export default function ProviderDashboard() {
               
               <div className="flex items-center gap-4">
                 <Avatar className="h-16 w-16">
-                  <AvatarImage src={formData.photos[0] || "/placeholder.svg"} />
-                  <AvatarFallback>{formData.name?.substring(0, 2).toUpperCase() || 'PR'}</AvatarFallback>
+                  <AvatarImage src={nonSensitiveData.photos[0] || "/placeholder.svg"} />
+                  <AvatarFallback>{sensitiveData.name?.substring(0, 2).toUpperCase() || 'PR'}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <h1 className="text-3xl font-bold">{formData.name || 'Nouveau Professionnel'}</h1>
-                  <p className="text-muted-foreground">{formData.specialty || 'Spécialité non définie'}</p>
+                  <h1 className="text-3xl font-bold">{sensitiveData.name || 'Nouveau Professionnel'}</h1>
+                  <p className="text-muted-foreground">{nonSensitiveData.specialty || 'Spécialité non définie'}</p>
                   {isVerified ? (
                     <Badge className="mt-1 bg-green-500 hover:bg-green-600">
                       <Shield className="h-3 w-3 mr-1" />
@@ -426,7 +513,7 @@ export default function ProviderDashboard() {
         )}
 
         {/* Main Tabs */}
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs defaultValue="overview" className="space-y-6" ref={tabsRef}>
           <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">
               <LayoutDashboard className="h-4 w-4 mr-1.5" />
@@ -502,11 +589,7 @@ export default function ProviderDashboard() {
                     <Button 
                       className="w-full" 
                       variant={isVerified ? 'outline' : 'default'}
-                      onClick={() => {
-                        const tabsList = document.querySelector('[role="tablist"]');
-                        const verificationTab = tabsList?.querySelector('[value="verification"]') as HTMLButtonElement;
-                        verificationTab?.click();
-                      }}
+                      onClick={navigateToVerificationTab}
                     >
                       {isVerified ? 'Voir les documents' : 'Gérer la vérification'}
                     </Button>
@@ -566,246 +649,32 @@ export default function ProviderDashboard() {
             </div>
           </TabsContent>
 
-          {/* Profile Tab */}
+          {/* Profile Tab - Split into Sensitive and Non-Sensitive Sections */}
           <TabsContent value="profile">
-            <div className="space-y-6">
-              {/* Basic Info Section */}
-              <div className="grid gap-6 lg:grid-cols-3">
-                {/* Main Profile Form */}
-                <Card className="lg:col-span-2">
-                  <CardHeader>
-                    <CardTitle>Informations du profil</CardTitle>
-                    <CardDescription>
-                      {isPending ? 'Ces informations seront visibles après validation.' : 'Visibles sur votre profil public.'}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form onSubmit={handleProfileUpdate} className="space-y-6">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="name">Nom de l'établissement</Label>
-                          <Input
-                            id="name"
-                            value={formData.name}
-                            onChange={(e) => handleFormChange('name', e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="specialty">Spécialité</Label>
-                          <Input
-                            id="specialty"
-                            value={formData.specialty}
-                            onChange={(e) => handleFormChange('specialty', e.target.value)}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="phone">Téléphone</Label>
-                          <Input
-                            id="phone"
-                            value={formData.phone}
-                            onChange={(e) => handleFormChange('phone', e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="address">Adresse</Label>
-                          <Input
-                            id="address"
-                            value={formData.address}
-                            onChange={(e) => handleFormChange('address', e.target.value)}
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <Label htmlFor="description">Description</Label>
-                        <Textarea
-                          id="description"
-                          rows={4}
-                          value={formData.description}
-                          onChange={(e) => handleFormChange('description', e.target.value)}
-                          placeholder="Décrivez votre établissement, vos services, votre expérience..."
-                        />
-                      </div>
-
-                      <ScheduleEditor
-                        value={formData.schedule}
-                        onChange={(schedule) => handleFormChange('schedule', schedule)}
-                        isEmergency={formData.emergency}
-                      />
-
-                      <div className="flex gap-6">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="accessible"
-                            checked={formData.accessible}
-                            onCheckedChange={(checked) => handleFormChange('accessible', !!checked)}
-                          />
-                          <Label htmlFor="accessible" className="font-normal">Accès PMR</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="emergency"
-                            checked={formData.emergency}
-                            onCheckedChange={(checked) => handleFormChange('emergency', !!checked)}
-                          />
-                          <Label htmlFor="emergency" className="font-normal">Urgences 24/7</Label>
-                        </div>
-                      </div>
-
-                      <Button type="submit" className="w-full" disabled={isSaving}>
-                        {isSaving ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Enregistrement...
-                          </>
-                        ) : (
-                          <>
-                            <Save className="mr-2 h-4 w-4" />
-                            Enregistrer
-                            {hasUnsavedChanges && <span className="ml-2 text-xs">●</span>}
-                          </>
-                        )}
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-
-                {/* Sidebar with Location & Photos */}
-                <div className="space-y-6">
-                  {/* Location Card */}
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <MapPin className="h-4 w-4" />
-                        Localisation
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="h-[200px] rounded-lg overflow-hidden border relative">
-                        {isPending && (
-                          <div className="absolute inset-0 bg-background/80 z-10 flex items-center justify-center">
-                            <div className="text-center">
-                              <Lock className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-                              <p className="text-xs text-muted-foreground">
-                                Visible après validation
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                        <LocationPicker 
-                          lat={formData.lat} 
-                          lng={formData.lng} 
-                          onLocationChange={(lat, lng) => {
-                            handleFormChange('lat', lat);
-                            handleFormChange('lng', lng);
-                          }}
-                        />
-                      </div>
-                      <Button 
-                        type="button" 
-                        className="w-full" 
-                        size="sm"
-                        onClick={handleLocationUpdate} 
-                        disabled={isSaving}
-                      >
-                        Mettre à jour
-                      </Button>
-                    </CardContent>
-                  </Card>
-
-                  {/* Photo Gallery Preview */}
-                  {/* Photo Gallery Preview */}
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <Image className="h-4 w-4" />
-                        Photos ({formData.photos.length}/10)
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <PhotoGalleryManager
-                        photos={formData.photos}
-                        onPhotosChange={(photos) => handleFormChange('photos', photos)}
-                        maxPhotos={10}
-                        className="border-0 shadow-none p-0"
-                      />
-                    </CardContent>
-                  </Card>
-                </div>
+            <div className="grid gap-6 lg:grid-cols-2">
+              {/* Left Column: Sensitive Fields (Legal Info) */}
+              <div>
+                <SensitiveFieldsEditor
+                  data={sensitiveData}
+                  originalData={originalSensitiveData}
+                  isVerified={isVerified}
+                  isSaving={isVerificationSaving}
+                  onDataChange={handleSensitiveChange}
+                  onSave={handleSaveSensitive}
+                />
               </div>
 
-              {/* Services, Insurance & Accessibility Section */}
-              <Collapsible open={servicesExpanded} onOpenChange={setServicesExpanded}>
-                <Card>
-                  <CollapsibleTrigger asChild>
-                    <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="flex items-center gap-2">
-                            <Settings className="h-5 w-5" />
-                            Services, Assurances & Accessibilité
-                          </CardTitle>
-                          <CardDescription className="mt-1">
-                            Détails supplémentaires pour améliorer votre visibilité
-                            {(formData.services.length > 0 || formData.insurances.length > 0 || formData.accessibility.length > 0) && (
-                              <span className="ml-2 text-primary font-medium">
-                                ({formData.services.length + formData.specialties.length + formData.insurances.length + formData.accessibility.length} éléments sélectionnés)
-                              </span>
-                            )}
-                          </CardDescription>
-                        </div>
-                        <ChevronDown className={cn(
-                          "h-5 w-5 text-muted-foreground transition-transform",
-                          servicesExpanded && "transform rotate-180"
-                        )} />
-                      </div>
-                    </CardHeader>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <CardContent className="pt-0">
-                      <ProfileServicesEditor
-                        services={formData.services}
-                        specialties={formData.specialties}
-                        insurances={formData.insurances}
-                        accessibility={formData.accessibility}
-                        onServicesChange={(services) => {
-                          handleFormChange('services', services);
-                        }}
-                        onSpecialtiesChange={(specialties) => {
-                          handleFormChange('specialties', specialties);
-                        }}
-                        onInsurancesChange={(insurances) => {
-                          handleFormChange('insurances', insurances);
-                        }}
-                        onAccessibilityChange={(accessibility) => {
-                          handleFormChange('accessibility', accessibility);
-                        }}
-                      />
-                      <Button 
-                        type="button" 
-                        className="w-full mt-6" 
-                        onClick={handleProfileUpdate}
-                        disabled={isSaving}
-                      >
-                        {isSaving ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Enregistrement...
-                          </>
-                        ) : (
-                          <>
-                            <Save className="mr-2 h-4 w-4" />
-                            Enregistrer les services
-                          </>
-                        )}
-                      </Button>
-                    </CardContent>
-                  </CollapsibleContent>
-                </Card>
-              </Collapsible>
+              {/* Right Column: Non-Sensitive Fields (Profile) */}
+              <div>
+                <NonSensitiveFieldsEditor
+                  data={nonSensitiveData}
+                  isVerified={isVerified}
+                  isSaving={isSaving}
+                  hasChanges={hasNonSensitiveChanges}
+                  onDataChange={handleNonSensitiveChange}
+                  onSave={handleSaveNonSensitive}
+                />
+              </div>
             </div>
           </TabsContent>
 
@@ -813,7 +682,7 @@ export default function ProviderDashboard() {
           <TabsContent value="verification">
             <EnhancedVerificationCenter
               providerId={providerData?.id || ''}
-              providerName={formData.name}
+              providerName={sensitiveData.name}
               currentStatus={verificationStatus}
               profileComplete={isProfileComplete}
               onStatusChange={setVerificationStatus}
@@ -824,7 +693,7 @@ export default function ProviderDashboard() {
           <TabsContent value="appointments">
             <AppointmentsManager
               providerId={providerData?.id || ''}
-              providerName={formData.name}
+              providerName={sensitiveData.name}
               isVerified={isVerified}
             />
           </TabsContent>
@@ -833,7 +702,7 @@ export default function ProviderDashboard() {
           <TabsContent value="ads">
             <MedicalAdsManager
               providerId={providerData?.id || ''}
-              providerName={formData.name}
+              providerName={sensitiveData.name}
               isVerified={isVerified}
             />
           </TabsContent>

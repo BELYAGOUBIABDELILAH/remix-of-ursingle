@@ -68,6 +68,9 @@ export interface CityHealthProvider {
   // New verification fields
   verificationStatus: VerificationStatus;
   isPublic: boolean;
+  // Verification revocation tracking
+  verificationRevokedAt?: Date | string;
+  verificationRevokedReason?: string;
   // Type-specific fields
   bloodTypes?: string[];
   urgentNeed?: boolean;
@@ -94,6 +97,11 @@ export interface CityHealthProvider {
   specialties?: string[];
   insurances?: string[];
   accessibilityFeatures?: string[];
+  // Legal/sensitive fields
+  legalRegistrationNumber?: string;
+  contactPersonName?: string;
+  contactPersonRole?: string;
+  postalCode?: string;
 }
 
 // Provider Type Labels (French/Arabic)
