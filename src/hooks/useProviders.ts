@@ -195,3 +195,36 @@ export function useUpdateProvider() {
     },
   });
 }
+
+/**
+ * Mutation: Update provider with verification check
+ * Use for: sensitive field updates that may revoke verification
+ */
+export function useUpdateProviderWithVerification() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      providerId,
+      updates,
+      currentVerificationStatus,
+    }: {
+      providerId: string;
+      updates: Partial<CityHealthProvider>;
+      currentVerificationStatus: 'pending' | 'verified' | 'rejected';
+    }) => {
+      const { updateProviderWithVerificationCheck } = await import(
+        '@/services/firestoreProviderService'
+      );
+      return updateProviderWithVerificationCheck(providerId, updates, currentVerificationStatus);
+    },
+    onSuccess: (result, { providerId }) => {
+      // Invalidate all provider queries
+      queryClient.invalidateQueries({ queryKey: providerKeys.detail(providerId) });
+      queryClient.invalidateQueries({ queryKey: providerKeys.verified() });
+      queryClient.invalidateQueries({ queryKey: providerKeys.pending() });
+      queryClient.invalidateQueries({ queryKey: providerKeys.all });
+      return result;
+    },
+  });
+}

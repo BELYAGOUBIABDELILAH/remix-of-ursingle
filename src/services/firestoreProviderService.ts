@@ -358,6 +358,58 @@ export async function updateProvider(
 }
 
 /**
+ * Update provider with verification status check
+ * Automatically revokes verification if sensitive fields are modified
+ */
+export async function updateProviderWithVerificationCheck(
+  providerId: string,
+  updates: Partial<CityHealthProvider>,
+  currentVerificationStatus: 'pending' | 'verified' | 'rejected'
+): Promise<{ success: boolean; verificationRevoked: boolean; modifiedSensitiveFields: string[] }> {
+  // Import dynamically to avoid circular dependencies
+  const { isSensitiveField } = await import('@/constants/sensitiveFields');
+  
+  // Check if any sensitive fields are being modified
+  const sensitiveFieldsModified = Object.keys(updates).filter(key => 
+    isSensitiveField(key)
+  );
+  
+  const shouldRevokeVerification = 
+    currentVerificationStatus === 'verified' && 
+    sensitiveFieldsModified.length > 0;
+  
+  const docRef = doc(db, PROVIDERS_COLLECTION, providerId);
+  
+  // Filter out undefined values
+  const cleanUpdates: Record<string, any> = {};
+  Object.entries(updates).forEach(([key, value]) => {
+    if (value !== undefined) {
+      cleanUpdates[key] = value;
+    }
+  });
+  
+  // Add verification revocation if needed
+  if (shouldRevokeVerification) {
+    cleanUpdates.verificationStatus = 'pending';
+    cleanUpdates.isPublic = false;
+    cleanUpdates.verified = false;
+    cleanUpdates.verificationRevokedAt = Timestamp.now();
+    cleanUpdates.verificationRevokedReason = `Modified: ${sensitiveFieldsModified.join(', ')}`;
+  }
+  
+  await updateDoc(docRef, {
+    ...cleanUpdates,
+    updatedAt: Timestamp.now(),
+  });
+  
+  return { 
+    success: true, 
+    verificationRevoked: shouldRevokeVerification,
+    modifiedSensitiveFields: sensitiveFieldsModified,
+  };
+}
+
+/**
  * Batch save multiple providers (for migration)
  */
 export async function batchSaveProviders(providers: CityHealthProvider[]): Promise<number> {
