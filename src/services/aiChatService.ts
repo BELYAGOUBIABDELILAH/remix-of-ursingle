@@ -1,7 +1,24 @@
+import { auth } from '@/lib/firebase';
+
 // AI Chat Function URL from environment variable
 const CHAT_FUNCTION_URL = import.meta.env.VITE_AI_CHAT_FUNCTION_URL || '';
 
 type Message = { role: "user" | "assistant"; content: string };
+
+/**
+ * Get the current user's Firebase auth token for authenticated API calls
+ */
+async function getAuthToken(): Promise<string | null> {
+  const user = auth.currentUser;
+  if (!user) {
+    return null;
+  }
+  try {
+    return await user.getIdToken();
+  } catch {
+    return null;
+  }
+}
 
 export async function streamChat({
   messages,
@@ -15,15 +32,28 @@ export async function streamChat({
   onError?: (error: Error) => void;
 }) {
   try {
+    // Get auth token for authenticated requests
+    const authToken = await getAuthToken();
+    
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    
+    // Add authorization header if user is authenticated
+    if (authToken) {
+      headers["Authorization"] = `Bearer ${authToken}`;
+    }
+
     const resp = await fetch(CHAT_FUNCTION_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify({ messages }),
     });
 
     if (!resp.ok) {
+      if (resp.status === 401) {
+        throw new Error("Veuillez vous connecter pour utiliser le chat IA.");
+      }
       if (resp.status === 429) {
         throw new Error("Trop de requêtes. Veuillez réessayer dans quelques instants.");
       }
