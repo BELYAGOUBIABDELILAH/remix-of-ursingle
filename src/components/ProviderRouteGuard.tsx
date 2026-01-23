@@ -99,7 +99,7 @@ export function ProviderRouteGuard({ children, requireVerified = false }: Provid
 
   // Redirect to login if not authenticated
   if (!isAuthenticated || !user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/provider/login" replace />;
   }
 
   // Check role FIRST and RETURN early if no provider role
