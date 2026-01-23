@@ -18,6 +18,7 @@ import {
 import { AlertTriangle, Lock, Save, Shield, Loader2 } from 'lucide-react';
 import { SENSITIVE_FIELD_LABELS, type SensitiveField } from '@/constants/sensitiveFields';
 import { LocationPicker } from './LocationPicker';
+import { PROVIDER_TYPE_LABELS, type ProviderType } from '@/data/providers';
 
 interface SensitiveFieldsData {
   name: string;
@@ -134,11 +135,17 @@ export function SensitiveFieldsEditor({
             {data.providerType && (
               <div className="sm:col-span-2">
                 <Label>Type d'établissement</Label>
-                <Input
-                  value={data.providerType}
-                  disabled
-                  className="bg-muted"
-                />
+                <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-md border">
+                  <span className="text-lg">
+                    {PROVIDER_TYPE_LABELS[data.providerType as ProviderType]?.icon || '🏥'}
+                  </span>
+                  <span className="font-medium">
+                    {PROVIDER_TYPE_LABELS[data.providerType as ProviderType]?.fr || data.providerType}
+                  </span>
+                  <span className="text-muted-foreground text-sm">
+                    ({PROVIDER_TYPE_LABELS[data.providerType as ProviderType]?.ar || ''})
+                  </span>
+                </div>
               </div>
             )}
 

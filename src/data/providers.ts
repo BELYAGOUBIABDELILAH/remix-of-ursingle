@@ -106,6 +106,17 @@ export interface CityHealthProvider {
   facilityNameAr?: string;
   // Additional business fields
   homeVisitAvailable?: boolean;
+  // Account settings
+  settings?: {
+    emailNotifications?: boolean;
+    smsNotifications?: boolean;
+    appointmentReminders?: boolean;
+    marketingEmails?: boolean;
+    showPhoneOnProfile?: boolean;
+    showEmailOnProfile?: boolean;
+    allowReviews?: boolean;
+    language?: string;
+  };
 }
 
 // Provider Type Labels (French/Arabic)

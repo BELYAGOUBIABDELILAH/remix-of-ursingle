@@ -35,6 +35,11 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { 
+  reauthenticateWithCredential, 
+  updatePassword, 
+  EmailAuthProvider 
+} from 'firebase/auth';
 
 interface ProviderSettingsModalProps {
   open: boolean;
@@ -110,11 +115,29 @@ export function ProviderSettingsModal({
       });
       return;
     }
+
+    if (!currentPassword) {
+      toast({
+        title: 'Erreur',
+        description: 'Veuillez entrer votre mot de passe actuel.',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     setIsChangingPassword(true);
     try {
-      // Firebase password change would go here
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!user || !user.email) {
+        throw new Error('User not authenticated');
+      }
+      
+      // Re-authenticate user with current password
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+      
+      // Update password
+      await updatePassword(user, newPassword);
+      
       toast({
         title: 'Mot de passe modifié',
         description: 'Votre mot de passe a été mis à jour avec succès.',
@@ -122,10 +145,20 @@ export function ProviderSettingsModal({
       setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
-    } catch {
+    } catch (error: any) {
+      let errorMessage = 'Impossible de modifier le mot de passe.';
+      
+      if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Le mot de passe actuel est incorrect.';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Le nouveau mot de passe est trop faible.';
+      } else if (error.code === 'auth/requires-recent-login') {
+        errorMessage = 'Veuillez vous reconnecter et réessayer.';
+      }
+      
       toast({
         title: 'Erreur',
-        description: 'Impossible de modifier le mot de passe.',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {

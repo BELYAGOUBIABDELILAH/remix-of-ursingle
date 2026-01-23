@@ -75,6 +75,8 @@ function docToProvider(docData: DocumentData, id: string): CityHealthProvider {
     insuranceAccepted: docData.insuranceAccepted || [],
     website: docData.website || null,
     email: docData.email || null,
+    // Account settings
+    settings: docData.settings || undefined,
   };
 }
 
@@ -120,6 +122,8 @@ function providerToDoc(provider: CityHealthProvider & { userId?: string }): Docu
     ...(provider.insuranceAccepted && { insuranceAccepted: provider.insuranceAccepted }),
     ...(provider.website && { website: provider.website }),
     ...(provider.email && { email: provider.email }),
+    // Account settings
+    ...(provider.settings && { settings: provider.settings }),
     // Metadata
     updatedAt: Timestamp.now(),
   };
