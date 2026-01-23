@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { 
   Eye, Phone, MapPin, TrendingUp, Calendar, Star, 
   Settings, BarChart3, Clock, Megaphone, Shield,
@@ -16,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
 import { CircularProgress } from '@/components/ui/circular-progress';
 import { calculateProfileCompletion } from '@/components/provider/ProfileProgressBar';
-import { ProviderOnboardingChecklist } from '@/components/provider/onboarding';
+import { ProviderOnboardingChecklist, OnboardingWelcome, OnboardingCelebration } from '@/components/provider/onboarding';
 import { EnhancedVerificationCenter, type VerificationStatus } from '@/components/provider/EnhancedVerificationCenter';
 import { MedicalAdsManager } from '@/components/provider/MedicalAdsManager';
 import { AppointmentsManager } from '@/components/provider/AppointmentsManager';
@@ -27,10 +28,14 @@ import { VerificationRevokedBanner } from '@/components/provider/VerificationRev
 import { ProviderSettingsModal } from '@/components/provider/ProviderSettingsModal';
 import { useProvider } from '@/contexts/ProviderContext';
 import { useUpdateProviderWithVerification } from '@/hooks/useProviders';
+import { useProviderOnboarding } from '@/hooks/useProviderOnboarding';
+import { useOnboardingCelebrations } from '@/hooks/useOnboardingCelebrations';
 import type { WeeklySchedule, CityHealthProvider } from '@/data/providers';
 import { cn } from '@/lib/utils';
 import { useReviewStats } from '@/hooks/useReviews';
 import { useUpcomingAppointmentsCount } from '@/hooks/useAppointments';
+
+const WELCOME_MODAL_KEY = 'provider_onboarding_welcome_seen';
 
 // Extended provider type with revocation fields
 interface ExtendedProvider extends CityHealthProvider {
@@ -120,6 +125,45 @@ export default function ProviderDashboard() {
   
   // Settings modal state
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  
+  // Welcome modal state
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  
+  // Onboarding state for celebrations
+  const onboardingState = useProviderOnboarding(providerData, contextVerificationStatus);
+  
+  // Celebration system
+  const { currentCelebration, dismissCelebration } = useOnboardingCelebrations(
+    onboardingState.milestones,
+    providerData?.id
+  );
+  
+  // Check for first visit - show welcome modal
+  useEffect(() => {
+    if (providerData && !isLoading) {
+      const hasSeenWelcome = localStorage.getItem(WELCOME_MODAL_KEY);
+      // Only show welcome if onboarding is not complete and user hasn't seen it
+      if (!hasSeenWelcome && !onboardingState.isOnboardingComplete) {
+        setShowWelcomeModal(true);
+      }
+    }
+  }, [providerData, isLoading, onboardingState.isOnboardingComplete]);
+  
+  // Handle welcome modal close
+  const handleWelcomeClose = () => {
+    localStorage.setItem(WELCOME_MODAL_KEY, 'true');
+    setShowWelcomeModal(false);
+  };
+  
+  // Handle celebration continue - navigate to next logical step
+  const handleCelebrationContinue = () => {
+    dismissCelebration();
+    if (currentCelebration === 'profile-complete') {
+      navigateToTab('verification');
+    } else if (currentCelebration === 'verified') {
+      navigateToTab('overview');
+    }
+  };
 
   useEffect(() => {
     if (providerData) {
@@ -768,6 +812,29 @@ export default function ProviderDashboard() {
             await updateProviderData({ settings: { ...providerData?.settings, ...settings } });
           }}
         />
+        
+        {/* Welcome Modal - First Visit */}
+        <Dialog open={showWelcomeModal} onOpenChange={setShowWelcomeModal}>
+          <DialogContent className="sm:max-w-md p-0 overflow-hidden">
+            <OnboardingWelcome
+              providerName={providerData?.name?.split(' ')[0]}
+              onGetStarted={handleWelcomeClose}
+            />
+          </DialogContent>
+        </Dialog>
+        
+        {/* Celebration Modal - Milestone Achievements */}
+        <Dialog open={!!currentCelebration} onOpenChange={() => dismissCelebration()}>
+          <DialogContent className="sm:max-w-md p-0 overflow-hidden">
+            {currentCelebration && (
+              <OnboardingCelebration
+                type={currentCelebration}
+                providerName={providerData?.name?.split(' ')[0]}
+                onContinue={handleCelebrationContinue}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
