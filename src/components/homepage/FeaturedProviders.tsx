@@ -1,10 +1,10 @@
 import { useCallback, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Star, MapPin, Clock, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Star, MapPin, Clock, ArrowRight, User } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useLanguage } from '@/hooks/useLanguage';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 import { Link } from 'react-router-dom';
 import { VerifiedBadge } from '@/components/trust/VerifiedBadge';
@@ -94,10 +94,10 @@ export const FeaturedProviders = () => {
         <div className="flex flex-col md:flex-row justify-between items-center mb-12 animate-slide-up">
           <div>
             <h2 id="featured-providers-title" className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              {t('providers.featured')}
+              {t('providers', 'featured')}
             </h2>
             <p className="text-xl text-muted-foreground">
-              Professionnels de santé vérifiés et très bien notés
+              {t('providers', 'featuredSubtitle')}
             </p>
           </div>
           
@@ -127,20 +127,37 @@ export const FeaturedProviders = () => {
           </div>
         </div>
 
-        {/* Embla Carousel for touch swipe */}
-        <div className="overflow-hidden" ref={emblaRef}>
-          <div className="flex gap-6">
-            {isLoading ? (
-              // Show skeletons while loading
-              Array.from({ length: 3 }).map((_, index) => (
-                <div key={index} className="flex-shrink-0">
-                  <ProviderSkeleton />
+      {/* Embla Carousel for touch swipe */}
+      <div className="overflow-hidden" ref={emblaRef}>
+        <div className="flex gap-6">
+          {isLoading ? (
+            // Show skeletons while loading
+            Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="flex-shrink-0">
+                <ProviderSkeleton />
+              </div>
+            ))
+          ) : providers.length === 0 ? (
+            // Empty state when no providers
+            <div className="w-full py-12 text-center">
+              <div className="max-w-md mx-auto">
+                <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
+                  <User className="w-8 h-8 text-primary/50" />
                 </div>
-              ))
-            ) : (
-              providers.map((provider, index) => (
-                <div 
-                  key={provider.id} 
+                <p className="text-muted-foreground text-lg">
+                  {t('providers', 'noProviders')}
+                </p>
+                <Link to="/provider/register" className="mt-4 inline-block">
+                  <Button variant="outline">
+                    Devenir prestataire
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          ) : (
+            providers.map((provider, index) => (
+              <div 
+                key={provider.id}
                   className="flex-shrink-0 min-w-[300px] md:min-w-[350px] lg:min-w-[380px]"
                 >
                   <Card 
@@ -227,7 +244,7 @@ export const FeaturedProviders = () => {
         <div className="text-center mt-12 animate-slide-up" style={{ animationDelay: '0.6s' }}>
           <Link to="/search">
             <Button size="lg" className="hover-lift">
-              {t('providers.viewAll')}
+              {t('providers', 'viewAll')}
               <ArrowRight className="ml-2" size={18} aria-hidden="true" />
             </Button>
           </Link>
