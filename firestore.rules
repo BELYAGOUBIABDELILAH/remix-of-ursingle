@@ -136,6 +136,28 @@ service cloud.firestore {
     // PROVIDERS - Public read for verified providers
     // ============================================
     match /providers/{providerId} {
+      // Helper: Check if any sensitive fields are being modified
+      function hasSensitiveFieldChanges() {
+        let sensitiveFields = ['name', 'facilityNameFr', 'facilityNameAr', 'type', 'providerType',
+          'legalRegistrationNumber', 'registrationAuthority', 'address', 'city', 'area', 
+          'postalCode', 'lat', 'lng', 'phone', 'email', 'contactPersonName', 
+          'contactPersonRole', 'legalRepresentative', 'verificationDocuments'];
+        return request.resource.data.diff(resource.data).affectedKeys().hasAny(sensitiveFields);
+      }
+      
+      // Helper: Check if verification is being properly revoked when sensitive fields change
+      function isVerificationProperlyRevoked() {
+        // If currently verified and modifying sensitive fields, must set status to pending
+        let wasVerified = resource.data.verificationStatus == 'verified';
+        let hasSensitiveChanges = hasSensitiveFieldChanges();
+        let newStatusIsPending = request.resource.data.verificationStatus == 'pending';
+        let newIsPublicFalse = request.resource.data.isPublic == false;
+        
+        // If was verified and has sensitive changes, must revoke
+        // If not verified or no sensitive changes, allow
+        return !wasVerified || !hasSensitiveChanges || (newStatusIsPending && newIsPublicFalse);
+      }
+      
       // PUBLIC ACCESS: Allow read for verified and public providers
       // This works for both single document reads AND queries
       allow read: if resource.data.verificationStatus == 'verified' && 
@@ -154,14 +176,23 @@ service cloud.firestore {
       allow read: if isAdmin();
       
       // CREATE: Authenticated users can create providers (for registration)
-      // Must create with their own userId
+      // Must create with their own userId and start as pending
       allow create: if isAuthenticated() && 
-                       request.resource.data.userId == request.auth.uid;
+                       request.resource.data.userId == request.auth.uid &&
+                       request.resource.data.verificationStatus == 'pending';
       
-      // UPDATE: Owner can update their own profile (but NOT verification status fields)
+      // UPDATE: Owner can update their own profile
+      // - Cannot directly set to verified/isPublic=true (only admin can)
+      // - If currently verified and changing sensitive fields, must revoke to pending
       allow update: if isAuthenticated() && 
                        resource.data.userId == request.auth.uid &&
-                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['verificationStatus', 'isPublic', 'verified']);
+                       // Cannot promote self to verified
+                       !(request.resource.data.verificationStatus == 'verified' && 
+                         resource.data.verificationStatus != 'verified') &&
+                       !(request.resource.data.isPublic == true && 
+                         resource.data.isPublic != true) &&
+                       // Must properly revoke verification if changing sensitive fields
+                       isVerificationProperlyRevoked();
       
       // UPDATE: Admins can update any provider (for verification)
       allow update: if isAdmin();
