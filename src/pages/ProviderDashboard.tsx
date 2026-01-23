@@ -23,6 +23,7 @@ import { AnalyticsCharts } from '@/components/provider/AnalyticsCharts';
 import { SensitiveFieldsEditor } from '@/components/provider/SensitiveFieldsEditor';
 import { NonSensitiveFieldsEditor } from '@/components/provider/NonSensitiveFieldsEditor';
 import { VerificationRevokedBanner } from '@/components/provider/VerificationRevokedBanner';
+import { ProviderSettingsModal } from '@/components/provider/ProviderSettingsModal';
 import { useProvider } from '@/contexts/ProviderContext';
 import { useUpdateProviderWithVerification } from '@/hooks/useProviders';
 import type { WeeklySchedule, CityHealthProvider } from '@/data/providers';
@@ -67,6 +68,8 @@ export default function ProviderDashboard() {
   // Sensitive fields state (legal/identity)
   const [sensitiveData, setSensitiveData] = useState({
     name: '',
+    facilityNameFr: '',
+    facilityNameAr: '',
     phone: '',
     email: '',
     address: '',
@@ -78,6 +81,7 @@ export default function ProviderDashboard() {
     legalRegistrationNumber: '',
     contactPersonName: '',
     contactPersonRole: '',
+    providerType: '',
   });
   
   // Original sensitive data for comparison
@@ -95,6 +99,10 @@ export default function ProviderDashboard() {
     specialties: [] as string[],
     insurances: [] as string[],
     accessibility: [] as string[],
+    languages: ['fr', 'ar'] as string[],
+    homeVisitAvailable: false,
+    consultationFee: '',
+    socialLinks: {} as { facebook?: string; instagram?: string; twitter?: string; linkedin?: string; website?: string },
   });
   
   const [originalNonSensitiveData, setOriginalNonSensitiveData] = useState(nonSensitiveData);
@@ -108,6 +116,9 @@ export default function ProviderDashboard() {
 
   // Ref to the tabs for programmatic navigation
   const tabsRef = useRef<HTMLDivElement>(null);
+  
+  // Settings modal state
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   useEffect(() => {
     if (providerData) {
@@ -136,6 +147,8 @@ export default function ProviderDashboard() {
       // Populate sensitive fields
       const newSensitiveData = {
         name: providerData.name || '',
+        facilityNameFr: providerData.facilityNameFr || '',
+        facilityNameAr: providerData.facilityNameAr || '',
         phone: providerData.phone || '',
         email: providerData.email || '',
         address: providerData.address || '',
@@ -147,6 +160,7 @@ export default function ProviderDashboard() {
         legalRegistrationNumber: providerData.legalRegistrationNumber || '',
         contactPersonName: providerData.contactPersonName || '',
         contactPersonRole: providerData.contactPersonRole || '',
+        providerType: providerData.type || '',
       };
       setSensitiveData(newSensitiveData);
       setOriginalSensitiveData(newSensitiveData);
@@ -163,6 +177,10 @@ export default function ProviderDashboard() {
         specialties: providerData.specialties || [],
         insurances: providerData.insurances || [],
         accessibility: providerData.accessibilityFeatures || [],
+        languages: providerData.languages || ['fr', 'ar'],
+        homeVisitAvailable: providerData.homeVisitAvailable ?? false,
+        consultationFee: String(providerData.consultationFee || ''),
+        socialLinks: providerData.socialLinks || {},
       };
       setNonSensitiveData(newNonSensitiveData);
       setOriginalNonSensitiveData(newNonSensitiveData);
@@ -216,6 +234,8 @@ export default function ProviderDashboard() {
         providerId: providerData.id,
         updates: {
           name: sensitiveData.name,
+          facilityNameFr: sensitiveData.facilityNameFr,
+          facilityNameAr: sensitiveData.facilityNameAr,
           phone: sensitiveData.phone,
           email: sensitiveData.email,
           address: sensitiveData.address,
@@ -269,6 +289,10 @@ export default function ProviderDashboard() {
         specialties: nonSensitiveData.specialties,
         insurances: nonSensitiveData.insurances,
         accessibilityFeatures: nonSensitiveData.accessibility,
+        languages: nonSensitiveData.languages as ('fr' | 'ar' | 'en')[],
+        homeVisitAvailable: nonSensitiveData.homeVisitAvailable,
+        consultationFee: nonSensitiveData.consultationFee ? Number(nonSensitiveData.consultationFee) : null,
+        socialLinks: nonSensitiveData.socialLinks,
       });
       
       setOriginalNonSensitiveData(nonSensitiveData);
@@ -293,10 +317,15 @@ export default function ProviderDashboard() {
     });
   };
 
-  const navigateToVerificationTab = () => {
+  // Helper function to navigate to any tab
+  const navigateToTab = (tabValue: string) => {
     const tabsList = document.querySelector('[role="tablist"]');
-    const verificationTab = tabsList?.querySelector('[value="verification"]') as HTMLButtonElement;
-    verificationTab?.click();
+    const tab = tabsList?.querySelector(`[value="${tabValue}"]`) as HTMLButtonElement;
+    tab?.click();
+  };
+
+  const navigateToVerificationTab = () => {
+    navigateToTab('verification');
   };
 
   if (isLoading) {
@@ -416,7 +445,7 @@ export default function ProviderDashboard() {
               <Button variant="outline" size="icon" onClick={handleRefresh}>
                 <RefreshCw className="h-4 w-4" />
               </Button>
-              <Button>
+              <Button onClick={() => setShowSettingsModal(true)}>
                 <Settings className="mr-2 h-4 w-4" />
                 Paramètres
               </Button>
@@ -620,6 +649,7 @@ export default function ProviderDashboard() {
                       variant="outline" 
                       className="h-auto py-4 flex-col gap-2"
                       disabled={isPending}
+                      onClick={() => navigateToTab('appointments')}
                     >
                       <Calendar className="h-6 w-6" />
                       <span>Gérer les RDV</span>
@@ -629,6 +659,7 @@ export default function ProviderDashboard() {
                       variant="outline" 
                       className="h-auto py-4 flex-col gap-2"
                       disabled={isPending}
+                      onClick={() => navigateToTab('ads')}
                     >
                       <Megaphone className="h-6 w-6" />
                       <span>Créer une annonce</span>
@@ -638,6 +669,7 @@ export default function ProviderDashboard() {
                       variant="outline" 
                       className="h-auto py-4 flex-col gap-2"
                       disabled={isPending}
+                      onClick={() => navigateToTab('analytics')}
                     >
                       <BarChart3 className="h-6 w-6" />
                       <span>Voir les stats</span>
@@ -707,11 +739,17 @@ export default function ProviderDashboard() {
             />
           </TabsContent>
 
-          {/* Analytics Tab */}
           <TabsContent value="analytics">
             <AnalyticsCharts providerId={providerData?.id || ''} />
           </TabsContent>
         </Tabs>
+
+        {/* Settings Modal */}
+        <ProviderSettingsModal
+          open={showSettingsModal}
+          onOpenChange={setShowSettingsModal}
+          providerEmail={sensitiveData.email}
+        />
       </div>
     </div>
   );

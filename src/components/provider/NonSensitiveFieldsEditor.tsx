@@ -1,14 +1,23 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Save, Loader2, Paintbrush, CheckCircle2 } from 'lucide-react';
+import { Save, Loader2, Paintbrush, CheckCircle2, Globe, Home, DollarSign, Link2 } from 'lucide-react';
 import { ScheduleEditor } from './ScheduleEditor';
 import { PhotoGalleryManager } from './PhotoGalleryManager';
 import { ProfileServicesEditor } from './ProfileServicesEditor';
 import type { WeeklySchedule } from '@/data/providers';
+
+interface SocialLinks {
+  facebook?: string;
+  instagram?: string;
+  twitter?: string;
+  linkedin?: string;
+  website?: string;
+}
 
 interface NonSensitiveFieldsData {
   description: string;
@@ -21,6 +30,10 @@ interface NonSensitiveFieldsData {
   specialties: string[];
   insurances: string[];
   accessibility: string[];
+  languages: string[];
+  homeVisitAvailable: boolean;
+  consultationFee: string;
+  socialLinks: SocialLinks;
 }
 
 interface NonSensitiveFieldsEditorProps {
@@ -34,6 +47,13 @@ interface NonSensitiveFieldsEditorProps {
   ) => void;
   onSave: () => Promise<void>;
 }
+
+const LANGUAGE_OPTIONS = [
+  { code: 'fr', label: 'Français' },
+  { code: 'ar', label: 'العربية (Arabe)' },
+  { code: 'en', label: 'English' },
+  { code: 'amazigh', label: 'ⵜⴰⵎⴰⵣⵉⵖⵜ (Amazigh)' },
+];
 
 export function NonSensitiveFieldsEditor({
   data,
@@ -110,8 +130,8 @@ export function NonSensitiveFieldsEditor({
         <CardHeader>
           <CardTitle className="text-lg">Caractéristiques</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex gap-6">
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-6">
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="accessible"
@@ -132,6 +152,75 @@ export function NonSensitiveFieldsEditor({
                 Urgences 24/7
               </Label>
             </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="homeVisit"
+                checked={data.homeVisitAvailable}
+                onCheckedChange={(checked) => onDataChange('homeVisitAvailable', !!checked)}
+              />
+              <Label htmlFor="homeVisit" className="font-normal flex items-center gap-1">
+                <Home className="h-4 w-4" />
+                Visite à domicile
+              </Label>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Languages */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            Langues parlées
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-3">
+            {LANGUAGE_OPTIONS.map((lang) => (
+              <div key={lang.code} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`lang-${lang.code}`}
+                  checked={data.languages?.includes(lang.code)}
+                  onCheckedChange={(checked) => {
+                    const current = data.languages || [];
+                    if (checked) {
+                      onDataChange('languages', [...current, lang.code]);
+                    } else {
+                      onDataChange('languages', current.filter(l => l !== lang.code));
+                    }
+                  }}
+                />
+                <Label htmlFor={`lang-${lang.code}`} className="font-normal">
+                  {lang.label}
+                </Label>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Consultation Fee */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Tarifs
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div>
+            <Label htmlFor="consultationFee">Prix de consultation (DA)</Label>
+            <Input
+              id="consultationFee"
+              value={data.consultationFee || ''}
+              onChange={(e) => onDataChange('consultationFee', e.target.value)}
+              placeholder="Ex: 2000 DA, 1500-3000 DA"
+              className="mt-1.5 max-w-xs"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Indiquez le prix ou la fourchette de prix.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -172,6 +261,60 @@ export function NonSensitiveFieldsEditor({
             onInsurancesChange={(insurances) => onDataChange('insurances', insurances)}
             onAccessibilityChange={(accessibility) => onDataChange('accessibility', accessibility)}
           />
+        </CardContent>
+      </Card>
+
+      {/* Social Links */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Link2 className="h-5 w-5" />
+            Liens et réseaux sociaux
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="website">Site web</Label>
+              <Input
+                id="website"
+                value={data.socialLinks?.website || ''}
+                onChange={(e) => onDataChange('socialLinks', { ...data.socialLinks, website: e.target.value })}
+                placeholder="https://www.example.com"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="facebook">Facebook</Label>
+              <Input
+                id="facebook"
+                value={data.socialLinks?.facebook || ''}
+                onChange={(e) => onDataChange('socialLinks', { ...data.socialLinks, facebook: e.target.value })}
+                placeholder="https://facebook.com/..."
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="instagram">Instagram</Label>
+              <Input
+                id="instagram"
+                value={data.socialLinks?.instagram || ''}
+                onChange={(e) => onDataChange('socialLinks', { ...data.socialLinks, instagram: e.target.value })}
+                placeholder="https://instagram.com/..."
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="linkedin">LinkedIn</Label>
+              <Input
+                id="linkedin"
+                value={data.socialLinks?.linkedin || ''}
+                onChange={(e) => onDataChange('socialLinks', { ...data.socialLinks, linkedin: e.target.value })}
+                placeholder="https://linkedin.com/in/..."
+                className="mt-1"
+              />
+            </div>
+          </div>
         </CardContent>
       </Card>
 
