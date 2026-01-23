@@ -402,6 +402,18 @@ export async function updateProviderWithVerificationCheck(
     updatedAt: Timestamp.now(),
   });
   
+  // Create admin notification if verification was revoked
+  if (shouldRevokeVerification) {
+    try {
+      const { notifyVerificationRevoked } = await import('@/services/adminNotificationService');
+      const providerName = updates.name || cleanUpdates.name || 'Prestataire';
+      await notifyVerificationRevoked(providerId, providerName, sensitiveFieldsModified);
+    } catch (error) {
+      // Don't fail the main operation if notification fails
+      console.error('Failed to create admin notification:', error);
+    }
+  }
+  
   return { 
     success: true, 
     verificationRevoked: shouldRevokeVerification,

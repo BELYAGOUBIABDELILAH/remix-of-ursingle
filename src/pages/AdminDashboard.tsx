@@ -14,12 +14,15 @@ import {
 } from '@/components/ui/table';
 import { 
   CheckCircle, XCircle, Eye, Users, Building2, TrendingUp,
-  AlertCircle, Activity, Search, Settings, Shield, Megaphone, Mail, Loader2
+  AlertCircle, Activity, Search, Settings, Shield, Megaphone, Mail, Loader2,
+  Bell, BellRing
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { VerificationQueue } from '@/components/admin/VerificationQueue';
 import { MedicalAdsModeration } from '@/components/admin/MedicalAdsModeration';
+import { AdminNotificationsPanel } from '@/components/admin/AdminNotificationsPanel';
 import { notificationService } from '@/services/notificationService';
+import { getUnreadCount } from '@/services/adminNotificationService';
 import { usePendingProviders, useAllProviders, useUpdateVerification } from '@/hooks/useProviders';
 import { CityHealthProvider } from '@/data/providers';
 
@@ -32,6 +35,7 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [sentNotifications, setSentNotifications] = useState<any[]>([]);
+  const [adminNotifCount, setAdminNotifCount] = useState(0);
 
   // Use TanStack Query for provider data
   const { data: pendingProvidersRaw = [], isLoading: loadingPending } = usePendingProviders();
@@ -74,6 +78,9 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     setSentNotifications(notificationService.getSentNotifications());
+    
+    // Get admin notification count
+    getUnreadCount().then(setAdminNotifCount).catch(() => setAdminNotifCount(0));
   }, []);
 
   const handleApprove = async (id: string) => {
@@ -261,8 +268,17 @@ export default function AdminDashboard() {
               Annonces
             </TabsTrigger>
             <TabsTrigger value="notifications">
-              <Mail className="h-4 w-4 mr-1" />
-              Notifications
+              {adminNotifCount > 0 ? (
+                <BellRing className="h-4 w-4 mr-1 text-red-500" />
+              ) : (
+                <Bell className="h-4 w-4 mr-1" />
+              )}
+              Alertes
+              {adminNotifCount > 0 && (
+                <Badge variant="destructive" className="ml-1.5 h-5 px-1.5">
+                  {adminNotifCount > 9 ? '9+' : adminNotifCount}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="analytics">Analytiques</TabsTrigger>
             <TabsTrigger value="settings">Configuration</TabsTrigger>
@@ -400,12 +416,19 @@ export default function AdminDashboard() {
             <MedicalAdsModeration />
           </TabsContent>
 
-          {/* Notifications Tab */}
-          <TabsContent value="notifications">
+          {/* Notifications Tab - Admin Alerts */}
+          <TabsContent value="notifications" className="space-y-6">
+            {/* Admin Notifications Panel */}
+            <AdminNotificationsPanel />
+            
+            {/* Sent Email Notifications */}
             <Card>
               <CardHeader>
-                <CardTitle>Notifications envoyées</CardTitle>
-                <CardDescription>Historique des emails et notifications</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5" />
+                  Emails envoyés
+                </CardTitle>
+                <CardDescription>Historique des notifications email aux prestataires</CardDescription>
               </CardHeader>
               <CardContent>
                 {sentNotifications.length === 0 ? (

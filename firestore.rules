@@ -287,5 +287,20 @@ service cloud.firestore {
       allow update, delete: if isAuthenticated() && 
         resource.data.userId == request.auth.uid;
     }
+    
+    // ============================================
+    // ADMIN NOTIFICATIONS - Real-time admin alerts
+    // ============================================
+    match /admin_notifications/{notificationId} {
+      // Only admins can read notifications
+      allow read: if isAdmin();
+      
+      // System can create notifications (via authenticated providers)
+      // This allows the verification revocation flow to create notifications
+      allow create: if isAuthenticated();
+      
+      // Admins can update (mark as read) and delete
+      allow update, delete: if isAdmin();
+    }
   }
 }
