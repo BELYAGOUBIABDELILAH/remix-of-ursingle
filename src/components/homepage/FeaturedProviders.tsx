@@ -61,7 +61,7 @@ export const FeaturedProviders = () => {
         isVerified: p.verified || p.verificationStatus === 'verified',
         isAvailable: p.isOpen || false,
         image: p.image || '/placeholder.svg',
-        nextAvailable: p.isOpen ? 'Maintenant' : 'Prochainement'
+        nextAvailable: p.isOpen ? t('providers', 'now') : t('providers', 'soon')
       }));
   }, [verifiedProviders]);
 
@@ -104,14 +104,14 @@ export const FeaturedProviders = () => {
           {/* Navigation Controls */}
           <div className="flex items-center gap-3 mt-6 md:mt-0">
             <span className="text-sm text-muted-foreground mr-2 hidden sm:inline">
-              ← Glissez ou utilisez les flèches →
+              {t('providers', 'carouselHint')}
             </span>
             <Button
               variant="outline"
               size="icon"
               onClick={scrollPrev}
               className="hover-lift rounded-full"
-              aria-label="Praticien précédent"
+              aria-label={t('providers', 'prevProvider')}
             >
               <ChevronLeft size={20} />
             </Button>
@@ -120,7 +120,7 @@ export const FeaturedProviders = () => {
               size="icon"
               onClick={scrollNext}
               className="hover-lift rounded-full"
-              aria-label="Praticien suivant"
+              aria-label={t('providers', 'nextProvider')}
             >
               <ChevronRight size={20} />
             </Button>
@@ -149,7 +149,7 @@ export const FeaturedProviders = () => {
                 </p>
                 <Link to="/provider/register" className="mt-4 inline-block">
                   <Button variant="outline">
-                    Devenir prestataire
+                    {t('providers', 'becomeProvider')}
                   </Button>
                 </Link>
               </div>
@@ -217,7 +217,7 @@ export const FeaturedProviders = () => {
                           variant={provider.isAvailable ? "default" : "secondary"}
                           className={provider.isAvailable ? "bg-green-100 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800" : ""}
                         >
-                          {provider.isAvailable ? 'Disponible maintenant' : 'Prochaine disponibilité'}
+                          {provider.isAvailable ? t('providers', 'availableNow') : t('providers', 'nextAvailability')}
                         </Badge>
                       </div>
 
@@ -226,9 +226,9 @@ export const FeaturedProviders = () => {
                         <Button 
                           className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300"
                           variant="outline"
-                          aria-label={`Voir le profil de ${provider.name}`}
+                          aria-label={`${t('providers', 'viewProfileOf')} ${provider.name}`}
                         >
-                          Voir le profil
+                          {t('providers', 'viewProfile')}
                           <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" size={14} aria-hidden="true" />
                         </Button>
                       </Link>

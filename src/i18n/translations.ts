@@ -97,6 +97,16 @@ export interface Translations {
     featuredSubtitle: string;
     viewAll: string;
     noProviders: string;
+    carouselHint: string;
+    prevProvider: string;
+    nextProvider: string;
+    becomeProvider: string;
+    availableNow: string;
+    nextAvailability: string;
+    now: string;
+    soon: string;
+    viewProfile: string;
+    viewProfileOf: string;
   };
 
   // Reviews
@@ -255,6 +265,16 @@ export const translations: Record<Language, Translations> = {
       featuredSubtitle: 'Professionnels de santé vérifiés et très bien notés',
       viewAll: 'Voir tous les professionnels',
       noProviders: 'Aucun professionnel disponible pour le moment',
+      carouselHint: '← Glissez ou utilisez les flèches →',
+      prevProvider: 'Praticien précédent',
+      nextProvider: 'Praticien suivant',
+      becomeProvider: 'Devenir prestataire',
+      availableNow: 'Disponible maintenant',
+      nextAvailability: 'Prochaine disponibilité',
+      now: 'Maintenant',
+      soon: 'Prochainement',
+      viewProfile: 'Voir le profil',
+      viewProfileOf: 'Voir le profil de',
     },
   },
   
@@ -373,6 +393,16 @@ export const translations: Record<Language, Translations> = {
       featuredSubtitle: 'متخصصون صحيون موثقون وذوو تقييم عالٍ',
       viewAll: 'عرض جميع المهنيين',
       noProviders: 'لا يوجد مهنيون متاحون حاليًا',
+      carouselHint: '← اسحب أو استخدم الأسهم →',
+      prevProvider: 'المهني السابق',
+      nextProvider: 'المهني التالي',
+      becomeProvider: 'انضم كمقدم خدمة',
+      availableNow: 'متاح الآن',
+      nextAvailability: 'الموعد القادم',
+      now: 'الآن',
+      soon: 'قريباً',
+      viewProfile: 'عرض الملف',
+      viewProfileOf: 'عرض ملف',
     },
   },
 
@@ -491,6 +521,16 @@ export const translations: Record<Language, Translations> = {
       featuredSubtitle: 'Verified and highly-rated healthcare professionals',
       viewAll: 'View All Providers',
       noProviders: 'No providers available at the moment',
+      carouselHint: '← Swipe or use arrows →',
+      prevProvider: 'Previous provider',
+      nextProvider: 'Next provider',
+      becomeProvider: 'Become a provider',
+      availableNow: 'Available now',
+      nextAvailability: 'Next availability',
+      now: 'Now',
+      soon: 'Coming soon',
+      viewProfile: 'View profile',
+      viewProfileOf: 'View profile of',
     },
   },
 };
