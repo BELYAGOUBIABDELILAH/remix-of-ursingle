@@ -749,6 +749,19 @@ export default function ProviderDashboard() {
           open={showSettingsModal}
           onOpenChange={setShowSettingsModal}
           providerEmail={sensitiveData.email}
+          providerSettings={{
+            emailNotifications: providerData?.settings?.emailNotifications ?? true,
+            smsNotifications: providerData?.settings?.smsNotifications ?? false,
+            appointmentReminders: providerData?.settings?.appointmentReminders ?? true,
+            marketingEmails: providerData?.settings?.marketingEmails ?? false,
+            showPhoneOnProfile: providerData?.settings?.showPhoneOnProfile ?? true,
+            showEmailOnProfile: providerData?.settings?.showEmailOnProfile ?? false,
+            allowReviews: providerData?.settings?.allowReviews ?? true,
+            language: (providerData?.settings?.language as 'fr' | 'ar' | 'en') ?? 'fr',
+          }}
+          onSaveSettings={async (settings) => {
+            await updateProviderData({ settings: { ...providerData?.settings, ...settings } });
+          }}
         />
       </div>
     </div>
