@@ -1,11 +1,15 @@
 import { Button } from '@/components/ui/button';
 import { 
-  CheckCircle2, 
   MapPin, 
   FileText, 
   Camera, 
   BadgeCheck,
-  ArrowRight 
+  ArrowRight,
+  User,
+  Award,
+  Upload,
+  Send,
+  Clock
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -17,24 +21,44 @@ interface OnboardingWelcomeProps {
 export function OnboardingWelcome({ providerName, onGetStarted }: OnboardingWelcomeProps) {
   const steps = [
     {
-      icon: CheckCircle2,
-      title: 'Complétez votre profil',
-      description: 'Informations, localisation et horaires',
+      icon: User,
+      title: 'Informations de base',
+      description: 'Nom, email et téléphone',
     },
     {
-      icon: Camera,
-      title: 'Ajoutez des photos',
-      description: 'Montrez votre cabinet aux patients',
+      icon: MapPin,
+      title: 'Localisation',
+      description: 'Adresse et coordonnées GPS',
     },
     {
       icon: FileText,
-      title: 'Téléchargez vos documents',
-      description: 'Licence et pièce d\'identité',
+      title: 'Description & Horaires',
+      description: 'Présentez votre pratique',
+    },
+    {
+      icon: Award,
+      title: 'Licence professionnelle',
+      description: 'Numéro d\'agrément',
+    },
+    {
+      icon: Camera,
+      title: 'Photos du cabinet',
+      description: 'Montrez votre établissement',
+    },
+    {
+      icon: Upload,
+      title: 'Documents officiels',
+      description: 'Licence + pièce d\'identité',
+    },
+    {
+      icon: Send,
+      title: 'Soumettre pour vérification',
+      description: 'Envoi pour validation',
     },
     {
       icon: BadgeCheck,
-      title: 'Obtenez le badge vérifié',
-      description: 'Gagnez la confiance des patients',
+      title: 'Obtenir le badge vérifié',
+      description: 'Visible publiquement',
     },
   ];
 
@@ -54,7 +78,7 @@ export function OnboardingWelcome({ providerName, onGetStarted }: OnboardingWelc
           Bienvenue{providerName ? `, ${providerName}` : ''} !
         </h2>
         <p className="text-muted-foreground">
-          Suivez ces 4 étapes simples pour activer votre profil et commencer à recevoir des patients.
+          Suivez ces 8 étapes pour activer votre profil et commencer à recevoir des patients.
         </p>
       </div>
 
@@ -86,7 +110,7 @@ export function OnboardingWelcome({ providerName, onGetStarted }: OnboardingWelc
           <ArrowRight className="h-4 w-4" />
         </Button>
         <p className="text-xs text-center text-muted-foreground mt-3">
-          ⏱️ Environ 10 minutes pour compléter votre profil
+          ⏱️ Environ 10-15 minutes pour compléter votre profil
         </p>
       </div>
     </div>
