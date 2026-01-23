@@ -21,6 +21,12 @@ import { db } from '@/lib/firebase';
 import { CityHealthProvider, ProviderType, VerificationStatus, Lang } from '@/data/providers';
 import { REFERENCE_PROVIDERS } from '@/data/referenceProviders';
 import { logError, handleError } from '@/utils/errorHandling';
+import { 
+  validateProviderUpdate, 
+  cleanProviderUpdate, 
+  mergeLegacyFields,
+  logValidationWarnings 
+} from '@/utils/providerValidation';
 
 const PROVIDERS_COLLECTION = 'providers';
 
@@ -34,53 +40,83 @@ function getFallbackProviders(): CityHealthProvider[] {
   return REFERENCE_PROVIDERS.filter(p => p.verificationStatus === 'verified' && p.isPublic);
 }
 
-// Convert Firestore document to CityHealthProvider
+/**
+ * Convert Firestore document to CityHealthProvider
+ * Handles legacy field names via fallback chains
+ */
 function docToProvider(docData: DocumentData, id: string): CityHealthProvider {
+  // Merge legacy field names to canonical names (cast to DocumentData for type safety)
+  const merged = mergeLegacyFields(docData as Record<string, unknown>) as DocumentData;
+  
   return {
     id,
-    name: docData.name || '',
-    type: docData.type as ProviderType,
-    specialty: docData.specialty,
-    rating: docData.rating || 0,
-    reviewsCount: docData.reviewsCount || 0,
-    distance: docData.distance || 0,
-    verified: docData.verified || false,
-    emergency: docData.emergency || false,
-    accessible: docData.accessible || true,
-    isOpen: docData.isOpen || false,
-    address: docData.address || '',
-    city: docData.city || 'Sidi Bel Abbès',
-    area: docData.area || '',
-    phone: docData.phone || '',
-    image: docData.image || '/placeholder.svg',
-    lat: docData.lat || 35.1975,
-    lng: docData.lng || -0.6300,
-    languages: (docData.languages || ['fr']) as Lang[],
-    description: docData.description || '',
-    verificationStatus: (docData.verificationStatus || 'pending') as VerificationStatus,
-    isPublic: docData.isPublic || false,
-    // Type-specific fields
-    bloodTypes: docData.bloodTypes,
-    urgentNeed: docData.urgentNeed,
-    stockStatus: docData.stockStatus,
-    imagingTypes: docData.imagingTypes,
-    // Enhanced profile fields
-    gallery: docData.gallery || [],
-    schedule: docData.schedule || null,
-    reviews: docData.reviews || [],
-    // Additional profile fields
-    socialLinks: docData.socialLinks || null,
-    departments: docData.departments || [],
-    consultationFee: docData.consultationFee || null,
-    insuranceAccepted: docData.insuranceAccepted || [],
-    website: docData.website || null,
-    email: docData.email || null,
-    // Account settings
-    settings: docData.settings || undefined,
+    name: String(merged.name || merged.facilityNameFr || ''),
+    type: merged.type as ProviderType,
+    specialty: merged.specialty as string | undefined,
+    rating: Number(merged.rating) || 0,
+    reviewsCount: Number(merged.reviewsCount) || 0,
+    distance: Number(merged.distance) || 0,
+    verified: Boolean(merged.verified) || false,
+    emergency: Boolean(merged.emergency || merged.is24_7) || false,
+    accessible: merged.accessible !== undefined ? Boolean(merged.accessible) : true,
+    isOpen: Boolean(merged.isOpen) || false,
+    address: String(merged.address || ''),
+    city: String(merged.city || 'Sidi Bel Abbès'),
+    area: String(merged.area || ''),
+    phone: String(merged.phone || ''),
+    image: String(merged.image || '/placeholder.svg'),
+    lat: Number(merged.lat) || 35.1975,
+    lng: Number(merged.lng) || -0.6300,
+    languages: (merged.languages || ['fr']) as Lang[],
+    description: String(merged.description || ''),
+    verificationStatus: (merged.verificationStatus || 'pending') as VerificationStatus,
+    isPublic: Boolean(merged.isPublic) || false,
+    
+    // ========== IDENTITY FIELDS (Sensitive) ==========
+    facilityNameFr: String(merged.facilityNameFr || merged.nameFr || ''),
+    facilityNameAr: String(merged.facilityNameAr || merged.nameAr || ''),
+    email: merged.email ? String(merged.email) : null,
+    legalRegistrationNumber: String(merged.legalRegistrationNumber || ''),
+    contactPersonName: String(merged.contactPersonName || ''),
+    contactPersonRole: String(merged.contactPersonRole || ''),
+    postalCode: String(merged.postalCode || ''),
+    
+    // ========== TYPE-SPECIFIC FIELDS ==========
+    bloodTypes: merged.bloodTypes as string[] | undefined,
+    urgentNeed: merged.urgentNeed as boolean | undefined,
+    stockStatus: merged.stockStatus as 'critical' | 'low' | 'normal' | 'high' | undefined,
+    imagingTypes: merged.imagingTypes as string[] | undefined,
+    
+    // ========== PROFILE FIELDS (Non-sensitive) - CANONICAL NAMES ==========
+    gallery: (merged.gallery || []) as string[],
+    services: (merged.services || []) as string[],
+    insurances: (merged.insurances || []) as string[],
+    specialties: (merged.specialties || []) as string[],
+    schedule: merged.schedule as CityHealthProvider['schedule'] || null,
+    reviews: (merged.reviews || []) as CityHealthProvider['reviews'],
+    socialLinks: merged.socialLinks as CityHealthProvider['socialLinks'] || null,
+    departments: (merged.departments || []) as string[],
+    consultationFee: merged.consultationFee as number | null ?? null,
+    website: merged.website ? String(merged.website) : null,
+    homeVisitAvailable: Boolean(merged.homeVisitAvailable) || false,
+    accessibilityFeatures: (merged.accessibilityFeatures || []) as string[],
+    
+    // ========== VERIFICATION REVOCATION ==========
+    verificationRevokedAt: merged.verificationRevokedAt as Date | string | undefined,
+    verificationRevokedReason: merged.verificationRevokedReason as string | undefined,
+    
+    // ========== ACCOUNT SETTINGS ==========
+    settings: merged.settings as CityHealthProvider['settings'] || undefined,
+    
+    // ========== DEPRECATED FIELDS (for backward compatibility reads only) ==========
+    insuranceAccepted: (merged.insurances || []) as string[],
   };
 }
 
-// Convert CityHealthProvider to Firestore document
+/**
+ * Convert CityHealthProvider to Firestore document
+ * Uses CANONICAL field names only for writes
+ */
 function providerToDoc(provider: CityHealthProvider & { userId?: string }): DocumentData {
   return {
     name: provider.name,
@@ -104,27 +140,48 @@ function providerToDoc(provider: CityHealthProvider & { userId?: string }): Docu
     description: provider.description,
     verificationStatus: provider.verificationStatus,
     isPublic: provider.isPublic,
+    
     // User ID linking to Firebase Auth
     ...(provider.userId && { userId: provider.userId }),
-    // Type-specific fields
+    
+    // ========== IDENTITY FIELDS (Sensitive) ==========
+    ...(provider.facilityNameFr && { facilityNameFr: provider.facilityNameFr }),
+    ...(provider.facilityNameAr && { facilityNameAr: provider.facilityNameAr }),
+    ...(provider.email && { email: provider.email }),
+    ...(provider.legalRegistrationNumber && { legalRegistrationNumber: provider.legalRegistrationNumber }),
+    ...(provider.contactPersonName && { contactPersonName: provider.contactPersonName }),
+    ...(provider.contactPersonRole && { contactPersonRole: provider.contactPersonRole }),
+    ...(provider.postalCode && { postalCode: provider.postalCode }),
+    
+    // ========== TYPE-SPECIFIC FIELDS ==========
     ...(provider.bloodTypes && { bloodTypes: provider.bloodTypes }),
     ...(provider.urgentNeed !== undefined && { urgentNeed: provider.urgentNeed }),
     ...(provider.stockStatus && { stockStatus: provider.stockStatus }),
     ...(provider.imagingTypes && { imagingTypes: provider.imagingTypes }),
-    // Enhanced profile fields
-    ...(provider.gallery && { gallery: provider.gallery }),
+    ...(provider.productCategories && { productCategories: provider.productCategories }),
+    ...(provider.rentalAvailable !== undefined && { rentalAvailable: provider.rentalAvailable }),
+    ...(provider.deliveryAvailable !== undefined && { deliveryAvailable: provider.deliveryAvailable }),
+    
+    // ========== PROFILE FIELDS - CANONICAL NAMES ONLY ==========
+    ...(provider.gallery && { gallery: provider.gallery }),                     // CANONICAL
+    ...(provider.services && { services: provider.services }),                  // CANONICAL
+    ...(provider.insurances && { insurances: provider.insurances }),            // CANONICAL
+    ...(provider.specialties && { specialties: provider.specialties }),
     ...(provider.schedule && { schedule: provider.schedule }),
     ...(provider.reviews && { reviews: provider.reviews }),
-    // Additional profile fields
     ...(provider.socialLinks && { socialLinks: provider.socialLinks }),
     ...(provider.departments && { departments: provider.departments }),
-    ...(provider.consultationFee && { consultationFee: provider.consultationFee }),
-    ...(provider.insuranceAccepted && { insuranceAccepted: provider.insuranceAccepted }),
+    ...(provider.equipment && { equipment: provider.equipment }),
+    ...(provider.accessibilityFeatures && { accessibilityFeatures: provider.accessibilityFeatures }),
+    ...(provider.consultationFee !== undefined && { consultationFee: provider.consultationFee }),
     ...(provider.website && { website: provider.website }),
-    ...(provider.email && { email: provider.email }),
-    // Account settings
+    ...(provider.homeVisitAvailable !== undefined && { homeVisitAvailable: provider.homeVisitAvailable }),
+    ...(provider.is24_7 !== undefined && { is24_7: provider.is24_7 }),
+    
+    // ========== ACCOUNT SETTINGS ==========
     ...(provider.settings && { settings: provider.settings }),
-    // Metadata
+    
+    // ========== METADATA ==========
     updatedAt: Timestamp.now(),
   };
 }
@@ -340,6 +397,7 @@ export async function saveProvider(provider: CityHealthProvider): Promise<void> 
 /**
  * Update an existing provider with partial data
  * Used by providers to update their own profile
+ * Includes validation and canonical field name enforcement
  */
 export async function updateProvider(
   providerId: string,
@@ -347,13 +405,16 @@ export async function updateProvider(
 ): Promise<void> {
   const docRef = doc(db, PROVIDERS_COLLECTION, providerId);
   
-  // Filter out undefined values and add metadata
-  const cleanUpdates: Record<string, any> = {};
-  Object.entries(updates).forEach(([key, value]) => {
-    if (value !== undefined) {
-      cleanUpdates[key] = value;
-    }
-  });
+  // Validate updates
+  const validation = validateProviderUpdate(updates as Record<string, unknown>);
+  logValidationWarnings(validation);
+  
+  if (!validation.valid) {
+    throw new Error(`Validation échouée: ${validation.errors.join(', ')}`);
+  }
+  
+  // Clean updates: remove undefined values and convert deprecated field names
+  const cleanUpdates = cleanProviderUpdate(updates as Record<string, unknown>);
   
   await updateDoc(docRef, {
     ...cleanUpdates,

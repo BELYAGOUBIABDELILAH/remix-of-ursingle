@@ -210,17 +210,20 @@ export default function ProviderDashboard() {
       setSensitiveData(newSensitiveData);
       setOriginalSensitiveData(newSensitiveData);
       
-      // Populate non-sensitive fields
+      // Populate non-sensitive fields with fallback chains for legacy data
       const newNonSensitiveData = {
         description: providerData.description || '',
         specialty: providerData.specialty || '',
         schedule: providerData.schedule || null,
         accessible: providerData.accessible ?? true,
-        emergency: providerData.emergency ?? false,
-        photos: providerData.gallery || [],
-        services: providerData.services || [],
+        emergency: providerData.emergency ?? providerData.is24_7 ?? false,
+        // CANONICAL: gallery (fallback to galleryImages for legacy)
+        photos: providerData.gallery || (providerData as any).galleryImages || [],
+        // CANONICAL: services (fallback to serviceCategories for legacy)
+        services: providerData.services || (providerData as any).serviceCategories || [],
         specialties: providerData.specialties || [],
-        insurances: providerData.insurances || [],
+        // CANONICAL: insurances (fallback to insuranceAccepted for legacy)
+        insurances: providerData.insurances || providerData.insuranceAccepted || [],
         accessibility: providerData.accessibilityFeatures || [],
         languages: providerData.languages || ['fr', 'ar'],
         homeVisitAvailable: providerData.homeVisitAvailable ?? false,
@@ -321,6 +324,7 @@ export default function ProviderDashboard() {
   };
 
   // Save non-sensitive fields (no verification impact)
+  // Uses CANONICAL field names for writes
   const handleSaveNonSensitive = async () => {
     try {
       await updateProviderData({
@@ -329,10 +333,11 @@ export default function ProviderDashboard() {
         schedule: nonSensitiveData.schedule,
         accessible: nonSensitiveData.accessible,
         emergency: nonSensitiveData.emergency,
-        gallery: nonSensitiveData.photos,
-        services: nonSensitiveData.services,
+        // CANONICAL field names for writes
+        gallery: nonSensitiveData.photos,              // CANONICAL: 'gallery' not 'galleryImages'
+        services: nonSensitiveData.services,           // CANONICAL: 'services' not 'serviceCategories'
+        insurances: nonSensitiveData.insurances,       // CANONICAL: 'insurances' not 'insuranceAccepted'
         specialties: nonSensitiveData.specialties,
-        insurances: nonSensitiveData.insurances,
         accessibilityFeatures: nonSensitiveData.accessibility,
         languages: nonSensitiveData.languages as ('fr' | 'ar' | 'en')[],
         homeVisitAvailable: nonSensitiveData.homeVisitAvailable,
