@@ -30,14 +30,23 @@ const ProviderLoginPage = () => {
 
   // Redirect if already authenticated as provider
   useEffect(() => {
+    console.log('[ProviderLoginPage] Auth state:', { 
+      isAuthenticated, 
+      userType: profile?.userType,
+      verificationStatus: profile?.verificationStatus 
+    });
+    
     if (isAuthenticated && profile?.userType === 'provider') {
       // Check verification status
       if (profile.verificationStatus === 'verified') {
+        console.log('[ProviderLoginPage] Redirecting to dashboard (verified)');
         navigate('/provider/dashboard');
       } else {
+        console.log('[ProviderLoginPage] Redirecting to registration-status (pending)');
         navigate('/registration-status');
       }
     } else if (isAuthenticated && profile?.userType) {
+      console.log('[ProviderLoginPage] Wrong user type:', profile.userType);
       toast.error('Ce compte n\'est pas un compte prestataire');
     }
   }, [isAuthenticated, profile, navigate]);
