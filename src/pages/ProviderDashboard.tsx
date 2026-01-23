@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { 
   Eye, Phone, MapPin, TrendingUp, Calendar, Star, 
   Settings, BarChart3, Clock, Megaphone, Shield,
@@ -819,27 +819,29 @@ export default function ProviderDashboard() {
         />
         
         {/* Welcome Modal - First Visit */}
-        <Dialog open={showWelcomeModal} onOpenChange={setShowWelcomeModal}>
-          <DialogContent className="sm:max-w-md p-0 overflow-hidden">
-            <OnboardingWelcome
-              providerName={providerData?.name?.split(' ')[0]}
-              onGetStarted={handleWelcomeClose}
-            />
-          </DialogContent>
-        </Dialog>
+      <Dialog open={showWelcomeModal} onOpenChange={setShowWelcomeModal}>
+        <DialogContent className="sm:max-w-md p-0 overflow-hidden">
+          <DialogTitle className="sr-only">Bienvenue sur CityHealth</DialogTitle>
+          <OnboardingWelcome
+            providerName={providerData?.name?.split(' ')[0]}
+            onGetStarted={handleWelcomeClose}
+          />
+        </DialogContent>
+      </Dialog>
         
         {/* Celebration Modal - Milestone Achievements */}
-        <Dialog open={!!currentCelebration} onOpenChange={() => dismissCelebration()}>
-          <DialogContent className="sm:max-w-md p-0 overflow-hidden">
-            {currentCelebration && (
-              <OnboardingCelebration
-                type={currentCelebration}
-                providerName={providerData?.name?.split(' ')[0]}
-                onContinue={handleCelebrationContinue}
-              />
-            )}
-          </DialogContent>
-        </Dialog>
+      <Dialog open={!!currentCelebration} onOpenChange={() => dismissCelebration()}>
+        <DialogContent className="sm:max-w-md p-0 overflow-hidden">
+          <DialogTitle className="sr-only">Félicitations</DialogTitle>
+          {currentCelebration && (
+            <OnboardingCelebration
+              type={currentCelebration}
+              providerName={providerData?.name?.split(' ')[0]}
+              onContinue={handleCelebrationContinue}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
       </div>
     </div>
   );
