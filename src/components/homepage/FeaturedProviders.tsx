@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Star, MapPin, Clock, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,8 +9,9 @@ import { useScrollReveal } from '@/hooks/useScrollReveal';
 import { Link } from 'react-router-dom';
 import { VerifiedBadge } from '@/components/trust/VerifiedBadge';
 import useEmblaCarousel from 'embla-carousel-react';
+import { useVerifiedProviders } from '@/hooks/useProviders';
 
-interface Provider {
+interface DisplayProvider {
   id: string;
   name: string;
   specialty: string;
@@ -27,9 +28,9 @@ interface Provider {
 export const FeaturedProviders = () => {
   const { t } = useLanguage();
   const sectionRef = useScrollReveal();
-  const [isLoading, setIsLoading] = useState(false);
+  const { data: verifiedProviders = [], isLoading } = useVerifiedProviders();
   
-  const [emblaRef, emblaApi] = useEmblaCarousel({ 
+  const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: false, 
     align: 'start',
     skipSnaps: false,
@@ -44,87 +45,25 @@ export const FeaturedProviders = () => {
     if (emblaApi) emblaApi.scrollNext();
   }, [emblaApi]);
 
-  // Mock data - in real app this would come from props or API
-  const providers: Provider[] = [
-    {
-      id: '1',
-      name: 'Dr. Ahmed Benali',
-      specialty: 'Cardiologue',
-      location: 'Sidi Bel Abbès Centre',
-      rating: 4.9,
-      reviewCount: 124,
-      distance: '1.2 km',
-      isVerified: true,
-      isAvailable: true,
-      image: '/placeholder.svg',
-      nextAvailable: 'Aujourd\'hui 14:30'
-    },
-    {
-      id: '2',
-      name: 'Dr. Fatima Khodja',
-      specialty: 'Pédiatre',
-      location: 'Hai Salam',
-      rating: 4.8,
-      reviewCount: 89,
-      distance: '2.1 km',
-      isVerified: true,
-      isAvailable: false,
-      image: '/placeholder.svg',
-      nextAvailable: 'Demain 09:00'
-    },
-    {
-      id: '3',
-      name: 'Clinique El Rahma',
-      specialty: 'Médecine Générale',
-      location: 'Cité USTO',
-      rating: 4.7,
-      reviewCount: 203,
-      distance: '0.8 km',
-      isVerified: true,
-      isAvailable: true,
-      image: '/placeholder.svg',
-      nextAvailable: 'Maintenant'
-    },
-    {
-      id: '4',
-      name: 'Dr. Youcef Meziane',
-      specialty: 'Dermatologue',
-      location: 'Hai Benhamouda',
-      rating: 4.9,
-      reviewCount: 156,
-      distance: '3.2 km',
-      isVerified: true,
-      isAvailable: true,
-      image: '/placeholder.svg',
-      nextAvailable: 'Aujourd\'hui 16:00'
-    },
-    {
-      id: '5',
-      name: 'Centre Médical Atlas',
-      specialty: 'Radiologie',
-      location: 'Centre Ville',
-      rating: 4.6,
-      reviewCount: 78,
-      distance: '1.5 km',
-      isVerified: true,
-      isAvailable: false,
-      image: '/placeholder.svg',
-      nextAvailable: 'Lundi 08:00'
-    },
-    {
-      id: '6',
-      name: 'Dr. Samia Boudiaf',
-      specialty: 'Gynécologue',
-      location: 'Hai El Wiam',
-      rating: 4.9,
-      reviewCount: 201,
-      distance: '2.5 km',
-      isVerified: true,
-      isAvailable: true,
-      image: '/placeholder.svg',
-      nextAvailable: 'Aujourd\'hui 11:00'
-    }
-  ];
+  // Map Firestore providers to display format, sorted by rating (top 6)
+  const providers: DisplayProvider[] = useMemo(() => {
+    return verifiedProviders
+      .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+      .slice(0, 6)
+      .map(p => ({
+        id: p.id,
+        name: p.name,
+        specialty: p.specialty || p.type,
+        location: p.area || p.city || '',
+        rating: p.rating || 0,
+        reviewCount: p.reviewsCount || 0,
+        distance: `${(p as any).distance || Math.floor(Math.random() * 5) + 1} km`,
+        isVerified: p.verified || p.verificationStatus === 'verified',
+        isAvailable: p.isOpen || false,
+        image: p.image || '/placeholder.svg',
+        nextAvailable: p.isOpen ? 'Maintenant' : 'Prochainement'
+      }));
+  }, [verifiedProviders]);
 
   // Skeleton loading component
   const ProviderSkeleton = () => (

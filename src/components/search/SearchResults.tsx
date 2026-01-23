@@ -92,7 +92,7 @@ const ProviderCard = memo(({ provider, isGrid, isFavorite, onToggleFavorite }: P
                   </h3>
                 </Link>
                 <p className="text-muted-foreground text-sm">{provider.specialty}</p>
-                {provider.verified && (
+                {(provider.verified || (provider as any).verificationStatus === 'verified') && (
                   <Badge variant="secondary" className="mt-1">
                     ✅ {t('provider', 'verified')}
                   </Badge>

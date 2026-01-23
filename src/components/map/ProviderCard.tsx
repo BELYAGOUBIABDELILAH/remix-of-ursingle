@@ -121,7 +121,7 @@ export const ProviderCard = ({ provider, distance, onClose }: ProviderCardProps)
               {typeLabel}
             </Badge>
             
-            {provider.verified && (
+            {(provider.verified || (provider as any).verificationStatus === 'verified') && (
               <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
                 <BadgeCheck className="h-3 w-3 mr-1" />
                 {tx.verified}
