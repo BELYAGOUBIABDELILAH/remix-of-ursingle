@@ -15,7 +15,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
 import { CircularProgress } from '@/components/ui/circular-progress';
-import { ProfileProgressBar, calculateProfileCompletion } from '@/components/provider/ProfileProgressBar';
+import { calculateProfileCompletion } from '@/components/provider/ProfileProgressBar';
+import { ProviderOnboardingChecklist } from '@/components/provider/onboarding';
 import { EnhancedVerificationCenter, type VerificationStatus } from '@/components/provider/EnhancedVerificationCenter';
 import { MedicalAdsManager } from '@/components/provider/MedicalAdsManager';
 import { AppointmentsManager } from '@/components/provider/AppointmentsManager';
@@ -575,8 +576,12 @@ export default function ProviderDashboard() {
           {/* Overview Tab */}
           <TabsContent value="overview">
             <div className="grid gap-6 lg:grid-cols-2">
-              {/* Profile Progress Card */}
-              <ProfileProgressBar fields={profileFields} />
+              {/* Onboarding Checklist - Step by step guidance */}
+              <ProviderOnboardingChecklist
+                providerData={providerData}
+                verificationStatus={contextVerificationStatus}
+                onNavigateToTab={navigateToTab}
+              />
               
               {/* Verification Status Card */}
               <Card>
