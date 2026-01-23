@@ -169,38 +169,40 @@ async function createProviderDocument(
   formData: ProviderFormData
 ): Promise<void> {
   const providerRef = doc(db, 'providers', providerId);
-  
+
   // Map provider type to display type
   const typeMapping: Record<string, string> = {
     'hospital': 'hospital',
-    'birth_hospital': 'hospital',
+    'birth_hospital': 'birth_hospital',
     'clinic': 'clinic',
     'doctor': 'doctor',
     'pharmacy': 'pharmacy',
-    'lab': 'laboratory',
+    'lab': 'lab',
     'blood_cabin': 'blood_cabin',
-    'radiology_center': 'radiology',
-    'medical_equipment': 'equipment'
+    'radiology_center': 'radiology_center',
+    'medical_equipment': 'medical_equipment'
   };
 
+  // Build provider document using CANONICAL field names
   const providerData = {
     // Link to Firebase Auth user
     userId,
     
-    // Basic info
+    // ========== IDENTITY (Sensitive) ==========
     name: formData.facilityNameFr,
-    nameFr: formData.facilityNameFr,
-    nameAr: formData.facilityNameAr,
+    facilityNameFr: formData.facilityNameFr,
+    facilityNameAr: formData.facilityNameAr,
     type: typeMapping[formData.providerType] || formData.providerType,
     providerType: formData.providerType,
     
-    // Contact
+    // ========== CONTACT (Sensitive) ==========
     email: formData.email,
     phone: formData.phone,
     contactPersonName: formData.contactPersonName,
     contactPersonRole: formData.contactPersonRole,
+    legalRegistrationNumber: formData.legalRegistrationNumber,
     
-    // Location
+    // ========== LOCATION (Sensitive) ==========
     address: formData.address,
     city: formData.city || 'Sidi Bel Abbès',
     area: formData.area,
@@ -208,13 +210,13 @@ async function createProviderDocument(
     lat: formData.lat || 35.1975,
     lng: formData.lng || -0.6300,
     
-    // Schedule
+    // ========== SCHEDULE (Non-sensitive) ==========
     schedule: formData.schedule,
     is24_7: formData.is24_7,
     homeVisitAvailable: formData.homeVisitAvailable,
     
-    // Services
-    serviceCategories: formData.serviceCategories,
+    // ========== SERVICES (Non-sensitive) - CANONICAL NAMES ==========
+    services: formData.serviceCategories,        // CANONICAL: 'services' not 'serviceCategories'
     specialties: formData.specialties,
     specialty: formData.specialties[0] || null,
     departments: formData.departments,
@@ -222,24 +224,24 @@ async function createProviderDocument(
     accessibilityFeatures: formData.accessibilityFeatures,
     languages: formData.languages,
     
-    // Profile
+    // ========== PROFILE (Non-sensitive) - CANONICAL NAMES ==========
     description: formData.description,
     image: formData.logoPreview || '/placeholder.svg',
-    galleryImages: formData.galleryPreviews,
-    insuranceAccepted: formData.insuranceAccepted,
+    gallery: formData.galleryPreviews,           // CANONICAL: 'gallery' not 'galleryImages'
+    insurances: formData.insuranceAccepted,      // CANONICAL: 'insurances' not 'insuranceAccepted'
     consultationFee: formData.consultationFee,
     socialLinks: formData.socialLinks,
     
-    // Type-specific fields
-    ...(formData.bloodTypes && { bloodTypes: formData.bloodTypes }),
+    // ========== TYPE-SPECIFIC FIELDS ==========
+    ...(formData.bloodTypes && formData.bloodTypes.length > 0 && { bloodTypes: formData.bloodTypes }),
     ...(formData.urgentNeed !== undefined && { urgentNeed: formData.urgentNeed }),
     ...(formData.stockStatus && { stockStatus: formData.stockStatus }),
-    ...(formData.imagingTypes && { imagingTypes: formData.imagingTypes }),
-    ...(formData.productCategories && { productCategories: formData.productCategories }),
+    ...(formData.imagingTypes && formData.imagingTypes.length > 0 && { imagingTypes: formData.imagingTypes }),
+    ...(formData.productCategories && formData.productCategories.length > 0 && { productCategories: formData.productCategories }),
     ...(formData.rentalAvailable !== undefined && { rentalAvailable: formData.rentalAvailable }),
     ...(formData.deliveryAvailable !== undefined && { deliveryAvailable: formData.deliveryAvailable }),
     
-    // Default values
+    // ========== DEFAULT VALUES ==========
     rating: 0,
     reviewsCount: 0,
     distance: 0,
@@ -247,12 +249,12 @@ async function createProviderDocument(
     accessible: formData.accessibilityFeatures.length > 0,
     emergency: formData.is24_7,
     
-    // Verification status - PENDING until admin approves
+    // ========== VERIFICATION STATUS ==========
     verificationStatus: 'pending',
     isPublic: false,
     verified: false,
     
-    // Timestamps
+    // ========== TIMESTAMPS ==========
     createdAt: Timestamp.now(),
     updatedAt: Timestamp.now(),
     submittedAt: Timestamp.now(),

@@ -65,48 +65,63 @@ export interface CityHealthProvider {
   lng: number;
   languages: Lang[];
   description: string;
-  // New verification fields
+  
+  // ========== VERIFICATION FIELDS ==========
   verificationStatus: VerificationStatus;
   isPublic: boolean;
-  // Verification revocation tracking
   verificationRevokedAt?: Date | string;
   verificationRevokedReason?: string;
-  // Type-specific fields
+  
+  // ========== TYPE-SPECIFIC FIELDS ==========
   bloodTypes?: string[];
   urgentNeed?: boolean;
   stockStatus?: 'critical' | 'low' | 'normal' | 'high';
   imagingTypes?: string[];
-  // New fields for enhanced profile
+  // Medical equipment specific
+  productCategories?: string[];
+  rentalAvailable?: boolean;
+  deliveryAvailable?: boolean;
+  
+  // ========== PROFILE FIELDS - CANONICAL NAMES ==========
+  /** Gallery images - CANONICAL (not galleryImages) */
   gallery?: string[];
-  schedule?: WeeklySchedule;
+  schedule?: WeeklySchedule | null;
   reviews?: ProviderReview[];
-  // Additional profile fields
   socialLinks?: {
     website?: string;
     facebook?: string;
     instagram?: string;
     twitter?: string;
+    linkedin?: string;
   } | null;
   departments?: string[];
+  /** Consultation fee (can be number or null) */
   consultationFee?: number | null;
+  /** Accepted insurances - CANONICAL (not insuranceAccepted) */
+  insurances?: string[];
+  /** @deprecated Use insurances instead */
   insuranceAccepted?: string[];
   website?: string | null;
   email?: string | null;
-  // Services and features
+  /** Service categories - CANONICAL (not serviceCategories) */
   services?: string[];
   specialties?: string[];
-  insurances?: string[];
   accessibilityFeatures?: string[];
-  // Legal/sensitive fields
+  equipment?: string[];
+  
+  // ========== IDENTITY FIELDS (Sensitive) ==========
   legalRegistrationNumber?: string;
   contactPersonName?: string;
   contactPersonRole?: string;
   postalCode?: string;
   facilityNameFr?: string;
   facilityNameAr?: string;
-  // Additional business fields
+  
+  // ========== ADDITIONAL BUSINESS FIELDS ==========
   homeVisitAvailable?: boolean;
-  // Account settings
+  is24_7?: boolean;
+  
+  // ========== ACCOUNT SETTINGS ==========
   settings?: {
     emailNotifications?: boolean;
     smsNotifications?: boolean;
