@@ -63,7 +63,7 @@ export const FeaturedProviders = () => {
         image: p.image || '/placeholder.svg',
         nextAvailable: p.isOpen ? t('providers', 'now') : t('providers', 'soon')
       }));
-  }, [verifiedProviders]);
+  }, [verifiedProviders, t]);
 
   // Skeleton loading component
   const ProviderSkeleton = () => (
