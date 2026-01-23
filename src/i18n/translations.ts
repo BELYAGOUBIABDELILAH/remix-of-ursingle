@@ -91,6 +91,14 @@ export interface Translations {
     accessible: string;
   };
 
+  // Providers section (plural)
+  providers: {
+    featured: string;
+    featuredSubtitle: string;
+    viewAll: string;
+    noProviders: string;
+  };
+
   // Reviews
   reviews: {
     title: string;
@@ -242,6 +250,12 @@ export const translations: Record<Language, Translations> = {
       placeholder: 'Posez votre question...',
       disclaimer: 'Ceci est un assistant virtuel. Consultez toujours un professionnel de santé.',
     },
+    providers: {
+      featured: 'Professionnels en Vedette',
+      featuredSubtitle: 'Professionnels de santé vérifiés et très bien notés',
+      viewAll: 'Voir tous les professionnels',
+      noProviders: 'Aucun professionnel disponible pour le moment',
+    },
   },
   
   ar: {
@@ -354,6 +368,12 @@ export const translations: Record<Language, Translations> = {
       placeholder: 'اسأل سؤالك...',
       disclaimer: 'هذا مساعد افتراضي. استشر دائمًا أخصائي الرعاية الصحية.',
     },
+    providers: {
+      featured: 'المهنيون المميزون',
+      featuredSubtitle: 'متخصصون صحيون موثقون وذوو تقييم عالٍ',
+      viewAll: 'عرض جميع المهنيين',
+      noProviders: 'لا يوجد مهنيون متاحون حاليًا',
+    },
   },
 
   en: {
@@ -465,6 +485,12 @@ export const translations: Record<Language, Translations> = {
       title: 'AI Health Assistant',
       placeholder: 'Ask your question...',
       disclaimer: 'This is a virtual assistant. Always consult a healthcare professional.',
+    },
+    providers: {
+      featured: 'Featured Providers',
+      featuredSubtitle: 'Verified and highly-rated healthcare professionals',
+      viewAll: 'View All Providers',
+      noProviders: 'No providers available at the moment',
     },
   },
 };
