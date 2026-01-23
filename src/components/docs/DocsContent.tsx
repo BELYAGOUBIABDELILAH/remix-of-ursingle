@@ -14,6 +14,7 @@ import {
   ArrowRight,
   FileText
 } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TableOfContents } from './TableOfContents';
@@ -21,6 +22,14 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { docsStructure, findDocPage, getAllDocPages } from '@/data/docsStructure';
 import { cn } from '@/lib/utils';
+
+// Sanitize HTML to prevent XSS
+const sanitizeHtml = (html: string): string => {
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['strong', 'code', 'em', 'b', 'i', 'span'],
+    ALLOWED_ATTR: ['class']
+  });
+};
 
 // Simple markdown-like renderer for our doc content
 const renderContent = (content: string) => {
@@ -68,7 +77,7 @@ const renderContent = (content: string) => {
         <li 
           key={index} 
           className="ml-6 mb-2 text-muted-foreground list-disc marker:text-primary"
-          dangerouslySetInnerHTML={{ __html: parsed }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(parsed) }}
         />
       );
     }
@@ -82,7 +91,7 @@ const renderContent = (content: string) => {
         <li 
           key={index} 
           className="ml-6 mb-2 text-muted-foreground list-decimal marker:text-primary marker:font-semibold"
-          dangerouslySetInnerHTML={{ __html: parsed }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(parsed) }}
         />
       );
     }
@@ -110,7 +119,7 @@ const renderContent = (content: string) => {
       <p 
         key={index} 
         className="mb-4 text-muted-foreground leading-relaxed"
-        dangerouslySetInnerHTML={{ __html: parsed }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(parsed) }}
       />
     );
   };
