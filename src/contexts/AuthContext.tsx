@@ -260,25 +260,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const loginAsProvider = async (email: string, password: string) => {
     setIsLoading(true);
     try {
+      console.log('[loginAsProvider] Attempting login for:', email);
       const { user: loggedInUser } = await signInWithEmailAndPassword(auth, email, password);
+      console.log('[loginAsProvider] Firebase Auth success, uid:', loggedInUser.uid);
       
       // Verify user type - must exist and be provider
       const userDoc = await getDoc(doc(db, 'users', loggedInUser.uid));
+      console.log('[loginAsProvider] User doc exists:', userDoc.exists());
+      
       if (!userDoc.exists()) {
+        console.log('[loginAsProvider] ERROR: User document not found in Firestore');
         await firebaseSignOut(auth);
-        toast.error('Compte non trouvé. Veuillez vous inscrire en tant que prestataire.');
-        throw new Error('User not found');
+        toast.error('Compte prestataire non configuré. Veuillez d\'abord vous inscrire.');
+        throw new Error('Provider account not configured');
       }
-      if (userDoc.data().userType !== 'provider') {
+      
+      const userData = userDoc.data();
+      console.log('[loginAsProvider] User type:', userData.userType);
+      
+      if (userData.userType !== 'provider') {
+        console.log('[loginAsProvider] ERROR: Wrong user type:', userData.userType);
         await firebaseSignOut(auth);
-        toast.error('Ce compte n\'est pas un compte prestataire. Utilisez la bonne page de connexion.');
+        toast.error(`Ce compte est de type "${userData.userType}". Utilisez la page de connexion appropriée.`);
         throw new Error('Invalid user type');
       }
       
+      // All verifications passed - show success
+      console.log('[loginAsProvider] SUCCESS: Provider login verified');
       toast.success('Bienvenue sur votre espace prestataire!');
     } catch (error: any) {
       logError(error, 'loginAsProvider');
-      if (error.message !== 'Invalid user type' && error.message !== 'User not found') {
+      // Don't show duplicate error for handled cases
+      const handledErrors = ['Provider account not configured', 'Invalid user type'];
+      if (!handledErrors.includes(error.message)) {
         const message = getErrorMessage(error, 'fr');
         toast.error(message);
       }
