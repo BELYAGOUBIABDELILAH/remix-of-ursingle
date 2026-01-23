@@ -119,6 +119,28 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow write: if isAuthenticated();
     }
+
+    // ============================================
+    // PROVIDER ANALYTICS - Track provider performance metrics
+    // ============================================
+    match /provider_analytics/{eventId} {
+      // Anyone authenticated can create analytics events (tracking profile views, clicks, etc.)
+      allow create: if isAuthenticated();
+      
+      // Allow unauthenticated users to create analytics (for anonymous profile views)
+      allow create: if true;
+      
+      // Providers can read analytics where their provider document ID matches
+      allow read: if isAuthenticated() && 
+        exists(/databases/$(database)/documents/providers/$(resource.data.providerId)) &&
+        get(/databases/$(database)/documents/providers/$(resource.data.providerId)).data.userId == request.auth.uid;
+      
+      // Admins can read all analytics for dashboard/reporting
+      allow read: if isAdmin();
+      
+      // Analytics are immutable - no updates or deletes allowed
+      allow update, delete: if false;
+    }
     
     // ============================================
     // FAVORITES - Users can only access their own
