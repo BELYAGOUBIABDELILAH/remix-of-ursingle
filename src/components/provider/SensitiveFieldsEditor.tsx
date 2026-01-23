@@ -21,6 +21,8 @@ import { LocationPicker } from './LocationPicker';
 
 interface SensitiveFieldsData {
   name: string;
+  facilityNameFr?: string;
+  facilityNameAr?: string;
   phone: string;
   email: string;
   address: string;
@@ -32,6 +34,7 @@ interface SensitiveFieldsData {
   legalRegistrationNumber?: string;
   contactPersonName?: string;
   contactPersonRole?: string;
+  providerType?: string;
 }
 
 interface SensitiveFieldsEditorProps {
@@ -57,9 +60,9 @@ export function SensitiveFieldsEditor({
   const getModifiedFields = (): SensitiveField[] => {
     const modified: SensitiveField[] = [];
     const fieldsToCheck: (keyof SensitiveFieldsData)[] = [
-      'name', 'phone', 'email', 'address', 'city', 'area', 
-      'postalCode', 'lat', 'lng', 'legalRegistrationNumber',
-      'contactPersonName', 'contactPersonRole'
+      'name', 'facilityNameFr', 'facilityNameAr', 'phone', 'email', 
+      'address', 'city', 'area', 'postalCode', 'lat', 'lng', 
+      'legalRegistrationNumber', 'contactPersonName', 'contactPersonRole'
     ];
     
     for (const field of fieldsToCheck) {
@@ -127,6 +130,18 @@ export function SensitiveFieldsEditor({
 
           {/* Form Fields */}
           <div className="grid gap-4 sm:grid-cols-2">
+            {/* Provider Type (Read-only) */}
+            {data.providerType && (
+              <div className="sm:col-span-2">
+                <Label>Type d'établissement</Label>
+                <Input
+                  value={data.providerType}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+            )}
+
             <div className="sm:col-span-2">
               <Label htmlFor="name">
                 Nom de l'établissement
@@ -137,6 +152,36 @@ export function SensitiveFieldsEditor({
                 value={data.name}
                 onChange={(e) => onDataChange('name', e.target.value)}
                 className={modifiedFields.includes('name') ? 'border-amber-500' : ''}
+              />
+            </div>
+
+            {/* Bilingual Names */}
+            <div>
+              <Label htmlFor="facilityNameFr">
+                Nom en français
+                {isVerified && <Lock className="h-3 w-3 inline ml-1 text-amber-500" />}
+              </Label>
+              <Input
+                id="facilityNameFr"
+                value={data.facilityNameFr || ''}
+                onChange={(e) => onDataChange('facilityNameFr', e.target.value)}
+                placeholder="Nom officiel en français"
+                className={modifiedFields.includes('facilityNameFr') ? 'border-amber-500' : ''}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="facilityNameAr">
+                الاسم بالعربية
+                {isVerified && <Lock className="h-3 w-3 inline ml-1 text-amber-500" />}
+              </Label>
+              <Input
+                id="facilityNameAr"
+                dir="rtl"
+                value={data.facilityNameAr || ''}
+                onChange={(e) => onDataChange('facilityNameAr', e.target.value)}
+                placeholder="الاسم الرسمي بالعربية"
+                className={modifiedFields.includes('facilityNameAr') ? 'border-amber-500' : ''}
               />
             </div>
 
@@ -207,6 +252,20 @@ export function SensitiveFieldsEditor({
             </div>
 
             <div>
+              <Label htmlFor="postalCode">
+                Code postal
+                {isVerified && <Lock className="h-3 w-3 inline ml-1 text-amber-500" />}
+              </Label>
+              <Input
+                id="postalCode"
+                value={data.postalCode || ''}
+                onChange={(e) => onDataChange('postalCode', e.target.value)}
+                placeholder="22000"
+                className={modifiedFields.includes('postalCode') ? 'border-amber-500' : ''}
+              />
+            </div>
+
+            <div>
               <Label htmlFor="legalRegistrationNumber">
                 N° d'inscription légale
                 {isVerified && <Lock className="h-3 w-3 inline ml-1 text-amber-500" />}
@@ -229,6 +288,20 @@ export function SensitiveFieldsEditor({
                 value={data.contactPersonName || ''}
                 onChange={(e) => onDataChange('contactPersonName', e.target.value)}
                 className={modifiedFields.includes('contactPersonName') ? 'border-amber-500' : ''}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="contactPersonRole">
+                Fonction du contact
+                {isVerified && <Lock className="h-3 w-3 inline ml-1 text-amber-500" />}
+              </Label>
+              <Input
+                id="contactPersonRole"
+                value={data.contactPersonRole || ''}
+                onChange={(e) => onDataChange('contactPersonRole', e.target.value)}
+                placeholder="Directeur, Gérant..."
+                className={modifiedFields.includes('contactPersonRole') ? 'border-amber-500' : ''}
               />
             </div>
           </div>

@@ -102,6 +102,10 @@ export interface CityHealthProvider {
   contactPersonName?: string;
   contactPersonRole?: string;
   postalCode?: string;
+  facilityNameFr?: string;
+  facilityNameAr?: string;
+  // Additional business fields
+  homeVisitAvailable?: boolean;
 }
 
 // Provider Type Labels (French/Arabic)
